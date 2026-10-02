@@ -2,7 +2,7 @@
 // the other wall of the same pit, the same horizon on the nearest pit that has it, an area reference
 // (soil survey data, for structure), the site-wide most common value, then a default. Every filled
 // value records where it came from so it can be reviewed (and shown as a suggestion in the app).
-import type { Horizon, TestPit } from './fieldRecord';
+import { updateHorizon, type AreaHorizon, type FieldRecord, type Horizon, type TestPit } from './fieldRecord';
 import { distanceFt } from './georef';
 import { wallLocation, wallOf } from './pitWalls';
 
@@ -14,6 +14,10 @@ export interface Fill {
   field: FillField;
   value: string;
   source: string;
+  wallId: string;
+  horizonId: string;
+  /** The filled field, ready to save into the horizon. */
+  patch: Partial<Horizon>;
 }
 
 /** Area reference for a horizon (e.g. soil survey structure at the pit); null = none. */
@@ -106,7 +110,8 @@ export function fillGaps(pits: TestPit[], reference?: Reference): { pits: TestPi
         }
         if (next) {
           cur = next;
-          fills.push({ wall: wall.label, horizon: `${cur.designation} ${cur.topIn}-${cur.bottomIn}`, field, value: show[field](cur), source });
+          const patch: Partial<Horizon> = { [field]: cur[field] };
+          fills.push({ wall: wall.label, horizon: `${cur.designation} ${cur.topIn}-${cur.bottomIn}`, field, value: show[field](cur), source, wallId: wall.id, horizonId: h.id, patch });
         }
       }
       return cur;
@@ -115,3 +120,24 @@ export function fillGaps(pits: TestPit[], reference?: Reference): { pits: TestPi
   });
   return { pits: out, fills };
 }
+
+/** The area soils reference (by pit number) as a fill source: the reference horizon overlapping the wall's horizon most. */
+export function areaReference(areaSoils: Record<string, AreaHorizon[]>): Reference {
+  return (wall, h) => {
+    const refs = areaSoils[wallOf(wall.label).pit] ?? [];
+    const top = h.topIn ?? 0;
+    const bottom = h.bottomIn ?? top;
+    const overlap = (x: AreaHorizon) => Math.min(bottom, x.bottomIn) - Math.max(top, x.topIn);
+    const best = refs.filter((x) => x.structure && overlap(x) > 0).sort((a, b) => overlap(b) - overlap(a))[0];
+    return best ? { structure: best.structure, source: best.source } : null;
+  };
+}
+
+/** The record's soil logs with every blank field filled, and the fills (the generator and the app use the same rule). */
+export const fillRecord = (r: FieldRecord) => fillGaps(r.testPits, areaReference(r.areaSoils ?? {}));
+
+/** Suggestions for the blank fields: what the soil logs will print there, and why. */
+export const suggestions = (r: FieldRecord): Fill[] => fillRecord(r).fills;
+
+/** Accepts a suggestion: saves the filled value into the wall's horizon. */
+export const acceptFill = (r: FieldRecord, f: Fill): FieldRecord => updateHorizon(r, f.wallId, f.horizonId, f.patch);

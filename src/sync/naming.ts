@@ -18,6 +18,7 @@ export const PRINT_QUEUE = `${SERVER_ROOT}/Office/Site Eval App/Print Queue`;
 export const DELIVERABLE_NAMES: Record<Exclude<DeliverableKind, 'field-record-json'>, string> = {
   'soil-log-xlsx': 'Soil Logs.xlsx',
   'soil-log-pdf': 'Soil Logs.pdf',
+  'soil-log-fills-csv': 'Soil Log Fills.csv',
   'perc-test-xlsx': 'Percolation Tests.xlsx',
   'perc-test-pdf': 'Percolation Tests.pdf',
   // 0105.003 filed `11 Groundwater Observation Results _ Cottonwood.pdf` (packet number and subdivision added at packet time).

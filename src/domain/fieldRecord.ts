@@ -5,7 +5,7 @@ import type { Georef } from './georef';
 import type { Stamp } from './merge';
 import type { ObservationWell } from '../groundwater/wells';
 
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 /** Header values are always text: `0999.001`, `SE 00001`, `3B` print exactly as entered. */
 export interface Header {
@@ -219,6 +219,16 @@ export interface FieldRecord {
   edits: Record<string, Stamp>;
   /** Files this app wrote to Dropbox, by lower-case path: the only files it may overwrite. */
   filed: Record<string, FiledFile>;
+  /** Area soils reference by pit number, from the job file (office: knowledge/soils); fills blank structure. */
+  areaSoils: Record<string, AreaHorizon[]>;
+}
+
+/** A reference horizon at a pit: the soil survey or past logs in its map unit, with where it came from. */
+export interface AreaHorizon {
+  topIn: number;
+  bottomIn: number;
+  structure: string;
+  source: string;
 }
 
 export interface FiledFile {
@@ -260,6 +270,7 @@ export function newSiteEvaluation(header: Partial<Header> = {}): FieldRecord {
     deliverableFolder: '',
     edits: {},
     filed: {},
+    areaSoils: {},
   };
 }
 
@@ -523,6 +534,8 @@ const migrations: Record<number, (r: any) => any> = {
   6: (r) => ({ ...r, schemaVersion: 7, design: emptyDesign() }),
   // v7 → v8: groundwater observation wells.
   7: (r) => ({ ...r, schemaVersion: 8, wells: [] }),
+  // v8 → v9: area soils reference from the job file.
+  8: (r) => ({ ...r, schemaVersion: 9, areaSoils: {} }),
 };
 
 export function migrate(raw: unknown): FieldRecord {

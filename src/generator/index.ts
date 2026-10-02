@@ -9,6 +9,7 @@ import { soilLogWorkbook } from './soilLog';
 import { forDeliverables } from './marking';
 import { groundwaterWorkbook } from '../groundwater/resultsWorkbook';
 import { layoutSheet } from './sheetPage';
+import { fillRecord, type Fill } from '../domain/fillGaps';
 
 export type { PhotoSource, PrintKind } from './printed';
 export { forDeliverables } from './marking';
@@ -21,6 +22,7 @@ export type DeliverableKind =
   | 'perc-test-pdf'
   | 'groundwater-xlsx'
   | 'groundwater-pdf'
+  | 'soil-log-fills-csv'
   | 'field-record-json';
 
 export interface GeneratedFile {
@@ -49,14 +51,15 @@ export async function generate(fieldRecord: FieldRecord, templates: TemplateSet,
     const bytes = await (opts.photo ?? noPhotos)(ref.id);
     if (bytes) photos.set(ref.id, bytes);
   }
-  const soilWb = soilLogWorkbook(record, templates, photos);
+  const { pits, fills } = fillRecord(record);
+  const soilWb = soilLogWorkbook({ ...record, testPits: pits }, templates, photos);
   const percWb = withPerc(record, opts) ? percTestWorkbook(record, templates) : null;
   const gwWb = record.wells.length ? groundwaterWorkbook(record) : null;
   // Workbook bytes first: rendering pages only reads the workbooks.
   const soilXlsx = new Uint8Array(await soilWb.xlsx.writeBuffer());
   const percXlsx = percWb && new Uint8Array(await percWb.xlsx.writeBuffer());
   const gwXlsx = gwWb && new Uint8Array(await gwWb.xlsx.writeBuffer());
-  const pages = await printPages(record, templates, opts, { soilWb: soilLogWorkbook(record, templates), percWb, gwWb });
+  const pages = await printPages(record, templates, opts, { soilWb: soilLogWorkbook({ ...record, testPits: pits }, templates), percWb, gwWb });
   const date = new Date(record.updatedAt);
   const title = (what: string) => [record.header.projectNumber, record.header.projectName, what].filter(Boolean).join(' ');
 
@@ -64,6 +67,7 @@ export async function generate(fieldRecord: FieldRecord, templates: TemplateSet,
     { kind: 'soil-log-xlsx', path: 'Soil Logs.xlsx', bytes: soilXlsx, mimeType: XLSX },
     { kind: 'soil-log-pdf', path: 'Soil Logs.pdf', bytes: await writePdf(pages['soil-logs'], { title: title('Soil Logs'), date }), mimeType: PDF },
   ];
+  if (fills.length) files.push({ kind: 'soil-log-fills-csv', path: 'Soil Log Fills.csv', bytes: new TextEncoder().encode(fillsCsv(fills)), mimeType: 'text/csv' });
   if (percXlsx) {
     files.push({ kind: 'perc-test-xlsx', path: 'Percolation Tests.xlsx', bytes: percXlsx, mimeType: XLSX });
     files.push({
@@ -91,6 +95,17 @@ export async function generate(fieldRecord: FieldRecord, templates: TemplateSet,
   return files;
 }
 
+/** Blank horizon fields print the deterministic fill (domain/fillGaps); the fills are filed for review. */
+const filledLogs = (record: FieldRecord): FieldRecord => ({ ...record, testPits: fillRecord(record).pits });
+
+const csvCell = (v: string) => (/[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+
+/** The review table: every filled field with where its value came from. */
+export function fillsCsv(fills: Fill[]): string {
+  const rows = [['Wall', 'Horizon', 'Field', 'Value', 'Source'], ...fills.map((f) => [f.wall, f.horizon, f.field, f.value, f.source])];
+  return rows.map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
+}
+
 const withPerc = (record: FieldRecord, opts: GenerateOptions) => opts.percTests !== false && record.percTests.length > 0;
 
 /** The printed pages of each PDF deliverable (the print view draws these same pages). */
@@ -99,14 +114,14 @@ export async function printPages(
   templates: TemplateSet,
   opts: GenerateOptions = {},
   books = {
-    soilWb: soilLogWorkbook(record, templates),
+    soilWb: soilLogWorkbook(filledLogs(record), templates),
     percWb: withPerc(record, opts) ? percTestWorkbook(record, templates) : null,
     gwWb: record.wells.length ? groundwaterWorkbook(record) : null,
   },
 ): Promise<Record<PrintKind, Page[]>> {
   const measure = await pdfMeasure();
   const photo = opts.photo ?? noPhotos;
-  const soil = await soilLogPages(record, templates, books.soilWb, measure, photo);
+  const soil = await soilLogPages(filledLogs(record), templates, books.soilWb, measure, photo);
   const perc = books.percWb ? percTestPages(books.percWb, measure) : [];
   return {
     'soil-logs': soil,

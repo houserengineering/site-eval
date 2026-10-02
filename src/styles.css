@@ -410,3 +410,10 @@ button.row-link:focus-visible { outline: 3px solid var(--focus); outline-offset:
   text-underline-offset: 3px;
 }
 .bar-link:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* Gap-fill suggestions: what the soil log will print in a blank field */
+.suggest { display: flex; align-items: center; gap: 12px; margin: 4px 0 14px; padding: 6px 6px 6px 12px; border: 2px dashed var(--line); border-radius: 8px; color: var(--muted); }
+.suggest p { flex: 1; min-width: 0; margin: 0; }
+.suggest-value { display: block; font-weight: 650; overflow-wrap: anywhere; }
+.suggest-source { display: block; font-size: 0.95rem; overflow-wrap: anywhere; }
+.suggest .btn.small { margin: 0; flex: none; }

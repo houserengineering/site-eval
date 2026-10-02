@@ -24,6 +24,7 @@ import { pitWarnings } from '../domain/rules';
 import { hueWarning } from '../domain/hueCheck';
 import { wallOf, wallSide } from '../domain/pitWalls';
 import { RuleWarnings } from './RuleWarnings';
+import { acceptFill, suggestions, type Fill, type FillField } from '../domain/fillGaps';
 
 export function TestPitView(props: { record: FieldRecord; pitId: string; save: (r: FieldRecord) => void; store: RecordStore }) {
   const r = props.record;
@@ -39,6 +40,7 @@ export function TestPitView(props: { record: FieldRecord; pitId: string; save: (
     );
 
   const missing = missingItems(pit);
+  const fills = suggestions(r).filter((f) => f.wallId === pit.id);
   const savePit = (patch: Partial<Omit<TestPit, 'id'>>) => props.save(updateTestPit(r, pit.id, patch));
   // Wall B starts from wall A of the same hole (only depths change); otherwise the previous pit.
   const otherWall = r.testPits.find((p) => p !== pit && p.horizons.length > 0 && wallOf(p.label).pit === wallOf(pit.label).pit);
@@ -75,6 +77,8 @@ export function TestPitView(props: { record: FieldRecord; pitId: string; save: (
           pits={r.testPits}
           index={i}
           missing={missing.horizons[i]}
+          fills={fills.filter((f) => f.horizonId === hz.id)}
+          accept={(f) => props.save(acceptFill(r, f))}
           open={i === pit.horizons.length - 1}
           set={(patch) => props.save(updateHorizon(r, pit.id, hz.id, patch))}
           remove={() => {
@@ -108,11 +112,18 @@ function HorizonCard(props: {
   pits: TestPit[];
   index: number;
   missing: string[];
+  /** What the soil log will print in each blank field (domain/fillGaps), with its source. */
+  fills: Fill[];
+  accept: (f: Fill) => void;
   open: boolean;
   set: (patch: Partial<Omit<Horizon, 'id'>>) => void;
   remove: () => void;
 }) {
   const { pit, index: i, set } = props;
+  const suggest = (field: FillField) => {
+    const f = props.fills.find((x) => x.field === field);
+    return f && <Suggestion fill={f} accept={props.accept} />;
+  };
   const hz = pit.horizons[i];
   const title = [`Horizon ${i + 1}`, hz.designation, depthText(hz)].filter(Boolean).join(' · ');
   const sandy = V.SANDY_TEXTURES.includes(hz.texture.cls);
@@ -140,6 +151,7 @@ function HorizonCard(props: {
         <Chips label="Quick bottom" options={quickBottoms.map((n) => ({ value: String(n), label: `${n}"` }))} value={String(hz.bottomIn ?? '')} onChange={(v) => set({ bottomIn: v ? Number(v) : null })} />
 
         <MunsellPicker label="Color (Munsell)" value={hz.color} onChange={(m) => set({ color: { ...hz.color, ...m, other: '' } })} />
+        {suggest('color')}
         {hueCheck && (
           <p class="hint-warn" role="status">
             {hueCheck}{' '}
@@ -157,6 +169,7 @@ function HorizonCard(props: {
         <fieldset class="group">
           <legend>Texture</legend>
           <Chips label="USDA class" options={V.TEXTURES} value={hz.texture.cls} onChange={(v) => set({ texture: { ...hz.texture, cls: v } })} other />
+          {suggest('texture')}
           <TextureGuide current={hz.texture.cls} onUse={(cls) => set({ texture: { ...hz.texture, cls } })} />
           {sandy && <Chips label="Sand size" options={V.SAND_SIZES} value={hz.texture.sandSize} onChange={(v) => set({ texture: { ...hz.texture, sandSize: v } })} />}
           <NumberField
@@ -168,6 +181,7 @@ function HorizonCard(props: {
               if (!V.rockPctProblem(v)) set({ rock: { ...hz.rock, pct: v } });
             }}
           />
+          {suggest('rock')}
           {rockProblem && (
             <p class="alert" role="alert">
               {rockProblem}
@@ -204,6 +218,7 @@ function HorizonCard(props: {
               )}
             </>
           )}
+          {suggest('structure')}
           {hz.structure.other && <TextField label="Structure as typed" value={hz.structure.other} onInput={(v) => set({ structure: { ...hz.structure, other: v } })} autoCapitalize="characters" hint="Picking above replaces this text." />}
           {structureText(hz) && <p class="readout">Prints as <strong>{structureText(hz)}</strong></p>}
         </fieldset>
@@ -215,6 +230,8 @@ function HorizonCard(props: {
           <YesNoChips label="Roots" value={hz.roots} onChange={(v) => set({ roots: v })} />
           <YesNoChips label="Mottling" value={hz.mottling.present} onChange={(v) => set({ mottling: { ...hz.mottling, present: v } })} />
         </div>
+        {suggest('roots')}
+        {suggest('mottling')}
         {hz.mottling.present === 'Y' && (
           <fieldset class="group">
             <legend>Mottles (redoximorphic features)</legend>
@@ -296,5 +313,26 @@ function EditedBy(props: { record: FieldRecord; pitId: string }) {
     <p class="hint">
       Last edited by {e.by}, {new Date(e.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
     </p>
+  );
+}
+
+const FIELD_NAMES: Record<FillField, string> = { color: 'Color', texture: 'Texture', rock: 'Rock fragments', structure: 'Structure', roots: 'Roots', mottling: 'Mottling' };
+const YES_NO: Record<string, string> = { Y: 'YES', N: 'NO' };
+
+/** A blank field's fill, greyed, with where it comes from; Use saves it, editing the field replaces it. */
+function Suggestion(props: { fill: Fill; accept: (f: Fill) => void }) {
+  const f = props.fill;
+  return (
+    <div class="suggest" role="group" aria-label={`Suggested ${FIELD_NAMES[f.field].toLowerCase()}`}>
+      <p>
+        <span class="suggest-value">
+          {FIELD_NAMES[f.field]}: {YES_NO[f.value] ?? f.value}
+        </span>
+        <span class="suggest-source">Soil log prints this: {f.source}</span>
+      </p>
+      <button type="button" class="btn small" onClick={() => props.accept(f)}>
+        Use
+      </button>
+    </div>
   );
 }

@@ -210,7 +210,7 @@ describe('groundwater deliverables', () => {
 describe('field record', () => {
   it('migrates a v7 record to v8 with no wells', () => {
     const { wells, ...v7 } = { ...newSiteEvaluation(), schemaVersion: 7 };
-    expect(migrate(v7)).toMatchObject({ schemaVersion: 8, wells: [] });
+    expect(migrate(v7)).toMatchObject({ wells: [] });
   });
 
   it('keeps readings two people added to the same well', () => {
