@@ -1,7 +1,8 @@
 // Field record: everything captured on a site evaluation. Persisted as JSON on device
 // and (later) in Dropbox, so the shape is versioned and migrated on load.
+import type { Georef } from './georef';
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 /** Header values are always text: `0999.001`, `SE 00001`, `3B` print exactly as entered. */
 export interface Header {
@@ -73,6 +74,13 @@ export interface TestPit {
   photos: PhotoRef[];
   /** GPS fix of the pit (county requires location within 10 ft). */
   location: GpsFix | null;
+  /** Where the pit is planned (job file map pin, or dropped on the map); null = unplanned. */
+  planned: LatLon | null;
+}
+
+export interface LatLon {
+  lat: number;
+  lon: number;
 }
 
 export interface PhotoRef {
@@ -151,6 +159,19 @@ export interface PercTest {
   notes: string;
 }
 
+/** Justin's test pit map: an image (bytes in the on-device blob store) aligned to real coordinates. */
+export interface SiteMap {
+  title: string;
+  source: string;
+  imageId: string;
+  mimeType: string;
+  width: number;
+  height: number;
+  /** Planned pit pins in map image pixels. */
+  pins: { label: string; x: number; y: number }[];
+  georef: Georef;
+}
+
 export interface FieldRecord {
   schemaVersion: typeof SCHEMA_VERSION;
   id: string;
@@ -161,6 +182,11 @@ export interface FieldRecord {
   percTests: PercTest[];
   /** Certifications by perc test id. */
   certifications: Record<string, Certification>;
+  /** Pre-filled header values to confirm on site, with why; marked on deliverables until confirmed. */
+  unconfirmed: Partial<Record<keyof Header, string>>;
+  siteMap: SiteMap | null;
+  /** Dropbox folder the deliverables are filed to ('' = not chosen yet). */
+  deliverableFolder: string;
 }
 
 export const emptyHeader = (): Header => ({
@@ -187,13 +213,24 @@ export function newSiteEvaluation(header: Partial<Header> = {}): FieldRecord {
     testPits: [],
     percTests: [],
     certifications: {},
+    unconfirmed: {},
+    siteMap: null,
+    deliverableFolder: '',
   };
 }
 
 const touch = (r: FieldRecord): FieldRecord => ({ ...r, updatedAt: now() });
 
+/** Typing a header value is the evaluator's own entry, so it also confirms that field. */
 export function updateHeader(r: FieldRecord, patch: Partial<Header>): FieldRecord {
-  return touch({ ...r, header: { ...r.header, ...patch } });
+  const unconfirmed = { ...r.unconfirmed };
+  for (const k of Object.keys(patch) as (keyof Header)[]) if (patch[k] !== r.header[k]) delete unconfirmed[k];
+  return touch({ ...r, header: { ...r.header, ...patch }, unconfirmed });
+}
+
+export function confirmHeaderField(r: FieldRecord, key: keyof Header): FieldRecord {
+  const { [key]: _, ...unconfirmed } = r.unconfirmed;
+  return touch({ ...r, unconfirmed });
 }
 
 export const emptyTestPit = (): Omit<TestPit, 'id' | 'label'> => ({
@@ -206,10 +243,11 @@ export const emptyTestPit = (): Omit<TestPit, 'id' | 'label'> => ({
   notes: '',
   photos: [],
   location: null,
+  planned: null,
 });
 
-export function addTestPit(r: FieldRecord, label: string): FieldRecord {
-  return touch({ ...r, testPits: [...r.testPits, { id: newId(), label, ...emptyTestPit() }] });
+export function addTestPit(r: FieldRecord, label: string, p: Partial<Omit<TestPit, 'id' | 'label'>> = {}): FieldRecord {
+  return touch({ ...r, testPits: [...r.testPits, { id: newId(), label, ...emptyTestPit(), ...p }] });
 }
 
 export function updateTestPit(r: FieldRecord, pitId: string, patch: Partial<Omit<TestPit, 'id'>>): FieldRecord {
@@ -399,6 +437,15 @@ const migrations: Record<number, (r: any) => any> = {
     schemaVersion: 4,
     testPits: (r.testPits ?? []).map((p: any) => ({ photos: [], location: null, ...p })),
     certifications: {},
+  }),
+  // v4 → v5: confirm-on-site flags, site map, planned pit locations, deliverable folder.
+  4: (r) => ({
+    ...r,
+    schemaVersion: 5,
+    testPits: (r.testPits ?? []).map((p: any) => ({ planned: null, ...p })),
+    unconfirmed: {},
+    siteMap: null,
+    deliverableFolder: '',
   }),
 };
 

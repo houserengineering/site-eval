@@ -6,8 +6,10 @@ import { pdfMeasure, writePdf } from './pdf';
 import { extraPhotoPages, mapPages, percTestPages, soilLogPages, type PhotoSource, type PrintKind } from './printed';
 import { percTestWorkbook } from './percTest';
 import { soilLogWorkbook } from './soilLog';
+import { forDeliverables } from './marking';
 
 export type { PhotoSource, PrintKind } from './printed';
+export { forDeliverables } from './marking';
 export type { Page } from './page';
 
 export type DeliverableKind =
@@ -34,7 +36,8 @@ const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 const PDF = 'application/pdf';
 const noPhotos: PhotoSource = async () => undefined;
 
-export async function generate(record: FieldRecord, templates: TemplateSet, opts: GenerateOptions = {}): Promise<GeneratedFile[]> {
+export async function generate(fieldRecord: FieldRecord, templates: TemplateSet, opts: GenerateOptions = {}): Promise<GeneratedFile[]> {
+  const record = forDeliverables(fieldRecord);
   const soilWb = soilLogWorkbook(record, templates);
   const percWb = record.percTests.length ? percTestWorkbook(record, templates) : null;
   // Workbook bytes first: rendering pages only reads the workbooks.
@@ -66,7 +69,7 @@ export async function generate(record: FieldRecord, templates: TemplateSet, opts
   files.push({
     kind: 'field-record-json',
     path: 'Field Record.json',
-    bytes: new TextEncoder().encode(JSON.stringify(record, null, 1)),
+    bytes: new TextEncoder().encode(JSON.stringify(fieldRecord, null, 1)),
     mimeType: 'application/json',
   });
   return files;

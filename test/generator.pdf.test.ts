@@ -15,7 +15,7 @@ import {
   updateTestPit,
   type FieldRecord,
 } from '../src/domain/fieldRecord';
-import { generate, printPages, type Page } from '../src/generator';
+import { forDeliverables, generate, printPages, type Page } from '../src/generator';
 import { GOLDEN_JOBS } from './golden/jobs';
 import { loadTemplatesFromDisk } from './templates';
 
@@ -181,6 +181,13 @@ describe('certification', () => {
     expect(pageText(page)).toContain('Justin Houser, PE');
     expect(sigs[0].y).toBeGreaterThan(300);
     expect(sigCell().signature).toBe('F19');
+  });
+
+  it('keeps the signature when a certified header value is only flagged confirm-on-site', async () => {
+    const base = { ...siteEvaluation(), unconfirmed: { confirmationNumber: 'pre-filled' } };
+    const rec = certify(base, [base.percTests[0].id], justin);
+    expect((await percSheet(rec)).getImages()).toHaveLength(1);
+    expect(images((await printPages(forDeliverables(rec), templates))['perc-tests'][0]).filter((i) => i.mime === 'image/png')).toHaveLength(1);
   });
 
   it('drops the signature when the perc test changes after it was certified', async () => {

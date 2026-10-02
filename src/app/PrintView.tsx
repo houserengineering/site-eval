@@ -7,6 +7,7 @@ import type { FontKey } from '../generator/page';
 import type { RecordStore } from '../storage/db';
 import { download, photoSource } from './deliverables';
 import { loadTemplates } from './templates';
+import { UnconfirmedNotice } from './Unconfirmed';
 
 export const PRINT_KINDS: Record<PrintKind, { title: string; file: DeliverableKind }> = {
   'soil-logs': { title: 'Soil logs', file: 'soil-log-pdf' },
@@ -21,7 +22,7 @@ const FAMILY: Record<FontKey, [string, string]> = {
   'sans-bold': ["Helvetica, Arial, 'Liberation Sans', Roboto, sans-serif", 'bold'],
 };
 
-export function PrintView(props: { record: FieldRecord; kind: PrintKind; store: RecordStore }) {
+export function PrintView(props: { record: FieldRecord; kind: PrintKind; store: RecordStore; save: (r: FieldRecord) => void }) {
   const r = props.record;
   const meta = PRINT_KINDS[props.kind];
   const [pages, setPages] = useState<Page[]>();
@@ -31,8 +32,8 @@ export function PrintView(props: { record: FieldRecord; kind: PrintKind; store: 
   useEffect(() => {
     let live = true;
     (async () => {
-      const [{ printPages }, templates] = await Promise.all([import('../generator'), loadTemplates()]);
-      const all = await printPages(r, templates, { photo: photoSource(props.store) });
+      const [{ printPages, forDeliverables }, templates] = await Promise.all([import('../generator'), loadTemplates()]);
+      const all = await printPages(forDeliverables(r), templates, { photo: photoSource(props.store) });
       if (live) setPages(all[props.kind]);
     })().catch((e) => live && setStatus(`Could not build the pages: ${e.message}`));
     return () => void (live = false);
@@ -69,6 +70,7 @@ export function PrintView(props: { record: FieldRecord; kind: PrintKind; store: 
             Save PDF
           </button>
         </div>
+        <UnconfirmedNotice record={r} save={props.save} context="preview" />
         <p class="hint">Letter paper, scale 100% (Default). On the office Wi-Fi, pick the office copier in the print dialog.</p>
         {status && (
           <p class="status" role="status">

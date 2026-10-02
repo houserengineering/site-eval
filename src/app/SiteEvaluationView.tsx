@@ -10,6 +10,9 @@ import { CertifyPanel } from './Certify';
 import { download, photoSource } from './deliverables';
 import { PRINT_KINDS } from './PrintView';
 import { loadTemplates } from './templates';
+import { STATUS_TEXT } from './SiteMapView';
+import { UnconfirmedNotice } from './Unconfirmed';
+import { pitStatus } from '../domain/soilLogText';
 
 export function SiteEvaluationView(props: { record: FieldRecord; save: (r: FieldRecord) => void; store: RecordStore }) {
   const r = props.record;
@@ -64,8 +67,15 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
         <h1>{r.header.projectNumber || 'New site evaluation'}</h1>
       </header>
 
+      {(r.siteMap || r.testPits.some((p) => p.planned || p.location)) && (
+        <a class="btn primary block" href={`#/se/${r.id}/map`}>
+          Map
+        </a>
+      )}
+
       <section aria-labelledby="hdr">
         <h2 id="hdr">Header</h2>
+        <UnconfirmedNotice record={r} save={props.save} context="header" />
         <TextField label="Project #" value={r.header.projectNumber} onInput={h('projectNumber')} inputMode="decimal" />
         <TextField label="Project name" value={r.header.projectName} onInput={h('projectName')} autoCapitalize="words" />
         <TextField label="Location" value={r.header.location} onInput={h('location')} autoCapitalize="words" />
@@ -84,13 +94,18 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
       <section aria-labelledby="pits">
         <h2 id="pits">Test pits</h2>
         {r.testPits.length === 0 && <p class="muted">No test pits yet.</p>}
+        {r.testPits.length > 0 && <p class="muted">{pitCounts(r)}</p>}
         <ul class="list">
           {r.testPits.map((p) => (
             <li key={p.id}>
               <a class="row-link" href={`#/se/${r.id}/pit/${p.id}`}>
-                <span class="row-title">Test pit {p.label}</span>
+                <span class="row-title">
+                  Test pit {p.label} <span class={`badge st-${pitStatus(p)}`}>{STATUS_TEXT[pitStatus(p)]}</span>
+                </span>
                 <span class="row-sub">
                   {p.horizons.length} horizon{p.horizons.length === 1 ? '' : 's'}
+                  {p.location ? ' · GPS' : ''}
+                  {p.photos.length ? ` · ${p.photos.length} photo${p.photos.length === 1 ? '' : 's'}` : ''}
                 </span>
               </a>
             </li>
@@ -172,6 +187,12 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
       </section>
     </main>
   );
+}
+
+function pitCounts(r: FieldRecord): string {
+  const n = { 'not-started': 0, 'in-progress': 0, complete: 0 };
+  for (const p of r.testPits) n[pitStatus(p)]++;
+  return `${n.complete} complete · ${n['in-progress']} in progress · ${n['not-started']} not started`;
 }
 
 const PRINT_SUB: Record<PrintKind, string> = {

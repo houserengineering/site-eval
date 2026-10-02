@@ -306,3 +306,42 @@ section > h2:first-child { margin-top: 24px; }
   .sheet { width: 8.5in; height: 11in; max-width: none; margin: 0; box-shadow: none; break-after: page; }
   .sheet:last-child { break-after: auto; }
 }
+
+/* Map */
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 0 0 8px; border: 2px solid var(--primary); border-radius: 8px; overflow: hidden; }
+.seg-btn { min-height: 48px; font: inherit; font-weight: 650; color: var(--primary); background: var(--bg); border: 0; cursor: pointer; }
+.seg-btn.on { background: var(--primary); color: var(--primary-text); }
+.seg-btn:disabled { color: var(--muted); cursor: not-allowed; }
+.seg-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+.map-page { max-width: 64rem; }
+.map-wrap { position: relative; margin: 0 -16px; }
+.map-box { position: relative; width: 100%; min-height: 50vh; max-height: 68vh; overflow: hidden; background: #2b2f33; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
+.map-box.placing { cursor: crosshair; outline: 4px solid var(--focus); outline-offset: -4px; }
+.map-content { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.map-content img { display: block; max-width: none; pointer-events: none; }
+.map-tools { position: absolute; right: 8px; top: 8px; display: grid; gap: 6px; }
+.map-tools .btn { min-height: 48px; min-width: 48px; padding: 6px 10px; box-shadow: 0 1px 4px rgb(0 0 0 / 40%); }
+.pin { position: absolute; display: grid; place-items: center; width: 48px; height: 48px; margin: -24px 0 0 -24px; text-decoration: none; }
+.pin:focus-visible { outline: 3px solid var(--focus); border-radius: 50%; }
+.pin-dot { display: inline-grid; place-items: center; min-width: 32px; height: 32px; padding: 0 4px; border-radius: 16px; font: 750 1rem/1 system-ui, sans-serif; border: 3px solid #111418; box-shadow: 0 0 0 2px #ffffff; }
+.pin-dot.not-started, .pin.not-started .pin-dot { background: #ffffff; color: #111418; }
+.pin-dot.in-progress, .pin.in-progress .pin-dot { background: #ffd23f; color: #111418; border-style: dashed; }
+.pin-dot.complete, .pin.complete .pin-dot { background: #1b5e20; color: #ffffff; border-color: #ffffff; box-shadow: 0 0 0 2px #111418; }
+.pin.compact .pin-dot { min-width: 24px; height: 24px; border-width: 2px; font-size: 0.8rem; }
+.pin.compact .pin-badge { width: 14px; height: 14px; font-size: 0.65rem; }
+.pin-badge { position: absolute; right: 0; top: 0; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 9px; background: #ffffff; color: #1b5e20; font-weight: 900; font-size: 0.8rem; border: 2px solid #1b5e20; }
+.me-dot { display: inline-block; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%; background: #1a73e8; border: 3px solid #ffffff; box-shadow: 0 0 0 2px #0b3d6e; pointer-events: none; }
+.legend .me-dot { margin: 0; vertical-align: middle; }
+.me-acc { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; background: rgb(26 115 232 / 18%); border: 2px solid rgb(26 115 232 / 70%); pointer-events: none; }
+.legend { list-style: none; display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 12px 0; padding: 0; }
+.legend li { display: flex; align-items: center; gap: 8px; }
+.badge.st-not-started { background: var(--surface); color: var(--text); border: 1px solid var(--line); }
+.badge.st-in-progress { background: #ffd23f; color: #111418; }
+.badge.st-complete { background: #1b5e20; color: #ffffff; }
+.confirm-box { margin: 8px 0 16px; padding: 8px 14px; border: 2px solid #8a5a00; background: #fff3cd; color: #3d2a00; border-radius: 8px; }
+.confirm-box h3 { margin: 4px 0; font-size: 1.05rem; }
+.confirm-box p { margin: 4px 0; }
+.confirm-box ul { list-style: none; margin: 4px 0; padding: 0; }
+.confirm-box li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0; }
+.confirm-why { display: block; font-size: 0.95rem; }
+.confirm-box .btn { color: #3d2a00; border-color: #3d2a00; background: #ffffff; }

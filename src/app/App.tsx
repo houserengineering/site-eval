@@ -7,6 +7,8 @@ import { PercTestView } from './PercTestView';
 import { PRINT_KINDS, PrintView } from './PrintView';
 import { PercTimers } from './PercTimers';
 import { SiteEvaluationView } from './SiteEvaluationView';
+import { SiteMapView } from './SiteMapView';
+import { readJob } from '../domain/job';
 import { TestPitView } from './TestPitView';
 
 type Route =
@@ -15,6 +17,7 @@ type Route =
   | { name: 'pit'; id: string; pitId: string }
   | { name: 'perc'; id: string; testId: string }
   | { name: 'print'; id: string; kind: PrintKind }
+  | { name: 'map'; id: string }
   | { name: 'certifier' };
 
 function parseRoute(hash: string): Route {
@@ -22,6 +25,7 @@ function parseRoute(hash: string): Route {
   if (parts[0] === 'se' && parts[1] && parts[2] === 'pit' && parts[3]) return { name: 'pit', id: parts[1], pitId: parts[3] };
   if (parts[0] === 'se' && parts[1] && parts[2] === 'perc' && parts[3]) return { name: 'perc', id: parts[1], testId: parts[3] };
   if (parts[0] === 'se' && parts[1] && parts[2] === 'print' && parts[3] && parts[3] in PRINT_KINDS) return { name: 'print', id: parts[1], kind: parts[3] as PrintKind };
+  if (parts[0] === 'se' && parts[1] && parts[2] === 'map') return { name: 'map', id: parts[1] };
   if (parts[0] === 'se' && parts[1]) return { name: 'site', id: parts[1] };
   if (parts[0] === 'certifier') return { name: 'certifier' };
   return { name: 'home' };
@@ -47,7 +51,8 @@ export function App() {
   if (!store) return <main class="page" aria-busy="true" />;
   if (route.name === 'pit') return <RecordLoader store={store} id={route.id} render={(r, save) => <TestPitView record={r} pitId={route.pitId} save={save} store={store} />} />;
   if (route.name === 'perc') return <RecordLoader store={store} id={route.id} render={(r, save) => <PercTestView record={r} testId={route.testId} save={save} />} />;
-  if (route.name === 'print') return <RecordLoader store={store} id={route.id} render={(r) => <PrintView record={r} kind={route.kind} store={store} />} />;
+  if (route.name === 'print') return <RecordLoader store={store} id={route.id} render={(r, save) => <PrintView record={r} kind={route.kind} store={store} save={save} />} />;
+  if (route.name === 'map') return <RecordLoader store={store} id={route.id} render={(r, save) => <SiteMapView record={r} save={save} store={store} />} />;
   if (route.name === 'certifier') return <CertifierSetup store={store} />;
   if (route.name === 'site') return <RecordLoader store={store} id={route.id} render={(r, save) => <SiteEvaluationView record={r} save={save} store={store} />} />;
   return <Home store={store} />;
@@ -105,6 +110,20 @@ function Home({ store }: { store: RecordStore }) {
     go(`#/se/${r.id}`);
   };
 
+  const loadJob = async (input: HTMLInputElement) => {
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    try {
+      const { record, mapImage } = readJob(await file.text());
+      if (mapImage) await store.putPhoto(mapImage.id, record.id, mapImage.blob);
+      await store.save(record);
+      go(`#/se/${record.id}`);
+    } catch (e: any) {
+      setProblem(`Could not load ${file.name}: ${e.message}`);
+    }
+  };
+
   return (
     <main class="page">
       <header class="bar">
@@ -113,6 +132,10 @@ function Home({ store }: { store: RecordStore }) {
       <button class="btn primary block" onClick={create}>
         New site evaluation
       </button>
+      <label class="btn block">
+        Load job file
+        <input class="visually-hidden" type="file" accept=".json,application/json" onChange={(e) => loadJob(e.currentTarget)} />
+      </label>
       {problem && (
         <p class="alert" role="alert">
           {problem}

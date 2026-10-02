@@ -134,3 +134,12 @@ export function missingItems(pit: TestPit): { horizons: string[][]; pit: string[
   if (depth != null && depth < 96 && !limited) p.push('pit is shallower than 8 ft: record the limiting layer or reason');
   return { horizons, pit: p };
 }
+
+export type PitStatus = 'not-started' | 'in-progress' | 'complete';
+
+/** Complete = GPS fix taken and nothing DEQ-4 asks for is blank (the same items the pit hints list). */
+export function pitStatus(pit: TestPit): PitStatus {
+  if (!pit.horizons.length && !pit.photos.length && !pit.location && !pit.notes) return 'not-started';
+  const m = missingItems(pit);
+  return pit.location && pit.horizons.length && !m.pit.length && m.horizons.every((h) => !h.length) ? 'complete' : 'in-progress';
+}

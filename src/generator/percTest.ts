@@ -3,6 +3,7 @@ import ExcelJS from 'exceljs';
 import { dateText, localNow, type FieldRecord, type LocalDateTime, type PercTest } from '../domain/fieldRecord';
 import { certificationState } from '../domain/certify';
 import { readingCalc, soakStatus, stopRule, tapeText } from '../domain/perc';
+import { asEntered } from './marking';
 import { dataUrlBytes, imageSize } from './page';
 import type { PercTestSnapshot, TemplateSet } from '../templates/types';
 import { splitAddr, styleCell } from './xlsx';
@@ -168,7 +169,7 @@ function fill(ws: ExcelJS.Worksheet, spec: PercTestSnapshot, record: FieldRecord
   };
   // The signature is applied only by the certifier's Certify tap, and only while the certified
   // content is unchanged; then the printed name, company and date are the certifier's.
-  const cert = certificationState(record, test);
+  const cert = certificationState(asEntered(record), test);
   if (cert.state === 'certified') {
     put(s(sig.testerName), cert.cert.name);
     put(s(sig.company), cert.cert.company);
