@@ -58,6 +58,8 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
   await page.goto('./?fake-dropbox');
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.reload();
+  await page.waitForFunction(() => !!(window as any).__fakeDropbox);
+  await page.evaluate((f) => (window as any).__fakeDropbox.mkdir(f), folder); // the office made the job folder
 
   // Start of day: load the job, confirm the flagged header values.
   await page.getByLabel('Load job file or backup').setInputFiles(jobPath);

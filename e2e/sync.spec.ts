@@ -23,6 +23,7 @@ test('Dropbox: sync, filing to convention beside office files, offline queue, pr
 
   const dropbox = page.getByRole('region', { name: 'Dropbox and office printing' });
   await expect(dropbox.getByText(DBX, { exact: true })).toBeVisible();
+  await expect(dropbox.getByText('Connected to Dropbox as Test Dropbox.')).toBeVisible();
   await dropbox.getByLabel('Your name').fill('Nathan Hart');
   await dropbox.getByRole('button', { name: 'Sync now' }).click();
   await expect(dropbox.getByText('Soil Logs.xlsx filed', { exact: false })).toBeVisible({ timeout: 30_000 });
@@ -75,4 +76,29 @@ test('Dropbox: sync, filing to convention beside office files, offline queue, pr
   await open.getByRole('button', { name: /Site evaluation in progress/ }).click();
   await expect(page.getByRole('heading', { name: '0999.007' })).toBeVisible();
   await expect(page.getByLabel('Owner name')).toHaveValue('Example Owner LLC');
+});
+
+test('Dropbox: the wrong account (0271) files nothing and asks for a folder that exists', async ({ page }) => {
+  await page.goto('./?fake-dropbox=Someone Else');
+  await expect(page.getByRole('heading', { name: 'Site evaluations' })).toBeVisible();
+  await page.waitForFunction(() => !!(window as any).__fakeDropbox);
+  await page.evaluate(() => (window as any).__fakeDropbox.mkdir('/Server/Server/Site Eval App')); // what that account had
+
+  await page.getByLabel('Load job file or backup').setInputFiles('test/fixtures/example-job.json');
+  const dropbox = page.getByRole('region', { name: 'Dropbox and office printing' });
+  await expect(dropbox.getByText('Connected to Dropbox as Someone Else.')).toBeVisible();
+  await expect(dropbox.getByRole('status').filter({ hasText: `${DBX} is not in the Dropbox account Someone Else. Nothing was filed.` })).toBeVisible({ timeout: 15_000 });
+  await shot(page, '74-wrong-account');
+
+  // The picker refuses the doubled root and folders missing from the account.
+  await dropbox.getByRole('button', { name: 'Choose another folder' }).click();
+  await dropbox.getByLabel('Go to folder').fill('/Server/Server/Site Eval App');
+  await dropbox.getByLabel('Go to folder').press('Enter');
+  await dropbox.getByRole('button', { name: 'Use this folder' }).click();
+  await expect(dropbox.getByRole('alert')).toContainText('has the server folder twice (/Server/Server)');
+  await dropbox.getByLabel('Go to folder').fill('0999');
+  await dropbox.getByLabel('Go to folder').press('Enter');
+  await dropbox.getByRole('button', { name: 'Use this folder' }).click();
+  await expect(dropbox.getByRole('alert')).toContainText('/Server/0999 is not in the Dropbox account Someone Else');
+  expect(await fakePaths(page)).toEqual([]);
 });

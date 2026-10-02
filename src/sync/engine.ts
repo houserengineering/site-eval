@@ -5,7 +5,7 @@ import { migrate, type FieldRecord } from '../domain/fieldRecord';
 import { mergeRecords, sameRecord, stampEdits } from '../domain/merge';
 import type { GeneratedFile } from '../generator';
 import { ConflictError, contentHash, type SyncAdapter } from './adapter';
-import { alternatePath, deliverablePath, dropboxFolder, fieldRecordPath, photoFolder, printQueuePath } from './naming';
+import { alternatePath, deliverablePath, dropboxFolder, fieldRecordPath, folderProblem, photoFolder, printQueuePath } from './naming';
 
 export interface PhotoStore {
   getPhoto(id: string): Promise<Blob | undefined>;
@@ -25,6 +25,21 @@ export class NoFolderError extends Error {
   }
 }
 
+/** The deliverable folder is not usable in the connected account; filing would put files where nobody looks. */
+export class MissingFolderError extends Error {}
+
+/** Throws unless the record's deliverable folder is a sound path that exists in this Dropbox account. */
+export async function checkFolder(record: FieldRecord, adapter: SyncAdapter) {
+  const folder = dropboxFolder(record.deliverableFolder);
+  if (!folder) throw new NoFolderError();
+  const problem = folderProblem(folder);
+  if (problem) throw new MissingFolderError(problem);
+  if (!(await adapter.folderExists(folder)))
+    throw new MissingFolderError(
+      `${folder} is not in the Dropbox account ${adapter.account || 'that is connected'}. Nothing was filed. Connect the Houser Dropbox account, or choose a folder that exists.`,
+    );
+}
+
 /** Canonical JSON (object keys sorted) so equal records hash equal on every device. */
 const canonical = (v: unknown): unknown =>
   Array.isArray(v) ? v.map(canonical) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canonical((v as any)[k])])) : v;
@@ -36,7 +51,7 @@ const encode = (r: FieldRecord) => new TextEncoder().encode(JSON.stringify(canon
  * photos both ways. Returns the merged record; `pulled` says whether it differs from `local`.
  */
 export async function syncRecord(local: FieldRecord, ctx: SyncContext): Promise<{ record: FieldRecord; pulled: boolean }> {
-  if (!dropboxFolder(local.deliverableFolder)) throw new NoFolderError();
+  await checkFolder(local, ctx.adapter);
   const path = fieldRecordPath(local);
   for (let attempt = 0; ; attempt++) {
     const remote = await ctx.adapter.read(path);
@@ -97,7 +112,7 @@ export async function fileDeliverables(
   ctx: SyncContext,
   at = new Date().toISOString(),
 ): Promise<{ record: FieldRecord; results: FilingResult[] }> {
-  if (!dropboxFolder(record.deliverableFolder)) throw new NoFolderError();
+  await checkFolder(record, ctx.adapter);
   const filed = { ...record.filed };
   const results: FilingResult[] = [];
   for (const f of files) {

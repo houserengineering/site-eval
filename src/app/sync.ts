@@ -6,13 +6,15 @@ import { mergeRecords, sameRecord, stampEdits } from '../domain/merge';
 import type { OutboxEntry, RecordStore } from '../storage/db';
 import { AuthError, FakeSync, OfflineError, type SyncAdapter } from '../sync/adapter';
 import { accountName, DropboxSync, finishSignIn, refreshAuth, startSignIn, type DropboxAuth } from '../sync/dropbox';
-import { fileDeliverables, NoFolderError, sendToPrintQueue, syncRecord, type FilingResult, type PrintableKind, type SyncContext } from '../sync/engine';
+import { fileDeliverables, MissingFolderError, NoFolderError, sendToPrintQueue, syncRecord, type FilingResult, type PrintableKind, type SyncContext } from '../sync/engine';
 import { photoSource } from './deliverables';
 import { loadTemplates } from './templates';
 
 export interface RecordSyncStatus {
   at?: string;
   error?: string;
+  /** The deliverable folder is not in the connected account (or is not a sound path): choose another. */
+  folderMissing?: boolean;
   filed?: FilingResult[];
   filedAt?: string;
   printed?: string[];
@@ -57,16 +59,19 @@ export class SyncService {
 
   async init(): Promise<string | undefined> {
     let returnTo: string | undefined;
-    const fake = new URLSearchParams(location.search).has('fake-dropbox') || safeGet(FAKE_FLAG) === '1';
+    const params = new URLSearchParams(location.search);
+    // `?fake-dropbox=Name` signs the fake in as another account (the 0271 wrong-account case).
+    const saved = safeGet(FAKE_FLAG);
+    const fake = params.has('fake-dropbox') ? params.get('fake-dropbox') || 'Test Dropbox' : saved === '1' ? 'Test Dropbox' : saved;
     if (fake) {
-      safeSet(FAKE_FLAG, '1');
-      const f: FakeSync = ((window as any).__fakeDropbox ??= new FakeSync());
+      safeSet(FAKE_FLAG, fake);
+      const f: FakeSync = ((window as any).__fakeDropbox ??= new FakeSync([], fake));
       // The fake follows the browser's connection, like the real API would.
       f.offline = !navigator.onLine;
       addEventListener('online', () => (f.offline = false));
       addEventListener('offline', () => (f.offline = true));
       this.adapter = f;
-      this.set({ connected: true, account: 'Test Dropbox', fake: true });
+      this.set({ connected: true, account: f.account, fake: true });
     } else {
       try {
         const done = await finishSignIn();
@@ -79,7 +84,7 @@ export class SyncService {
       }
       this.auth = await this.store.getSetting<DropboxAuth>('dropbox');
       if (this.auth) {
-        this.adapter = new DropboxSync(() => this.token());
+        this.adapter = new DropboxSync(() => this.token(), this.auth.accountName);
         this.set({ connected: true, account: this.auth.accountName });
       }
     }
@@ -134,7 +139,7 @@ export class SyncService {
     const auth: DropboxAuth = { accessToken: t, expiresAt: Date.now() + 4 * 3600_000, accountName: await accountName(t) };
     await this.store.setSetting('dropbox', auth);
     this.auth = auth;
-    this.adapter = new DropboxSync(() => this.token());
+    this.adapter = new DropboxSync(() => this.token(), auth.accountName);
     this.set({ connected: true, account: auth.accountName, error: undefined });
     if (this.state.who === 'This device') await this.setWho(auth.accountName);
     this.kick(0);
@@ -224,7 +229,7 @@ export class SyncService {
       for (const id of ids) {
         try {
           await this.syncOne(id);
-          this.setRecord(id, { error: undefined });
+          this.setRecord(id, { error: undefined, folderMissing: false });
         } catch (e: any) {
           if (e instanceof OfflineError) {
             this.set({ online: navigator.onLine });
@@ -235,7 +240,8 @@ export class SyncService {
             this.set({ error: e.message });
             break;
           }
-          this.setRecord(id, { error: e instanceof NoFolderError ? e.message : `Sync failed: ${e.message}` });
+          const folder = e instanceof NoFolderError || e instanceof MissingFolderError;
+          this.setRecord(id, { error: folder ? e.message : `Sync failed: ${e.message}`, folderMissing: e instanceof MissingFolderError });
         }
       }
     } finally {

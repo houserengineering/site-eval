@@ -4,8 +4,8 @@ import { addHorizon, addTestPit, newSiteEvaluation, updateTestPit, type FieldRec
 import { stampEdits } from '../src/domain/merge';
 import type { GeneratedFile } from '../src/generator';
 import { contentHash, FakeSync, OfflineError } from '../src/sync/adapter';
-import { fileDeliverables, sendToPrintQueue, syncRecord, type PhotoStore } from '../src/sync/engine';
-import { alternatePath, dropboxFolder, fieldRecordPath, printQueuePath } from '../src/sync/naming';
+import { fileDeliverables, MissingFolderError, sendToPrintQueue, syncRecord, type PhotoStore } from '../src/sync/engine';
+import { alternatePath, dropboxFolder, fieldRecordPath, folderProblem, printQueuePath } from '../src/sync/naming';
 
 const FOLDER = '0999\\Engineering\\Permitting\\DEQ Application\\supporting documents\\site evaluation\\';
 const DBX = '/Server/0999/Engineering/Permitting/DEQ Application/supporting documents/site evaluation';
@@ -45,7 +45,7 @@ describe('naming', () => {
 
 describe('two devices syncing one site evaluation', () => {
   it('merges edits to different pits and the same pit through Dropbox', async () => {
-    const dropbox = new FakeSync();
+    const dropbox = new FakeSync([DBX]);
     const phoneA = { adapter: dropbox, photos: photoStore(), who: 'Nathan' };
     const phoneB = { adapter: dropbox, photos: photoStore(), who: 'Justin' };
 
@@ -73,7 +73,7 @@ describe('two devices syncing one site evaluation', () => {
   });
 
   it('two devices that both edited settle: no endless rewrites', async () => {
-    const dropbox = new FakeSync();
+    const dropbox = new FakeSync([DBX]);
     const A = { adapter: dropbox, photos: photoStore(), who: 'Nathan' };
     const B = { adapter: dropbox, photos: photoStore(), who: 'Justin' };
     let a = (await syncRecord(record(), A)).record;
@@ -93,7 +93,7 @@ describe('two devices syncing one site evaluation', () => {
   });
 
   it('mirrors pit photos and the map image to the other device', async () => {
-    const dropbox = new FakeSync();
+    const dropbox = new FakeSync([DBX]);
     const A = { adapter: dropbox, photos: photoStore(), who: 'Nathan' };
     const B = { adapter: dropbox, photos: photoStore(), who: 'Justin' };
     let r = record();
@@ -106,7 +106,7 @@ describe('two devices syncing one site evaluation', () => {
   });
 
   it('retries when the other device writes between read and write', async () => {
-    const dropbox = new FakeSync();
+    const dropbox = new FakeSync([DBX]);
     const A = { adapter: dropbox, photos: photoStore(), who: 'Nathan' };
     const base = (await syncRecord(record(), A)).record;
     const other = stampEdits(base, updateTestPit(base, pit(base, '1').id, { notes: 'B' }), 'Justin', '2026-10-02T15:00:00Z');
@@ -127,18 +127,55 @@ describe('two devices syncing one site evaluation', () => {
   });
 
   it('offline: the sync fails with OfflineError and nothing is lost', async () => {
-    const dropbox = new FakeSync();
+    const dropbox = new FakeSync([DBX]);
     dropbox.offline = true;
     await expect(syncRecord(record(), { adapter: dropbox, photos: photoStore(), who: 'N' })).rejects.toBeInstanceOf(OfflineError);
   });
 
   it('refuses to sync before a folder is chosen', async () => {
-    await expect(syncRecord(newSiteEvaluation(), { adapter: new FakeSync(), photos: photoStore(), who: 'N' })).rejects.toThrow(/Choose the Dropbox folder/);
+    await expect(syncRecord(newSiteEvaluation(), { adapter: new FakeSync([DBX]), photos: photoStore(), who: 'N' })).rejects.toThrow(/Choose the Dropbox folder/);
+  });
+
+  it('refuses a deliverable folder that is not in the connected account (0271: wrong account)', async () => {
+    const other = new FakeSync([], 'Someone Else');
+    const err = syncRecord(record(), { adapter: other, photos: photoStore(), who: 'N' });
+    await expect(err).rejects.toBeInstanceOf(MissingFolderError);
+    await expect(err).rejects.toThrow(`${DBX} is not in the Dropbox account Someone Else`);
+    expect(other.writes).toEqual([]);
+    await expect(fileDeliverables(record(), [file('soil-log-pdf', 'x')], { adapter: other, photos: photoStore(), who: 'N' })).rejects.toBeInstanceOf(MissingFolderError);
+    expect(other.writes).toEqual([]);
+  });
+
+  it('a folder counts as existing when it holds files or was created empty', async () => {
+    const d = new FakeSync(['/Server/0271']);
+    await d.write('/Server/0999/x/a.txt', new Uint8Array());
+    expect(await d.folderExists('/server/0271')).toBe(true);
+    expect(await d.folderExists('/Server/0999')).toBe(true);
+    expect(await d.folderExists('/Server/0999/x')).toBe(true);
+    expect(await d.folderExists('/Server/Server')).toBe(false);
+    expect(await d.folderExists('/Server/0999/x/a.txt')).toBe(false);
+  });
+});
+
+describe('deliverable folder problems', () => {
+  it('rejects a doubled server root and the app folder itself', () => {
+    expect(folderProblem('/Server/Server/Site Eval App')).toMatch(/\/Server\/Server/);
+    expect(folderProblem('C:\\Users\\x\\Dropbox\\Server\\Server\\0271')).toMatch(/\/Server\/Server/);
+    expect(folderProblem(`${DBX}/Site Eval App`)).toMatch(/folder above/);
+    expect(folderProblem('/Server')).toMatch(/project folder/);
+    expect(folderProblem(FOLDER)).toBeUndefined();
+  });
+
+  it('syncing a doubled-root folder fails before anything is written', async () => {
+    const d = new FakeSync(['/Server/Server/Site Eval App']);
+    const r = { ...record(), deliverableFolder: '/Server/Server/Site Eval App' };
+    await expect(syncRecord(r, { adapter: d, photos: photoStore(), who: 'N' })).rejects.toBeInstanceOf(MissingFolderError);
+    expect(d.writes).toEqual([]);
   });
 });
 
 describe('filing deliverables', () => {
-  const ctx = (dropbox = new FakeSync()) => ({ adapter: dropbox, photos: photoStore(), who: 'Nathan' });
+  const ctx = (dropbox = new FakeSync([DBX])) => ({ adapter: dropbox, photos: photoStore(), who: 'Nathan' });
 
   it('writes the conventional names, then replaces only its own unchanged files', async () => {
     const c = ctx();
@@ -184,7 +221,7 @@ describe('filing deliverables', () => {
   });
 
   it('a second device recognises files the first one filed, once the record syncs', async () => {
-    const dropbox = new FakeSync();
+    const dropbox = new FakeSync([DBX]);
     const A = ctx(dropbox);
     const B = { ...ctx(dropbox), who: 'Justin' };
     const r = (await syncRecord(record(), A)).record;

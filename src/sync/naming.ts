@@ -39,6 +39,19 @@ export function dropboxFolder(folder: string): string {
   return `${SERVER_ROOT}/${f}`;
 }
 
+/**
+ * Why a folder cannot be the deliverable folder, or undefined if it can. On 0271 the phone filed
+ * into `/Server/Server/Site Eval App` (a doubled root), which reached nobody at the office.
+ */
+export function folderProblem(folder: string): string | undefined {
+  const f = dropboxFolder(folder);
+  if (!f) return undefined;
+  if (/^\/server\/server(\/|$)/i.test(f)) return `${f} has the server folder twice (${SERVER_ROOT}${SERVER_ROOT}). Choose the project folder under ${SERVER_ROOT}.`;
+  if (f.toLowerCase() === SERVER_ROOT.toLowerCase()) return `Choose a project folder under ${SERVER_ROOT}, not ${SERVER_ROOT} itself.`;
+  if (f.toLowerCase().endsWith(`/${APP_FOLDER.toLowerCase()}`)) return `${APP_FOLDER} is where the app keeps its own files. Choose the folder above it.`;
+  return undefined;
+}
+
 export const appFolder = (r: FieldRecord) => `${dropboxFolder(r.deliverableFolder)}/${APP_FOLDER}`;
 export const photoFolder = (r: FieldRecord) => `${appFolder(r)}/Photos`;
 /** The synced field record. Keyed by record id so every device finds the same file. */

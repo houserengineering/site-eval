@@ -41,7 +41,15 @@ async function failure(res: Response): Promise<Error> {
 const toFile = (m: any): RemoteFile => ({ path: m.path_display, name: m.name, folder: false, rev: m.rev, hash: m.content_hash });
 
 export class DropboxSync implements SyncAdapter {
-  constructor(private token: () => Promise<string>) {}
+  constructor(
+    private token: () => Promise<string>,
+    public account = '',
+  ) {}
+
+  async folderExists(path: string): Promise<boolean> {
+    const m = await this.rpc('files/get_metadata', { path });
+    return m?.['.tag'] === 'folder';
+  }
 
   private async rpc(endpoint: string, body: unknown): Promise<any | null> {
     const run = async () =>

@@ -365,6 +365,9 @@ button.row-link { width: 100%; text-align: left; font: inherit; color: inherit; 
 button.row-link:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .open-files { border: 2px solid var(--primary); border-radius: 8px; }
 .connect details { margin: 4px 0 12px; }
+.account { margin: 4px 0 12px; }
+.account p { margin: 0; }
+.connect .hint { margin-bottom: 8px; }
 
 /* Rule checks: advisory warnings with the rule text and its source on tap. */
 .rules { margin: 16px 0; }

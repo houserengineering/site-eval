@@ -30,6 +30,10 @@ export interface SyncAdapter {
   stat(path: string): Promise<RemoteFile | null>;
   read(path: string): Promise<{ bytes: Uint8Array; file: RemoteFile } | null>;
   write(path: string, bytes: Uint8Array, opts?: WriteOptions): Promise<RemoteFile>;
+  /** Whether `path` is a folder in this account. Writing creates missing parents, so check first. */
+  folderExists(path: string): Promise<boolean>;
+  /** The signed-in account's display name, for messages. */
+  readonly account: string;
 }
 
 /** The file changed (or appeared) since it was read. */
@@ -56,9 +60,27 @@ const nameOf = (path: string) => path.slice(path.lastIndexOf('/') + 1);
 /** In-memory Dropbox: case-insensitive paths, revisions, content hashes, and an offline switch. */
 export class FakeSync implements SyncAdapter {
   files = new Map<string, { path: string; bytes: Uint8Array; rev: string; hash: string }>();
+  /** Folders created empty; folders holding files exist implicitly. */
+  folders = new Set<string>();
   offline = false;
   writes: string[] = [];
   private revs = 0;
+
+  constructor(folders: string[] = [], public account = 'Test Dropbox') {
+    for (const f of folders) this.mkdir(f);
+  }
+
+  mkdir(path: string) {
+    this.folders.add(key(path));
+  }
+
+  async folderExists(path: string): Promise<boolean> {
+    this.check();
+    const k = key(path).replace(/\/+$/, '');
+    if (!k || this.folders.has(k)) return true;
+    const prefix = `${k}/`;
+    return [...this.folders].some((f) => f.startsWith(prefix)) || [...this.files.keys()].some((f) => f.startsWith(prefix));
+  }
 
   private check() {
     if (this.offline) throw new OfflineError('No connection');

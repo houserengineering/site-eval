@@ -7,7 +7,7 @@ import { readJob } from '../domain/job';
 import { migrate } from '../domain/fieldRecord';
 import type { RecordStore } from '../storage/db';
 import type { RemoteEntry } from '../sync/adapter';
-import { APP_FOLDER, dropboxFolder, isFieldRecordName, SERVER_ROOT } from '../sync/naming';
+import { APP_FOLDER, dropboxFolder, folderProblem, isFieldRecordName, SERVER_ROOT } from '../sync/naming';
 import { syncRecord, type FilingResult } from '../sync/engine';
 import { go } from './App';
 import { download } from './deliverables';
@@ -74,12 +74,13 @@ export function DropboxSection(props: { record: FieldRecord; save: (r: FieldReco
       <h2 id="dbx">Dropbox and office printing</h2>
       <SyncStatus record={r} />
       {!s.connected && <ConnectDropbox />}
-      {s.connected && <TextField label="Your name" value={s.who} onInput={(v) => sync.setWho(v)} autoCapitalize="words" hint={`Shown on your edits as "edited by". Dropbox: ${s.account}.`} />}
+      {s.connected && <DropboxAccount account={s.account} fake={s.fake} />}
+      {s.connected && <TextField label="Your name" value={s.who} onInput={(v) => sync.setWho(v)} autoCapitalize="words" hint={'Shown on your edits as "edited by".'} />}
       <p class="field-label">Deliverables folder</p>
       <p class="path">{r.deliverableFolder ? dropboxFolder(r.deliverableFolder) : 'Not chosen'}</p>
       {s.connected && !choosing && (
-        <button class="btn small" onClick={() => setChoosing(true)}>
-          {r.deliverableFolder ? 'Change folder' : 'Choose folder'}
+        <button class={`btn ${rs.folderMissing ? 'primary' : 'small'}`} onClick={() => setChoosing(true)}>
+          {rs.folderMissing ? 'Choose another folder' : r.deliverableFolder ? 'Change folder' : 'Choose folder'}
         </button>
       )}
       {choosing && (
@@ -128,6 +129,23 @@ export function DropboxSection(props: { record: FieldRecord; save: (r: FieldReco
   );
 }
 
+/** Which Dropbox account files go to. On 0271 the phone was signed in to another account and nothing reached the office. */
+function DropboxAccount({ account, fake }: { account: string; fake: boolean }) {
+  return (
+    <div class="account">
+      <p>
+        Connected to Dropbox as <strong>{account || 'an unnamed account'}</strong>.
+      </p>
+      <p class="hint">Files go to this account's Server folder. If this is not the Houser account, disconnect and connect again.</p>
+      {!fake && (
+        <button class="btn small" onClick={() => syncService().disconnect()}>
+          Disconnect Dropbox
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function ConnectDropbox() {
   const [token, setToken] = useState('');
   const [error, setError] = useState<string>();
@@ -144,6 +162,10 @@ export function ConnectDropbox() {
       <button class="btn primary block" onClick={() => syncService().connect()}>
         Connect Dropbox
       </button>
+      <p class="hint">
+        Sign in with your own Houser Engineering Dropbox login, the one that shows the Server folder. Justin's admin account cannot authorize individual apps. If Dropbox opens a
+        different account, sign out of it at dropbox.com first.
+      </p>
       <details>
         <summary>Use an access token instead</summary>
         <TextField label="Access token" value={token} onInput={setToken} autoCapitalize="off" hint="Generated in the Dropbox app console; lasts about 4 hours." />
@@ -188,6 +210,17 @@ export function FolderBrowser(props: {
       live = false;
     };
   }, [folder]);
+  const pick = async () => {
+    const problem = folderProblem(folder);
+    if (problem) return setError(problem);
+    try {
+      const adapter = syncService().getAdapter()!;
+      if (!(await adapter.folderExists(folder))) return setError(`${folder} is not in the Dropbox account ${adapter.account}. Choose a folder that exists.`);
+    } catch (e: any) {
+      return setError(e.message);
+    }
+    props.onPick!(folder);
+  };
   const up = folder.slice(0, folder.lastIndexOf('/')) || SERVER_ROOT;
   const folders = entries?.filter((e) => e.folder) ?? [];
   return (
@@ -232,7 +265,7 @@ export function FolderBrowser(props: {
       )}
       {props.onPick && (
         <div class="btn-row">
-          <button class="btn primary" onClick={() => props.onPick!(folder)}>
+          <button class="btn primary" onClick={pick}>
             {props.action ?? 'Choose'}
           </button>
           <button class="btn" onClick={props.onCancel}>
