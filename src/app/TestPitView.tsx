@@ -1,3 +1,4 @@
+import { lastEdit, pitPath } from '../domain/merge';
 import {
   addHorizon,
   copyHorizons,
@@ -49,6 +50,7 @@ export function TestPitView(props: { record: FieldRecord; pitId: string; save: (
         <a class="back" href={back} aria-label="Back to site evaluation">‹</a>
         <h1>Test pit {pit.label}</h1>
       </header>
+      <EditedBy record={props.record} pitId={pit.id} />
 
       <TextField label="Test pit #" value={pit.label} onInput={(v) => savePit({ label: v })} autoCapitalize="characters" />
 
@@ -255,5 +257,15 @@ function PitSummary(props: { pit: TestPit; missing: string[]; save: (patch: Part
       )}
       {props.missing.length > 0 && <p class="hint-warn">Still needed: {props.missing.join(', ')}</p>}
     </section>
+  );
+}
+
+function EditedBy(props: { record: FieldRecord; pitId: string }) {
+  const e = lastEdit(props.record, pitPath(props.pitId));
+  if (!e || new Set(Object.values(props.record.edits).map((x) => x.by)).size < 2) return null;
+  return (
+    <p class="hint">
+      Last edited by {e.by}, {new Date(e.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+    </p>
   );
 }

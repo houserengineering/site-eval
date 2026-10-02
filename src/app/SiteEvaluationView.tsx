@@ -13,6 +13,8 @@ import { loadTemplates } from './templates';
 import { STATUS_TEXT } from './SiteMapView';
 import { UnconfirmedNotice } from './Unconfirmed';
 import { pitStatus } from '../domain/soilLogText';
+import { lastEdit, pitPath } from '../domain/merge';
+import { DropboxSection, SyncStatus } from './SyncPanel';
 
 export function SiteEvaluationView(props: { record: FieldRecord; save: (r: FieldRecord) => void; store: RecordStore }) {
   const r = props.record;
@@ -67,6 +69,8 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
         <h1>{r.header.projectNumber || 'New site evaluation'}</h1>
       </header>
 
+      <SyncStatus record={r} />
+
       {(r.siteMap || r.testPits.some((p) => p.planned || p.location)) && (
         <a class="btn primary block" href={`#/se/${r.id}/map`}>
           Map
@@ -106,6 +110,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
                   {p.horizons.length} horizon{p.horizons.length === 1 ? '' : 's'}
                   {p.location ? ' · GPS' : ''}
                   {p.photos.length ? ` · ${p.photos.length} photo${p.photos.length === 1 ? '' : 's'}` : ''}
+                  {editedBy(r, p.id)}
                 </span>
               </a>
             </li>
@@ -180,6 +185,8 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
         )}
       </section>
 
+      <DropboxSection record={r} save={props.save} store={props.store} />
+
       <section class="danger-zone">
         <button class="btn danger" onClick={remove}>
           Delete site evaluation
@@ -187,6 +194,13 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
       </section>
     </main>
   );
+}
+
+/** "edited by" note once a second person has edited the site evaluation. */
+function editedBy(r: FieldRecord, pitId: string): string {
+  const editors = new Set(Object.values(r.edits).map((e) => e.by));
+  const e = lastEdit(r, pitPath(pitId));
+  return e && editors.size > 1 ? ` · edited by ${e.by}` : '';
 }
 
 function pitCounts(r: FieldRecord): string {

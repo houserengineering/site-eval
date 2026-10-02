@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { newSiteEvaluation, type FieldRecord } from '../domain/fieldRecord';
 import { openStore, type RecordStore } from '../storage/db';
 import type { PrintKind } from '../generator';
@@ -10,6 +10,9 @@ import { SiteEvaluationView } from './SiteEvaluationView';
 import { SiteMapView } from './SiteMapView';
 import { readJob } from '../domain/job';
 import { TestPitView } from './TestPitView';
+import { setSyncService, SyncService, syncService } from './sync';
+import { DropboxOpenView } from './SyncPanel';
+import { readBackup, isBackup } from '../domain/backup';
 
 type Route =
   | { name: 'home' }
@@ -18,7 +21,8 @@ type Route =
   | { name: 'perc'; id: string; testId: string }
   | { name: 'print'; id: string; kind: PrintKind }
   | { name: 'map'; id: string }
-  | { name: 'certifier' };
+  | { name: 'certifier' }
+  | { name: 'dropbox' };
 
 function parseRoute(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean);
@@ -28,6 +32,7 @@ function parseRoute(hash: string): Route {
   if (parts[0] === 'se' && parts[1] && parts[2] === 'map') return { name: 'map', id: parts[1] };
   if (parts[0] === 'se' && parts[1]) return { name: 'site', id: parts[1] };
   if (parts[0] === 'certifier') return { name: 'certifier' };
+  if (parts[0] === 'dropbox') return { name: 'dropbox' };
   return { name: 'home' };
 }
 
@@ -41,7 +46,16 @@ export function App() {
   const [route, setRoute] = useState(() => parseRoute(location.hash));
 
   useEffect(() => {
-    openStore().then(setStore, (e) => setError(`Storage unavailable on this device: ${e.message}`));
+    openStore().then(
+      async (s) => {
+        const sync = new SyncService(s);
+        setSyncService(sync);
+        const returnTo = await sync.init();
+        if (returnTo) location.hash = returnTo;
+        setStore(s);
+      },
+      (e) => setError(`Storage unavailable on this device: ${e.message}`),
+    );
     const onHash = () => setRoute(parseRoute(location.hash));
     addEventListener('hashchange', onHash);
     return () => removeEventListener('hashchange', onHash);
@@ -54,6 +68,7 @@ export function App() {
   if (route.name === 'print') return <RecordLoader store={store} id={route.id} render={(r, save) => <PrintView record={r} kind={route.kind} store={store} save={save} />} />;
   if (route.name === 'map') return <RecordLoader store={store} id={route.id} render={(r, save) => <SiteMapView record={r} save={save} store={store} />} />;
   if (route.name === 'certifier') return <CertifierSetup store={store} />;
+  if (route.name === 'dropbox') return <DropboxOpenView store={store} />;
   if (route.name === 'site') return <RecordLoader store={store} id={route.id} render={(r, save) => <SiteEvaluationView record={r} save={save} store={store} />} />;
   return <Home store={store} />;
 }
@@ -64,14 +79,26 @@ function RecordLoader(props: {
   render: (r: FieldRecord, save: (r: FieldRecord) => void) => preact.ComponentChildren;
 }) {
   const [record, setRecord] = useState<FieldRecord | null>();
+  const current = useRef<FieldRecord | null | undefined>(undefined);
   const [error, setError] = useState<string>();
   useEffect(() => {
     setRecord(undefined);
     props.store.get(props.id).then((r) => setRecord(r ?? null), (e) => setError(e.message));
+    const sync = syncService();
+    sync.watch(props.id);
+    const off = sync.onRecord((r) => r.id === props.id && setRecord(r));
+    return () => {
+      off();
+      sync.watch(undefined);
+    };
   }, [props.id]);
-  const save = (r: FieldRecord) => {
-    setRecord(r);
-    props.store.save(r).catch((e) => setError(`Not saved: ${e.message}`));
+  current.current = record;
+  const save = (next: FieldRecord) => {
+    const prev = current.current;
+    const stamped = prev ? syncService().recordEdited(prev, next) : next;
+    current.current = stamped;
+    setRecord(stamped);
+    props.store.save(stamped).catch((e) => setError(`Not saved: ${e.message}`));
   };
   if (error) return <main class="page"><p class="alert" role="alert">{error}</p></main>;
   if (record === undefined) return <main class="page" aria-busy="true" />;
@@ -115,9 +142,23 @@ function Home({ store }: { store: RecordStore }) {
     input.value = '';
     if (!file) return;
     try {
-      const { record, mapImage } = readJob(await file.text());
+      const text = await file.text();
+      let json: unknown;
+      try {
+        json = JSON.parse(text);
+      } catch {}
+      if (isBackup(json)) {
+        const { record, photos } = readBackup(json);
+        if ((await store.get(record.id)) && !confirm('This site evaluation is already on this device. Replace it with the backup?')) return;
+        for (const p of photos) await store.putPhoto(p.id, record.id, p.blob);
+        await store.save(record);
+        go(`#/se/${record.id}`);
+        return;
+      }
+      const { record, mapImage } = readJob(text);
       if (mapImage) await store.putPhoto(mapImage.id, record.id, mapImage.blob);
       await store.save(record);
+      if (record.deliverableFolder) await syncService().queue(record.id, { deliverables: false });
       go(`#/se/${record.id}`);
     } catch (e: any) {
       setProblem(`Could not load ${file.name}: ${e.message}`);
@@ -132,8 +173,11 @@ function Home({ store }: { store: RecordStore }) {
       <button class="btn primary block" onClick={create}>
         New site evaluation
       </button>
+      <a class="btn block" href="#/dropbox">
+        Open from Dropbox
+      </a>
       <label class="btn block">
-        Load job file
+        Load job file or backup
         <input class="visually-hidden" type="file" accept=".json,application/json" onChange={(e) => loadJob(e.currentTarget)} />
       </label>
       {problem && (

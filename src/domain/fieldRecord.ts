@@ -1,8 +1,9 @@
 // Field record: everything captured on a site evaluation. Persisted as JSON on device
 // and (later) in Dropbox, so the shape is versioned and migrated on load.
 import type { Georef } from './georef';
+import type { Stamp } from './merge';
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 /** Header values are always text: `0999.001`, `SE 00001`, `3B` print exactly as entered. */
 export interface Header {
@@ -187,6 +188,18 @@ export interface FieldRecord {
   siteMap: SiteMap | null;
   /** Dropbox folder the deliverables are filed to ('' = not chosen yet). */
   deliverableFolder: string;
+  /** Who changed each field and when (merge metadata; see domain/merge.ts). */
+  edits: Record<string, Stamp>;
+  /** Files this app wrote to Dropbox, by lower-case path: the only files it may overwrite. */
+  filed: Record<string, FiledFile>;
+}
+
+export interface FiledFile {
+  /** Path as written (original case). */
+  path: string;
+  /** Dropbox content hash of the bytes the app wrote; a different hash means someone else changed the file. */
+  hash: string;
+  at: string;
 }
 
 export const emptyHeader = (): Header => ({
@@ -216,6 +229,8 @@ export function newSiteEvaluation(header: Partial<Header> = {}): FieldRecord {
     unconfirmed: {},
     siteMap: null,
     deliverableFolder: '',
+    edits: {},
+    filed: {},
   };
 }
 
@@ -447,6 +462,8 @@ const migrations: Record<number, (r: any) => any> = {
     siteMap: null,
     deliverableFolder: '',
   }),
+  // v5 → v6: field edit stamps for merging, files the app filed to Dropbox.
+  5: (r) => ({ ...r, schemaVersion: 6, edits: {}, filed: {} }),
 };
 
 export function migrate(raw: unknown): FieldRecord {

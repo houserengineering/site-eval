@@ -345,3 +345,20 @@ section > h2:first-child { margin-top: 24px; }
 .confirm-box li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0; }
 .confirm-why { display: block; font-size: 0.95rem; }
 .confirm-box .btn { color: #3d2a00; border-color: #3d2a00; background: #ffffff; }
+
+/* Dropbox sync */
+.sync-line { margin: 8px 0; padding: 8px 12px; border-radius: 6px; font-weight: 600; font-size: 0.95rem; border-left: 4px solid; }
+.sync-line.ok { color: var(--ok); border-color: var(--ok); background: var(--surface); }
+.sync-line.warn { color: #5c3c00; background: #fff3cd; border-color: #8a5a00; }
+.sync-line.bad { color: var(--danger); border-color: var(--danger); background: var(--surface); }
+.field-label { font-weight: 650; margin: 12px 0 2px; }
+.path { overflow-wrap: anywhere; font-size: 0.95rem; margin: 2px 0 8px; }
+.filed-list { margin: 4px 0 12px; padding-left: 20px; }
+.filed-list li { margin: 4px 0; }
+.filed-list .path { font-weight: 650; }
+.browser { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 8px 0; }
+.browser .path { font-weight: 650; }
+button.row-link { width: 100%; text-align: left; font: inherit; color: inherit; background: none; cursor: pointer; }
+button.row-link:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.open-files { border: 2px solid var(--primary); border-radius: 8px; }
+.connect details { margin: 4px 0 12px; }

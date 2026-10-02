@@ -52,7 +52,7 @@ test('create a site evaluation, log a test pit, export the soil log, work offlin
 
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export soil logs (Excel)' }).click()]);
   expect(download.suggestedFilename()).toBe('0999.001 Soil Logs.xlsx');
-  await expect(page.getByRole('status')).toContainText('Saved 0999.001 Soil Logs.xlsx');
+  await expect(page.getByRole('status').filter({ hasText: 'Saved 0999' })).toContainText('Saved 0999.001 Soil Logs.xlsx');
   await shot(page, '04-exported');
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(readFileSync(await download.path()) as any);

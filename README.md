@@ -21,7 +21,11 @@ npm run dev
 - `src/generator/` — `generate(fieldRecord, templates) → files`, the deliverable seam.
 - `src/templates/soil-log/` — snapshot of the office `Soil Log Template.xls` (layout only, sample values cleared, source SHA-256 recorded). Refresh with `tools/snapshot-soil-log.ps1` on the office PC.
 - `src/templates/perc-test/` — snapshot of the office `Perc Test.xlsx` (cells located by label; sample values cleared). Refresh with `python tools/snapshot_perc_test.py "%USERPROFILE%\Dropbox\Server\Office\Tools\Wastewater Tools\SEPTIC\SITE EVALUATION\Perc Test.xlsx" src/templates/perc-test`.
-- `src/storage/` — on-device IndexedDB persistence.
+- `src/storage/` — on-device IndexedDB persistence and the sync outbox.
+- `src/domain/merge.ts` — field-level last-writer-wins merge with "edited by" stamps.
+- `src/sync/` — Dropbox seam: `SyncAdapter` (Dropbox HTTP API with PKCE sign-in, and `FakeSync` in memory), the engine (sync record, mirror photos, file deliverables, print queue) and naming. Deliverables are filed unnumbered (`Soil Logs.xlsx/.pdf`, `Percolation Tests.xlsx/.pdf`, `Site Evaluation.pdf`) in the chosen folder; app data goes in `Site Eval App/`. The app never replaces a file it did not write (or one edited since): it files `… (Site Eval App).ext` beside it.
+
+`DROPBOX_TOKEN_FILE=<file holding an access token> npx vitest run test/dropbox.live.test.ts` runs the real Dropbox round trip (writes only under `/Server/Office/Site Eval App/Live Test/`). `?fake-dropbox` runs the app against the in-memory fake (end-to-end tests).
 - `src/app/` — the Preact UI.
 
 No client or job data is committed to this public repository. Job files are loaded on the device.

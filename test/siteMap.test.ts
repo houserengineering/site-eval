@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
-import { addHorizon, addTestPit, confirmHeaderField, migrate, newSiteEvaluation, updateHeader, updateTestPit } from '../src/domain/fieldRecord';
+import { addHorizon, addTestPit, confirmHeaderField, migrate, newSiteEvaluation, SCHEMA_VERSION, updateHeader, updateTestPit } from '../src/domain/fieldRecord';
 import { pitStatus } from '../src/domain/soilLogText';
 import { lonLatToPx, pxToLonLat, type Georef } from '../src/domain/georef';
 import { readJob } from '../src/domain/job';
@@ -155,7 +155,7 @@ describe('schema v5', () => {
     delete v4.siteMap;
     delete v4.deliverableFolder;
     const r = migrate(v4);
-    expect(r.schemaVersion).toBe(5);
+    expect(r.schemaVersion).toBe(SCHEMA_VERSION);
     expect(r.unconfirmed).toEqual({});
     expect(r.siteMap).toBeNull();
     expect(r.deliverableFolder).toBe('');
