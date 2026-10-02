@@ -1,4 +1,5 @@
 import { useId, useState } from 'preact/hooks';
+import { draftShown, tapeShown, wholeInches, type Draft } from './draft';
 
 export function TextField(props: {
   label: string;
@@ -39,12 +40,12 @@ export function NumberField(props: {
 }) {
   const id = useId();
   // Keep the typed text (e.g. "5." on the way to "5.5") while it parses to the stored value.
-  const [draft, setDraft] = useState(props.value == null ? '' : String(props.value));
+  const [draft, setDraft] = useState<Draft>({ text: props.value == null ? '' : String(props.value), base: props.value });
   const parse = (t: string) => {
     const n = Number(t.trim());
     return t.trim() === '' || !Number.isFinite(n) ? null : n;
   };
-  const shown = parse(draft) === props.value ? draft : props.value == null ? '' : String(props.value);
+  const shown = draftShown(draft, props.value, parse(draft.text) === props.value, props.value == null ? '' : String(props.value));
   return (
     <div class="field">
       <label for={id}>{props.label}</label>
@@ -57,7 +58,7 @@ export function NumberField(props: {
           readOnly={props.readOnly}
           placeholder={props.placeholder}
           onInput={(e) => {
-            setDraft(e.currentTarget.value);
+            setDraft({ text: e.currentTarget.value, base: props.value });
             props.onInput(parse(e.currentTarget.value));
           }}
         />
@@ -165,10 +166,10 @@ const SIXTEENTHS = Array.from({ length: 16 }, (_, i) => {
 /** Tape reading: whole inches plus sixteenths (no "/" needed on a phone keypad). */
 export function TapeField(props: { label: string; value: number | null; onInput: (v: number | null) => void }) {
   const id = useId();
-  const whole = props.value == null ? null : Math.floor(Math.round(props.value * 16) / 16);
+  const whole = wholeInches(props.value);
   const six = props.value == null ? 0 : Math.round(props.value * 16) - (whole ?? 0) * 16;
-  const [draft, setDraft] = useState(whole == null ? '' : String(whole));
-  const shown = draft.trim() === '' ? (whole == null ? '' : String(whole)) : Number(draft) === whole ? draft : String(whole ?? '');
+  const [draft, setDraft] = useState<Draft>({ text: whole == null ? '' : String(whole), base: props.value });
+  const shown = tapeShown(draft, props.value);
   const set = (w: string, s: number) => {
     const n = Number(w.trim());
     // Whole inches take the sixteenths pick; a typed decimal (19.5) is kept, to the nearest 1/16.
@@ -185,7 +186,7 @@ export function TapeField(props: { label: string; value: number | null; onInput:
           value={shown}
           autoComplete="off"
           onInput={(e) => {
-            setDraft(e.currentTarget.value);
+            setDraft({ text: e.currentTarget.value, base: props.value });
             set(e.currentTarget.value, six);
           }}
         />

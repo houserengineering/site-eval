@@ -101,6 +101,14 @@ test('perc test: soak branch, timed readings with alerts, reload, concurrent tes
   expect(ws.getCell('D2').value).toBe('Example Owner');
   expect(ws.getCell('B8').value).toBe('Lot 19 Test #1');
   expect(ws.getCell('J2').value).toBe('10/2/2026 @ 8:00 AM');
-  expect((ws.getCell('K15').value as any).result).toBeCloseTo(7.5, 6);
+  // The clock keeps running (the app's timers and rendering need it), so each reading lasts 15 min
+  // plus however long the Record tap took in real time: 7.508 mpi on a loaded parallel run (ticket
+  // 14). Check the sheet's own arithmetic and the drop exactly, and the interval within tap delay.
+  const interval = (ws.getCell('D15').value as any).result as number;
+  const drop = (ws.getCell('I15').value as any).result ?? ws.getCell('I15').value;
+  expect(drop).toBeCloseTo(2, 6);
+  expect(interval).toBeGreaterThanOrEqual(15);
+  expect(interval).toBeLessThan(15.5);
+  expect((ws.getCell('K15').value as any).result).toBeCloseTo(interval / drop, 9);
   expect((ws.getCell('K15').value as any).formula).toBe('IF(I15>0,D15/I15,"")');
 });
