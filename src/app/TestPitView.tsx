@@ -21,6 +21,7 @@ import { MunsellPicker } from './MunsellPicker';
 import { PitMedia } from './PitMedia';
 import { TextureGuide } from './TextureGuide';
 import { pitWarnings } from '../domain/rules';
+import { hueWarning } from '../domain/hueCheck';
 import { RuleWarnings } from './RuleWarnings';
 
 export function TestPitView(props: { record: FieldRecord; pitId: string; save: (r: FieldRecord) => void; store: RecordStore }) {
@@ -47,7 +48,7 @@ export function TestPitView(props: { record: FieldRecord; pitId: string; save: (
   };
 
   return (
-    <main class="page">
+    <main class="page pit-page">
       <header class="bar">
         <a class="back" href={back} aria-label="Back to site evaluation">‹</a>
         <h1>Test pit {pit.label}</h1>
@@ -66,6 +67,7 @@ export function TestPitView(props: { record: FieldRecord; pitId: string; save: (
         <HorizonCard
           key={hz.id}
           pit={pit}
+          pits={r.testPits}
           index={i}
           missing={missing.horizons[i]}
           open={i === pit.horizons.length - 1}
@@ -97,6 +99,8 @@ export function TestPitView(props: { record: FieldRecord; pitId: string; save: (
 
 function HorizonCard(props: {
   pit: TestPit;
+  /** Every wall on the site, for the hue check. */
+  pits: TestPit[];
   index: number;
   missing: string[];
   open: boolean;
@@ -110,6 +114,7 @@ function HorizonCard(props: {
   const structureless = V.STRUCTURELESS.includes(hz.structure.shape);
   const quickBottoms = i === 0 ? V.FIRST_BOTTOMS : V.PIT_BOTTOMS;
   const [rockProblem, setRockProblem] = useState<string>();
+  const hueCheck = hueWarning(props.pits, hz);
 
   return (
     <section class="card" aria-label={`Horizon ${i + 1}`}>
@@ -121,7 +126,7 @@ function HorizonCard(props: {
           </span>
         </summary>
 
-        <Chips label="Horizon" options={V.HORIZONS} value={hz.designation} onChange={(v) => set({ designation: v })} other />
+        <Chips label="Horizon" options={V.HORIZONS} value={hz.designation} onChange={(v) => set({ designation: v })} other asTyped />
 
         <div class="pair">
           <NumberField label="Top" value={hz.topIn} onInput={(v) => set({ topIn: v })} readOnly={i > 0} hint={i > 0 ? 'Bottom of horizon above' : undefined} />
@@ -130,6 +135,14 @@ function HorizonCard(props: {
         <Chips label="Quick bottom" options={quickBottoms.map((n) => ({ value: String(n), label: `${n}"` }))} value={String(hz.bottomIn ?? '')} onChange={(v) => set({ bottomIn: v ? Number(v) : null })} />
 
         <MunsellPicker label="Color (Munsell)" value={hz.color} onChange={(m) => set({ color: { ...hz.color, ...m, other: '' } })} />
+        {hueCheck && (
+          <p class="hint-warn" role="status">
+            {hueCheck}{' '}
+            <button type="button" class="btn small" onClick={() => set({ color: { ...hz.color, keptHue: hz.color.hue } })}>
+              Keep {hz.color.hue}
+            </button>
+          </p>
+        )}
         <div class="pair">
           <Chips label="Moisture" options={V.MOISTURE} value={hz.color.moisture} onChange={(v) => set({ color: { ...hz.color, moisture: v } })} />
           <Chips label="State" options={V.PHYSICAL_STATE} value={hz.color.physicalState} onChange={(v) => set({ color: { ...hz.color, physicalState: v } })} />

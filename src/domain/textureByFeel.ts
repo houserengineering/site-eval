@@ -60,9 +60,9 @@ export const TEXTURE_STEPS: Record<TextureStepId, TextureStep> = {
   length: {
     question: 'How long is the ribbon before it breaks?',
     answers: [
-      { value: 'weak', label: 'Weak: under 1 in (2.5 cm)', next: 'feelWeak' },
-      { value: 'medium', label: 'Medium: 1–2 in (2.5–5 cm)', next: 'feelMedium' },
-      { value: 'strong', label: 'Strong: 2 in (5 cm) or longer', next: 'feelStrong' },
+      { value: 'weak', label: 'Weak: under 1 in', next: 'feelWeak' },
+      { value: 'medium', label: 'Medium: 1–2 in', next: 'feelMedium' },
+      { value: 'strong', label: 'Strong: 2 in or longer', next: 'feelStrong' },
     ],
   },
   feelWeak: feel('SANDY LOAM', 'SILT LOAM', 'LOAM'),

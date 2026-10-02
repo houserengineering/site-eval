@@ -43,4 +43,10 @@ describe('texture by feel (Thien flowchart)', () => {
   it('rejects an answer the current step does not offer', () => {
     expect(() => walk(['maybe'])).toThrow();
   });
+
+  it('measures ribbons in inches only (ticket 03)', () => {
+    const labels = JSON.stringify(Object.values(TEXTURE_STEPS));
+    expect(labels).not.toMatch(/\d cm\b/);
+    expect(labels).toMatch(/under 1 in/);
+  });
 });

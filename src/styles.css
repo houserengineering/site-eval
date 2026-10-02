@@ -385,3 +385,7 @@ button.row-link:focus-visible { outline: 3px solid var(--focus); outline-offset:
 @media (prefers-color-scheme: dark) {
   .rule { background: #4a3a10; color: #ffe7a3; }
 }
+
+/* The soil log prints in ALL CAPS: picks on the test pit screen show as they will print. */
+.pit-page .chip { text-transform: uppercase; }
+.pit-page .chip small, .pit-page .as-typed .chip { text-transform: none; }

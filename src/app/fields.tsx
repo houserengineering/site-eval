@@ -1,6 +1,17 @@
 import { useId, useState } from 'preact/hooks';
 import { draftShown, tapeShown, wholeInches, type Draft } from './draft';
 
+/** Upper-cases typed text in place (as the soil log prints it), keeping the caret where it was. */
+function upperInPlace(el: HTMLInputElement): string {
+  const v = el.value.toUpperCase();
+  if (v !== el.value) {
+    const [a, b] = [el.selectionStart, el.selectionEnd];
+    el.value = v;
+    if (a != null && b != null) el.setSelectionRange(a, b);
+  }
+  return v;
+}
+
 export function TextField(props: {
   label: string;
   value: string;
@@ -21,7 +32,8 @@ export function TextField(props: {
         inputMode={props.inputMode}
         autoCapitalize={props.autoCapitalize}
         autoComplete="off"
-        onInput={(e) => props.onInput(e.currentTarget.value)}
+        // ALL CAPS fields store what prints (2026-10-02 field feedback).
+        onInput={(e) => props.onInput(props.autoCapitalize === 'characters' ? upperInPlace(e.currentTarget) : e.currentTarget.value)}
       />
       {props.hint && <p class="hint">{props.hint}</p>}
     </div>
@@ -84,6 +96,8 @@ export function Chips(props: {
   other?: boolean;
   disabled?: (v: string) => boolean;
   hint?: string;
+  /** Prints exactly as entered (horizon designations: Bw, Bt), so no ALL CAPS. */
+  asTyped?: boolean;
 }) {
   const id = useId();
   const options = props.options.map(opt);
@@ -91,7 +105,7 @@ export function Chips(props: {
   const [typing, setTyping] = useState(false);
   const showOther = props.other && (isOther || typing);
   return (
-    <div class="field">
+    <div class={`field${props.asTyped ? ' as-typed' : ''}`}>
       <span class="label" id={id}>{props.label}</span>
       <div class="chips" role="radiogroup" aria-labelledby={id}>
         {options.map((o) => {
@@ -138,7 +152,7 @@ export function Chips(props: {
           autoCapitalize="characters"
           autoComplete="off"
           autoFocus={typing && !isOther}
-          onInput={(e) => props.onChange(e.currentTarget.value)}
+          onInput={(e) => props.onChange(props.asTyped ? e.currentTarget.value : upperInPlace(e.currentTarget))}
         />
       )}
       {props.hint && <p class="hint">{props.hint}</p>}

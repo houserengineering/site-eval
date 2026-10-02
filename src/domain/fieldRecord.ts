@@ -32,6 +32,8 @@ export interface HorizonColor extends Munsell {
   physicalState: string;
   /** Free text that replaces the structured color (legacy records, unusual colors). */
   other: string;
+  /** A hue outside the site's pattern, kept on purpose (the hue check stays quiet). */
+  keptHue?: string;
 }
 
 export interface Horizon {

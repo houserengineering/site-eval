@@ -97,7 +97,19 @@ test('full test pit capture: picks, mottles, rock modifier, pit summary, copy pr
   await page.getByLabel('New test pit #').fill('2');
   await page.getByRole('button', { name: 'Add test pit' }).click();
   await page.getByRole('button', { name: 'Copy horizons from test pit 1' }).click();
-  await expect(page.getByRole('region', { name: 'Horizon 2' })).toBeVisible();
+  const p2h2 = page.getByRole('region', { name: 'Horizon 2' });
+  await expect(p2h2).toBeVisible();
+
+  // A hue no other B horizon on the site uses (0271's 2.5YR mis-tap) asks for a second look.
+  await pick(p2h2.getByRole('group', { name: 'Color (Munsell)' }), 'Hue', '2.5YR');
+  await expect(p2h2.getByRole('status').filter({ hasText: '2.5YR is not used on other B horizons on this site (2.5Y). Check the chip.' })).toBeVisible();
+  await shot(page, '14-hue-check', p2h2.getByRole('group', { name: 'Color (Munsell)' }).locator('..'));
+  await p2h2.getByRole('button', { name: 'Keep 2.5YR' }).click();
+  await expect(p2h2.getByText(/is not used on other/)).toHaveCount(0);
+
+  // Typed text is stored and shown in ALL CAPS, as it prints.
+  await p2h2.getByLabel('Notes', { exact: true }).fill('driveway nearby');
+  await expect(p2h2.getByLabel('Notes', { exact: true })).toHaveValue('DRIVEWAY NEARBY');
   await page.getByRole('link', { name: 'Back to site evaluation' }).click();
 
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export soil logs (Excel)' }).click()]);
