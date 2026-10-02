@@ -2,7 +2,7 @@
 // reference from the job file, and the review table filed with the deliverables.
 import ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
-import { addHorizon, addPitWalls, emptyHorizon, migrate, newSiteEvaluation, type FieldRecord } from '../src/domain/fieldRecord';
+import { addHorizon, addPitWalls, emptyHorizon, migrate, newSiteEvaluation, SCHEMA_VERSION, type FieldRecord } from '../src/domain/fieldRecord';
 import { acceptFill, areaReference, fillGaps, suggestions } from '../src/domain/fillGaps';
 import { readJob } from '../src/domain/job';
 import { generate } from '../src/generator';
@@ -56,7 +56,7 @@ describe('area soils reference', () => {
 
   it('starts empty on records from before it existed', () => {
     const { areaSoils, ...v8 } = { ...newSiteEvaluation(), schemaVersion: 8 };
-    expect(migrate(v8)).toMatchObject({ schemaVersion: 9, areaSoils: {} });
+    expect(migrate(v8)).toMatchObject({ schemaVersion: SCHEMA_VERSION, areaSoils: {} });
   });
 });
 

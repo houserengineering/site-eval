@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { addPercTest, addPitWalls, updateHeader, type FieldRecord, type Header } from '../domain/fieldRecord';
+import { addPercTest, addPitWalls, updateHeader, type FieldRecord, type Header, type TestPit } from '../domain/fieldRecord';
 import { groupStatus, nextPitNumber, pitGroups, wallSide } from '../domain/pitWalls';
 import { percSummary } from '../domain/perc';
 import type { RecordStore } from '../storage/db';
@@ -20,6 +20,8 @@ import { allWarnings } from '../domain/rules';
 import { RuleWarnings } from './RuleWarnings';
 import { wellSummary } from './GroundwaterView';
 import { useSettings } from './settings';
+import { SoilLogHold } from './PitChecks';
+import { openFlags, wallFlags } from '../domain/pitChecks';
 
 export function SiteEvaluationView(props: { record: FieldRecord; save: (r: FieldRecord) => void; store: RecordStore }) {
   const r = props.record;
@@ -29,6 +31,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
   const { percTests } = useSettings();
   const [status, setStatus] = useState<string>();
   const h = (k: keyof Header) => (v: string) => props.save(updateHeader(r, { [k]: v }));
+  const held = openFlags(r).length > 0;
 
   const addPit = (e: Event) => {
     e.preventDefault();
@@ -124,6 +127,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
                         {p.horizons.length} horizon{p.horizons.length === 1 ? '' : 's'}
                         {p.location ? ' · GPS' : ''}
                         {p.photos.length ? ` · ${p.photos.length} photo${p.photos.length === 1 ? '' : 's'}` : ''}
+                        {openText(r, p)}
                         {editedBy(r, p.id)}
                       </span>
                     </a>
@@ -185,6 +189,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
 
       <section aria-labelledby="out">
         <h2 id="out">Deliverables</h2>
+        <SoilLogHold record={r} />
         <RuleWarnings warnings={allWarnings(r, now, { percTests })} title="Rule checks before export" showSubject />
         <p class="hint">Print or save PDF (letter):</p>
         <ul class="list">
@@ -199,7 +204,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
               </li>
             ))}
         </ul>
-        <button class="btn primary block" onClick={exportXlsx('soil-log-xlsx', 'soil logs')}>
+        <button class="btn primary block" onClick={exportXlsx('soil-log-xlsx', 'soil logs')} disabled={held}>
           Export soil logs (Excel)
         </button>
         {percTests && r.percTests.length > 0 && (
@@ -230,6 +235,12 @@ function editedBy(r: FieldRecord, pitId: string): string {
   const editors = new Set(Object.values(r.edits).map((e) => e.by));
   const e = lastEdit(r, pitPath(pitId));
   return e && editors.size > 1 ? ` · edited by ${e.by}` : '';
+}
+
+/** ` · 2 checks open` on a wall with open pit checks. */
+function openText(r: FieldRecord, wall: TestPit) {
+  const n = wallFlags(r, wall).filter((f) => !f.accepted).length;
+  return n ? <span class="warn-text"> · {n} check{n === 1 ? '' : 's'} open</span> : null;
 }
 
 function pitCounts(r: FieldRecord): string {

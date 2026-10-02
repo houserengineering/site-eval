@@ -15,6 +15,10 @@ _Avoid_: treating A and B as separate pits or separate locations
 **Horizon**:
 A layer in a pit wall that differs in texture, color or rock content from the one above it. Horizon depths are measured on each wall; texture and color are sampled on the first walls and carried forward until something looks different.
 
+**Pit check**:
+Something on a pit wall to fix or accept before leaving it: a depth gap or overlap, a log short of 96 inches (or of the water or limiting depth), walls A and B with different horizon counts, a hue outside the site pattern, rock of 60% or more, a horizon with no color or texture, or a photo that is blurry, too dark, washed out or too small. An open check holds the soil log; accepting one records who and when.
+_Avoid_: rule warning (those cite DEQ/county rules and never hold anything)
+
 ## Relationships
 
 - A **Test pit** has two **Pit walls** (A and B); a soil log is one **Pit wall**.

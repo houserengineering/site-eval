@@ -24,6 +24,7 @@ import { pitWarnings } from '../domain/rules';
 import { hueWarning } from '../domain/hueCheck';
 import { wallOf, wallSide } from '../domain/pitWalls';
 import { RuleWarnings } from './RuleWarnings';
+import { OpenChecksLink, WallChecks } from './PitChecks';
 import { acceptFill, suggestions, type Fill, type FillField } from '../domain/fillGaps';
 
 export function TestPitView(props: { record: FieldRecord; pitId: string; save: (r: FieldRecord) => void; store: RecordStore }) {
@@ -61,6 +62,7 @@ export function TestPitView(props: { record: FieldRecord; pitId: string; save: (
       </header>
       {side && <p class="hint">{side === 'north' ? 'North' : 'South'} wall of test pit {wallOf(pit.label).pit}</p>}
       <EditedBy record={props.record} pitId={pit.id} />
+      <OpenChecksLink record={r} wall={pit} />
 
       <TextField label="Test pit #" value={pit.label} onInput={(v) => savePit({ label: v })} autoCapitalize="characters" />
 
@@ -96,6 +98,8 @@ export function TestPitView(props: { record: FieldRecord; pitId: string; save: (
       <RuleWarnings warnings={pitWarnings(r, pit)} />
 
       <PitMedia record={r} pit={pit} save={props.save} store={props.store} />
+
+      <WallChecks record={r} wall={pit} save={props.save} />
 
       <section class="danger-zone">
         <button class="btn danger" onClick={remove}>

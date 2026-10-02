@@ -9,6 +9,8 @@ import { download, photoSource } from './deliverables';
 import { settings } from './settings';
 import { loadTemplates } from './templates';
 import { UnconfirmedNotice } from './Unconfirmed';
+import { SoilLogHold } from './PitChecks';
+import { openFlags } from '../domain/pitChecks';
 
 export const PRINT_KINDS: Record<PrintKind, { title: string; file: DeliverableKind }> = {
   'soil-logs': { title: 'Soil logs', file: 'soil-log-pdf' },
@@ -28,6 +30,8 @@ export function PrintView(props: { record: FieldRecord; kind: PrintKind; store: 
   const meta = PRINT_KINDS[props.kind];
   const [pages, setPages] = useState<Page[]>();
   const [status, setStatus] = useState<string>();
+  // Open pit checks hold the soil log (ticket 09): the preview shows, printing and saving wait.
+  const held = props.kind === 'soil-logs' && openFlags(r).length > 0;
   const back = props.kind === 'groundwater' ? `#/se/${r.id}/gw` : `#/se/${r.id}`;
 
   useEffect(() => {
@@ -64,13 +68,14 @@ export function PrintView(props: { record: FieldRecord; kind: PrintKind; store: 
           <h1>Print {meta.title.toLowerCase()}</h1>
         </header>
         <div class="btn-row">
-          <button class="btn primary" onClick={() => print()} disabled={!pages?.length}>
+          <button class="btn primary" onClick={() => print()} disabled={!pages?.length || held}>
             Print…
           </button>
-          <button class="btn" onClick={savePdf} disabled={!pages?.length}>
+          <button class="btn" onClick={savePdf} disabled={!pages?.length || held}>
             Save PDF
           </button>
         </div>
+        {held && <SoilLogHold record={r} />}
         <UnconfirmedNotice record={r} save={props.save} context="preview" />
         <p class="hint">Letter paper{pages?.some((p) => p.w > p.h) ? ', landscape' : ''}, scale 100% (Default). On the office Wi-Fi, pick the office copier in the print dialog.</p>
         {status && (

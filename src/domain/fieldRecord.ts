@@ -4,8 +4,9 @@ import { wallOf } from './pitWalls';
 import type { Georef } from './georef';
 import type { Stamp } from './merge';
 import type { ObservationWell } from '../groundwater/wells';
+import type { Acceptance, PhotoQuality } from './pitChecks';
 
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 
 /** Header values are always text: `0999.001`, `SE 00001`, `3B` print exactly as entered. */
 export interface Header {
@@ -81,6 +82,8 @@ export interface TestPit {
   location: GpsFix | null;
   /** Where the pit is planned (job file map pin, or dropped on the map); null = unplanned. */
   planned: LatLon | null;
+  /** Pit checks accepted as they are (domain/pitChecks.ts), by flag id: who and when. */
+  accepted: Record<string, Acceptance>;
 }
 
 export interface LatLon {
@@ -93,6 +96,8 @@ export interface PhotoRef {
   takenAt: string;
   width: number;
   height: number;
+  /** Sharpness and exposure, measured when taken; absent on photos from before v10. */
+  quality?: PhotoQuality;
 }
 
 /** WGS84 position from the device; accuracy is the 68% radius the device reports. */
@@ -304,6 +309,7 @@ const blankTestPit = (): Omit<TestPit, 'id' | 'label'> => ({
   photos: [],
   location: null,
   planned: null,
+  accepted: {},
 });
 
 /** A new pit reads as a normal one (spec 2026-10-02): no groundwater, no redox features, no limiting layer, 2% slope (estimated). */
@@ -536,6 +542,8 @@ const migrations: Record<number, (r: any) => any> = {
   7: (r) => ({ ...r, schemaVersion: 8, wells: [] }),
   // v8 → v9: area soils reference from the job file.
   8: (r) => ({ ...r, schemaVersion: 9, areaSoils: {} }),
+  // v9 → v10: pit checks accepted on each wall.
+  9: (r) => ({ ...r, schemaVersion: 10, testPits: (r.testPits ?? []).map((p: any) => ({ ...p, accepted: p.accepted ?? {} })) }),
 };
 
 export function migrate(raw: unknown): FieldRecord {

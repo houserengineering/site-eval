@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import ExcelJS from 'exceljs';
 import { readFileSync } from 'node:fs';
+import { acceptOpenChecks } from './checks';
 
 const shots = process.env.SHOTS_DIR;
 const shot = async (page: import('@playwright/test').Page, name: string) => {
@@ -48,7 +49,8 @@ test('create a site evaluation, log a test pit, export the soil log, work offlin
   await page.reload();
   await expect(page.getByRole('region', { name: 'Horizon 1' }).getByRole('radio', { name: 'SILT LOAM' })).toHaveAttribute('aria-checked', 'true');
   await page.getByRole('link', { name: 'Back to site evaluation' }).click();
-  await expect(page.getByRole('link', { name: /Wall 3B/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /^Wall 3B, south/ })).toBeVisible();
+  await acceptOpenChecks(page);
 
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export soil logs (Excel)' }).click()]);
   expect(download.suggestedFilename()).toBe('0999.001 Soil Logs.xlsx');

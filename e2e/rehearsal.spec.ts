@@ -5,6 +5,7 @@ import ExcelJS from 'exceljs';
 import { readFileSync } from 'node:fs';
 import { PDFDocument } from 'pdf-lib';
 import { turnOnPercTests } from './settings';
+import { acceptOpenChecks } from './checks';
 
 const shots = process.env.SHOTS_DIR;
 const shot = async (page: Page, name: string, fullPage = true) => {
@@ -207,11 +208,17 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
   await page.clock.fastForward('00:10');
   await expect(page.getByRole('status').filter({ hasText: /^Synced to Dropbox/ }).first()).toBeVisible({ timeout: 30_000 });
 
-  // File every deliverable to the convention folder.
+  // Open pit checks hold the soil log; everything else files. Accepting them releases it.
   const dropbox = page.getByRole('region', { name: 'Dropbox and office printing' });
   await expect(dropbox.getByText(folder, { exact: true })).toBeVisible();
   await dropbox.getByRole('button', { name: 'Sync now' }).click();
-  await expect(dropbox.getByText('Percolation Tests.pdf filed', { exact: false })).toBeVisible({ timeout: 60_000 });
+  await expect(dropbox.getByText(/^Soil log not filed: \d+ pit checks? open\.$/)).toBeVisible({ timeout: 60_000 });
+  await shot(page, 'r06b-soil-log-held');
+  await acceptOpenChecks(page);
+
+  // File every deliverable to the convention folder.
+  await dropbox.getByRole('button', { name: 'Sync now' }).click();
+  await expect(dropbox.getByText('Soil Logs.pdf filed', { exact: false })).toBeVisible({ timeout: 60_000 });
   const paths = await fakePaths(page);
   expect(paths).toEqual(
     expect.arrayContaining([

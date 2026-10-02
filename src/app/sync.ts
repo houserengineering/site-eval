@@ -10,6 +10,7 @@ import { fileDeliverables, MissingFolderError, NoFolderError, sendToPrintQueue, 
 import { photoSource } from './deliverables';
 import { loadTemplates } from './templates';
 import { settings } from './settings';
+import { openFlags } from '../domain/pitChecks';
 
 export interface RecordSyncStatus {
   at?: string;
@@ -19,6 +20,8 @@ export interface RecordSyncStatus {
   filed?: FilingResult[];
   filedAt?: string;
   printed?: string[];
+  /** Why the soil log was not filed (open pit checks); the rest was. */
+  held?: string;
 }
 
 export interface SyncState {
@@ -269,18 +272,22 @@ export class SyncService {
     const due = entry && (entry.deliverables || entry.print.length) && Date.now() - (this.lastFiled[id] ?? 0) >= FILE_EVERY_MS;
     if (due) {
       const [{ generate }, templates] = await Promise.all([import('../generator'), loadTemplates()]);
-      const files = await generate(record, templates, { photo: photoSource(this.store), percTests: settings().percTests });
+      // Open pit checks hold the soil log files and its printing; the field record, perc tests and
+      // groundwater results still file. Fixing or accepting a check is an edit, which files again.
+      const open = openFlags(record).length;
+      const files = (await generate(record, templates, { photo: photoSource(this.store), percTests: settings().percTests })).filter((f) => !open || !f.kind.startsWith('soil-log'));
       const out = await fileDeliverables(record, files, ctx);
       await this.saveMerged(out.record); // keep which files are the app's even if the next sync fails
       record = (await syncRecord(out.record, ctx)).record;
       await this.saveMerged(record);
       const printed: string[] = [];
-      for (const kind of entry.print) {
+      for (const kind of entry.print.filter((k) => !open || k !== 'soil-log-pdf')) {
         printed.push(...(await sendToPrintQueue(record, files, [kind], ctx)));
         await this.printed(id, kind); // a later failure must not print this one again
       }
       this.lastFiled[id] = Date.now();
-      this.setRecord(id, { filed: out.results, filedAt: new Date().toISOString(), ...(printed.length ? { printed } : {}) });
+      const held = open ? `Soil log not filed: ${open} pit check${open === 1 ? '' : 's'} open.` : undefined;
+      this.setRecord(id, { filed: out.results, filedAt: new Date().toISOString(), held, ...(printed.length ? { printed } : {}) });
       await this.dequeue(id, entry);
     } else if (entry && !entry.deliverables && !entry.print.length) await this.dequeue(id, entry);
   }

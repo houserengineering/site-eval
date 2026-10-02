@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import ExcelJS from 'exceljs';
 import { readFileSync } from 'node:fs';
+import { acceptOpenChecks } from './checks';
 
 const shots = process.env.SHOTS_DIR;
 const shot = async (page: Page, name: string, el?: Locator) => {
@@ -111,6 +112,7 @@ test('full test pit capture: picks, mottles, rock modifier, pit summary, copy pr
   await p2h2.getByLabel('Notes', { exact: true }).fill('driveway nearby');
   await expect(p2h2.getByLabel('Notes', { exact: true })).toHaveValue('DRIVEWAY NEARBY');
   await page.getByRole('link', { name: 'Back to site evaluation' }).click();
+  await acceptOpenChecks(page);
 
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export soil logs (Excel)' }).click()]);
   const wb = new ExcelJS.Workbook();

@@ -5,6 +5,7 @@ import { accuracyFt, fixText, stampText } from '../generator/sitePlan';
 import type { RecordStore } from '../storage/db';
 import { needsAutoFix, wallLocation } from '../domain/pitWalls';
 import { locationCaption } from '../generator/locationPanel';
+import { lumaOf, measurePhoto, photoProblems, type PhotoQuality } from '../domain/pitChecks';
 
 /** County site evaluations locate each test pit within 10 ft. */
 const COUNTY_FT = 10;
@@ -27,9 +28,13 @@ export function PitMedia(props: { record: FieldRecord; pit: TestPit; save: (r: F
   );
 }
 
-/** Downscales a camera photo (EXIF orientation applied) to a JPEG the PDFs and sync can carry. */
-async function shrink(file: Blob, max = 1600): Promise<{ blob: Blob; width: number; height: number }> {
+/**
+ * Downscales a camera photo (EXIF orientation applied) to a JPEG the PDFs and sync can carry, and
+ * measures it against the photo minimum standard (domain/pitChecks.ts) on a ≤ 512 px copy.
+ */
+async function shrink(file: Blob, max = 1600): Promise<{ blob: Blob; width: number; height: number; quality: PhotoQuality }> {
   const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  const quality = measure(bmp);
   const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
   const width = Math.round(bmp.width * k);
   const height = Math.round(bmp.height * k);
@@ -39,7 +44,19 @@ async function shrink(file: Blob, max = 1600): Promise<{ blob: Blob; width: numb
   canvas.getContext('2d')!.drawImage(bmp, 0, 0, width, height);
   bmp.close();
   const blob = await new Promise<Blob>((ok, fail) => canvas.toBlob((b) => (b ? ok(b) : fail(new Error('Could not encode the photo'))), 'image/jpeg', 0.85));
-  return { blob, width, height };
+  return { blob, width, height, quality };
+}
+
+function measure(bmp: ImageBitmap): PhotoQuality {
+  const k = Math.min(1, 512 / Math.max(bmp.width, bmp.height));
+  const w = Math.max(3, Math.round(bmp.width * k));
+  const h = Math.max(3, Math.round(bmp.height * k));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+  ctx.drawImage(bmp, 0, 0, w, h);
+  return measurePhoto(lumaOf(ctx.getImageData(0, 0, w, h).data), w, h, { width: bmp.width, height: bmp.height });
 }
 
 type PatchPit = (patch: (pit: TestPit) => Partial<Omit<TestPit, 'id'>>) => void;
@@ -69,26 +86,32 @@ function PitPhotos({ record, pit, store, patchPit }: Props) {
     };
   }, [ids]);
 
-  const add = async (files: FileList | null) => {
+  /** Saves picked photos; `retake` replaces that photo in its place. */
+  const add = async (files: FileList | null, retake?: string) => {
     if (!files?.length) return;
     setStatus('Saving photo…');
     try {
       const refs: PhotoRef[] = [];
       for (const file of Array.from(files)) {
-        const { blob, width, height } = await shrink(file);
+        const { blob, width, height, quality } = await shrink(file);
         const id = crypto.randomUUID();
         await store.putPhoto(id, record.id, blob);
-        refs.push({ id, takenAt: new Date(file.lastModified || Date.now()).toISOString(), width, height });
+        refs.push({ id, takenAt: new Date(file.lastModified || Date.now()).toISOString(), width, height, quality });
       }
-      patchPit((p) => ({ photos: [...p.photos, ...refs] }));
-      setStatus(`${refs.length} photo${refs.length === 1 ? '' : 's'} saved on this device.`);
+      patchPit((p) => {
+        const at = retake ? p.photos.findIndex((x) => x.id === retake) : -1;
+        return { photos: at < 0 ? [...p.photos, ...refs] : [...p.photos.slice(0, at), ...refs, ...p.photos.slice(at + 1)] };
+      });
+      if (retake) await store.removePhoto(retake);
+      const bad = refs.filter((x) => photoProblems(x.quality!).length).length;
+      setStatus(bad ? `Saved, but ${bad === refs.length ? (refs.length === 1 ? 'it does' : 'they do') : `${bad} of ${refs.length} do`} not meet the photo standard: retake.` : `${refs.length} photo${refs.length === 1 ? '' : 's'} saved on this device.`);
     } catch (e: any) {
       setStatus(`Photo not saved: ${e.message}`);
     }
   };
 
   // Cleared after each pick so choosing the same photo again still fires.
-  const picked = (input: HTMLInputElement) => void add(input.files).finally(() => (input.value = ''));
+  const picked = (input: HTMLInputElement, retake?: string) => void add(input.files, retake).finally(() => (input.value = ''));
 
   const remove = async (id: string, n: number) => {
     if (!confirm(`Delete photo ${n}?`)) return;
@@ -111,7 +134,14 @@ function PitPhotos({ record, pit, store, patchPit }: Props) {
               {i === 0 ? 'On the soil log · ' : ''}
               {stampText(p.takenAt)}
             </span>
+            {p.quality && photoProblems(p.quality).length > 0 && <p class="alert">{cap(photoProblems(p.quality).join(', '))}: retake it.</p>}
             <div class="btn-row">
+              {p.quality && photoProblems(p.quality).length > 0 && (
+                <label class="btn small primary">
+                  Retake
+                  <input class="visually-hidden" type="file" accept="image/*" capture="environment" aria-label={`Retake photo ${i + 1}`} onChange={(e) => picked(e.currentTarget, p.id)} />
+                </label>
+              )}
               {i > 0 && (
                 <button class="btn small" onClick={() => useOnLog(p.id)}>
                   Use on soil log
@@ -247,3 +277,5 @@ function PitLocation({ record, pit, patchPit }: Props) {
     </section>
   );
 }
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

@@ -1,5 +1,6 @@
 // Dropbox UI: the sync status line, the per-site-evaluation Dropbox section (folder, sync, print
-// at office, backup), connecting Dropbox, and opening a site evaluation from Dropbox.
+// at office, backup), connecting Dropbox, and opening a site evaluation from Dropbox.
+import { openFlags } from '../domain/pitChecks';
 import { useEffect, useState } from 'preact/hooks';
 import { backupName, makeBackup } from '../domain/backup';
 import type { FieldRecord } from '../domain/fieldRecord';
@@ -100,7 +101,7 @@ export function DropboxSection(props: { record: FieldRecord; save: (r: FieldReco
           <button class="btn" onClick={() => sync.syncNow(r.id)} disabled={s.busy}>
             Sync now
           </button>
-          <button class="btn" onClick={print}>
+          <button class="btn" onClick={print} disabled={openFlags(r).length > 0}>
             Print at office
           </button>
         </div>
@@ -124,6 +125,11 @@ export function DropboxSection(props: { record: FieldRecord; save: (r: FieldReco
             ))}
           </ul>
         </div>
+      )}
+      {rs.held && (
+        <p class="hint alert" role="status">
+          {rs.held}
+        </p>
       )}
       {rs.printed && <p class="hint">Sent to the office print queue: {rs.printed.map((p) => p.slice(p.lastIndexOf('/') + 1)).join(', ')}</p>}
     </section>

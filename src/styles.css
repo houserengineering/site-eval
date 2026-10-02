@@ -417,3 +417,14 @@ button.row-link:focus-visible { outline: 3px solid var(--focus); outline-offset:
 .suggest-value { display: block; font-weight: 650; overflow-wrap: anywhere; }
 .suggest-source { display: block; font-size: 0.95rem; overflow-wrap: anywhere; }
 .suggest .btn.small { margin: 0; flex: none; }
+
+/* Pit checks (ticket 09). */
+.checks .check-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.checks .check-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-radius: 6px; border-left: 4px solid var(--danger); background: var(--bg); }
+.checks .check-list li.accepted { border-left-color: var(--ok); }
+.checks .check-list li > span:first-child { flex: 1 1 14rem; }
+.checks-link { display: block; width: 100%; min-height: 48px; margin: 8px 0; padding: 8px 12px; border: 2px solid var(--danger); border-radius: 6px; background: var(--bg); color: var(--danger); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
+.hold { margin: 12px 0; padding: 10px 12px; border: 2px solid var(--danger); border-radius: 6px; }
+.hold p { margin: 0 0 4px; }
+.hold-walls { margin: 0; padding-left: 1.2rem; }
+.hold-walls a { display: inline-block; min-height: 44px; line-height: 44px; color: var(--text); }

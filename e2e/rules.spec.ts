@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { turnOnPercTests } from './settings';
+import { acceptOpenChecks } from './checks';
 
 const shots = process.env.SHOTS_DIR;
 const shot = async (page: Page, name: string, el?: Locator) => {
@@ -64,7 +65,10 @@ test('rule checks warn in pit and perc views, cite the rule, and are summarized 
   await expect(before.getByText('Test pit 1A:', { exact: false }).first()).toBeVisible();
   await expect(before.getByText('Perc test 1:', { exact: false }).first()).toBeVisible();
   await expect(before.getByText(/No Site Evaluation #/)).toBeVisible();
-  // Export stays available with warnings outstanding.
+  // Pit checks hold the export; rule warnings never do.
+  await expect(page.getByRole('button', { name: 'Export soil logs (Excel)' })).toBeDisabled();
+  await acceptOpenChecks(page);
+  await expect(before.getByText(/No Site Evaluation #/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Export soil logs (Excel)' })).toBeEnabled();
   await shot(page, '82-export-summary', before);
   await shot(page, '83-site-evaluation');
