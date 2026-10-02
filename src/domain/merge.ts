@@ -1,7 +1,7 @@
 // Field-level last-writer-wins merge for two devices editing one site evaluation.
 //
 // A record is flattened to leaf paths (`/testPits/@<id>/horizons/@<id>/color/hue`). Arrays of
-// id'd items (test pits, horizons, photos, perc tests, readings) become keyed elements plus an
+// id'd items (test pits, horizons, photos, perc tests, readings, wells) become keyed elements plus an
 // `#order` leaf, so two devices adding different pits both keep theirs. Each save stamps the
 // paths it changed with who and when (`record.edits`); a path without a stamp inherits the
 // nearest stamped ancestor. Merging takes, path by path, the side with the later stamp.
@@ -14,7 +14,7 @@ export interface Stamp {
 }
 
 /** Arrays under these keys hold `{ id }` items and merge element by element. */
-const ID_ARRAYS = new Set(['testPits', 'horizons', 'photos', 'percTests', 'readings']);
+const ID_ARRAYS = new Set(['testPits', 'horizons', 'photos', 'percTests', 'readings', 'wells']);
 /** Bookkeeping, not evaluation data. */
 const UNTRACKED = new Set(['schemaVersion', 'id', 'createdAt', 'updatedAt', 'edits']);
 
@@ -185,3 +185,4 @@ export function lastEdit(r: FieldRecord, path: string): Stamp | undefined {
 
 export const pitPath = (pitId: string) => `/testPits/@${esc(pitId)}`;
 export const percPath = (testId: string) => `/percTests/@${esc(testId)}`;
+export const wellPath = (wellId: string) => `/wells/@${esc(wellId)}`;

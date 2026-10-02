@@ -223,13 +223,22 @@ export const RULES = {
     effective: DEQ4_EFF,
     juris: 'ALL',
   },
+  gwSchedule: {
+    id: 'gw-schedule',
+    title: 'Groundwater observation schedule',
+    text: 'Observe during the time when ground water levels are highest, weekly or more frequently, with at least two weeks of observation prior to and after the ground water peak, otherwise the reviewing authority may reject the results.',
+    source: DEQ4,
+    section: 'DEQ-4 App. C p139',
+    effective: DEQ4_EFF,
+    juris: 'ALL',
+  },
 } as const satisfies Record<string, Rule>;
 
 export type RuleKey = keyof typeof RULES;
 
 export interface Subject {
-  kind: 'site' | 'pit' | 'perc';
-  /** Pit or perc test id ('' for the site). */
+  kind: 'site' | 'pit' | 'perc' | 'well';
+  /** Pit, perc test or observation well id ('' for the site). */
   id: string;
   /** `Test pit 2`, `Perc test 1`, `Site`. */
   name: string;

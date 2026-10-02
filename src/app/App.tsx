@@ -7,6 +7,7 @@ import { PercTestView } from './PercTestView';
 import { PRINT_KINDS, PrintView } from './PrintView';
 import { PercTimers } from './PercTimers';
 import { SiteEvaluationView } from './SiteEvaluationView';
+import { GroundwaterView, WellView } from './GroundwaterView';
 import { SiteMapView } from './SiteMapView';
 import { readJob } from '../domain/job';
 import { TestPitView } from './TestPitView';
@@ -21,6 +22,8 @@ type Route =
   | { name: 'perc'; id: string; testId: string }
   | { name: 'print'; id: string; kind: PrintKind }
   | { name: 'map'; id: string }
+  | { name: 'gw'; id: string }
+  | { name: 'well'; id: string; wellId: string }
   | { name: 'certifier' }
   | { name: 'dropbox' };
 
@@ -30,6 +33,8 @@ function parseRoute(hash: string): Route {
   if (parts[0] === 'se' && parts[1] && parts[2] === 'perc' && parts[3]) return { name: 'perc', id: parts[1], testId: parts[3] };
   if (parts[0] === 'se' && parts[1] && parts[2] === 'print' && parts[3] && parts[3] in PRINT_KINDS) return { name: 'print', id: parts[1], kind: parts[3] as PrintKind };
   if (parts[0] === 'se' && parts[1] && parts[2] === 'map') return { name: 'map', id: parts[1] };
+  if (parts[0] === 'se' && parts[1] && parts[2] === 'gw' && parts[3]) return { name: 'well', id: parts[1], wellId: parts[3] };
+  if (parts[0] === 'se' && parts[1] && parts[2] === 'gw') return { name: 'gw', id: parts[1] };
   if (parts[0] === 'se' && parts[1]) return { name: 'site', id: parts[1] };
   if (parts[0] === 'certifier') return { name: 'certifier' };
   if (parts[0] === 'dropbox') return { name: 'dropbox' };
@@ -67,6 +72,8 @@ export function App() {
   if (route.name === 'perc') return <RecordLoader store={store} id={route.id} render={(r, save) => <PercTestView record={r} testId={route.testId} save={save} />} />;
   if (route.name === 'print') return <RecordLoader store={store} id={route.id} render={(r, save) => <PrintView record={r} kind={route.kind} store={store} save={save} />} />;
   if (route.name === 'map') return <RecordLoader store={store} id={route.id} render={(r, save) => <SiteMapView record={r} save={save} store={store} />} />;
+  if (route.name === 'gw') return <RecordLoader store={store} id={route.id} render={(r, save) => <GroundwaterView record={r} save={save} />} />;
+  if (route.name === 'well') return <RecordLoader store={store} id={route.id} render={(r, save) => <WellView record={r} wellId={route.wellId} save={save} />} />;
   if (route.name === 'certifier') return <CertifierSetup store={store} />;
   if (route.name === 'dropbox') return <DropboxOpenView store={store} />;
   if (route.name === 'site') return <RecordLoader store={store} id={route.id} render={(r, save) => <SiteEvaluationView record={r} save={save} store={store} />} />;
@@ -194,6 +201,7 @@ function Home({ store }: { store: RecordStore }) {
               <span class="row-sub">
                 {r.testPits.length} test pit{r.testPits.length === 1 ? '' : 's'}
                 {r.percTests.length > 0 && ` · ${r.percTests.length} perc test${r.percTests.length === 1 ? '' : 's'}`}
+                {r.wells?.length > 0 && ` · ${r.wells.length} observation well${r.wells.length === 1 ? '' : 's'}`}
                 {r.header.date && ` · ${r.header.date}`}
               </span>
             </a>

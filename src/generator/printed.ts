@@ -10,7 +10,7 @@ import { accuracyFt, drawSitePlan, fixText, stampText } from './sitePlan';
 /** Photo bytes by id (the on-device photo store); undefined when not on this device. */
 export type PhotoSource = (id: string) => Promise<Uint8Array | undefined>;
 
-export type PrintKind = 'soil-logs' | 'perc-tests' | 'site-evaluation';
+export type PrintKind = 'soil-logs' | 'perc-tests' | 'site-evaluation' | 'groundwater';
 
 export interface Workbooks {
   soilLog: ExcelJS.Workbook;

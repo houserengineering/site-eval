@@ -244,6 +244,9 @@ export function formatValue(v: unknown, fmt: string): string {
     while (n && n % 2 === 0) (n /= 2), (d /= 2);
     return n ? `${whole ? `${whole} ` : ''}${n}/${d}` : String(whole);
   }
+  // A literal suffix after a number format (`0" dry"`).
+  const suffix = /^(.*?)"([^"]*)"$/.exec(fmt);
+  if (suffix && suffix[1]) return formatValue(v, suffix[1]) + suffix[2];
   const dec = /^0(?:\.(0+))?(%?)$/.exec(fmt);
   if (dec) return (dec[2] ? (v * 100).toFixed(dec[1]?.length ?? 0) + '%' : v.toFixed(dec[1]?.length ?? 0));
   return String(Number(v.toPrecision(10)));

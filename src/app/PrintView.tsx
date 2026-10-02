@@ -13,6 +13,7 @@ export const PRINT_KINDS: Record<PrintKind, { title: string; file: DeliverableKi
   'soil-logs': { title: 'Soil logs', file: 'soil-log-pdf' },
   'perc-tests': { title: 'Perc tests', file: 'perc-test-pdf' },
   'site-evaluation': { title: 'Site evaluation', file: 'site-evaluation-pdf' },
+  groundwater: { title: 'Groundwater observation results', file: 'groundwater-pdf' },
 };
 
 const FAMILY: Record<FontKey, [string, string]> = {
@@ -27,7 +28,7 @@ export function PrintView(props: { record: FieldRecord; kind: PrintKind; store: 
   const meta = PRINT_KINDS[props.kind];
   const [pages, setPages] = useState<Page[]>();
   const [status, setStatus] = useState<string>();
-  const back = `#/se/${r.id}`;
+  const back = props.kind === 'groundwater' ? `#/se/${r.id}/gw` : `#/se/${r.id}`;
 
   useEffect(() => {
     let live = true;
@@ -71,7 +72,7 @@ export function PrintView(props: { record: FieldRecord; kind: PrintKind; store: 
           </button>
         </div>
         <UnconfirmedNotice record={r} save={props.save} context="preview" />
-        <p class="hint">Letter paper, scale 100% (Default). On the office Wi-Fi, pick the office copier in the print dialog.</p>
+        <p class="hint">Letter paper{pages?.some((p) => p.w > p.h) ? ', landscape' : ''}, scale 100% (Default). On the office Wi-Fi, pick the office copier in the print dialog.</p>
         {status && (
           <p class="status" role="status">
             {status}
@@ -102,7 +103,7 @@ function SheetSvg({ page, label }: { page: Page; label: string }) {
   );
   useEffect(() => () => urls.forEach((u) => URL.revokeObjectURL(u)), [urls]);
   return (
-    <svg class="sheet" viewBox={`0 0 ${page.w} ${page.h}`} role="img" aria-label={label} xmlns="http://www.w3.org/2000/svg">
+    <svg class={`sheet${page.w > page.h ? ' landscape' : ''}`} viewBox={`0 0 ${page.w} ${page.h}`} role="img" aria-label={label} xmlns="http://www.w3.org/2000/svg">
       <rect width={page.w} height={page.h} fill="#ffffff" />
       {page.ops.map((o, i) => {
         if (o.k === 'text') {

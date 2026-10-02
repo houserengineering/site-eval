@@ -2,6 +2,7 @@
 import { openDB } from 'idb';
 import type { CertifierProfile } from '../domain/certify';
 import { migrate, type FieldRecord } from '../domain/fieldRecord';
+import type { PrintableKind } from '../sync/engine';
 
 const STORE = 'fieldRecords';
 /** Pit photo bytes by photo id (records hold only PhotoRefs). */
@@ -18,7 +19,7 @@ export interface OutboxEntry {
   /** Deliverables need regenerating and filing. */
   deliverables: boolean;
   /** PDFs waiting to go to the office print queue. */
-  print: ('soil-log-pdf' | 'perc-test-pdf' | 'site-evaluation-pdf')[];
+  print: PrintableKind[];
 }
 
 export interface RecordStore {

@@ -299,11 +299,14 @@ section > h2:first-child { margin-top: 24px; }
 .sheets { padding: 0 8px 24px; }
 .sheet { display: block; width: 100%; max-width: 50rem; height: auto; margin: 0 auto 16px; box-shadow: 0 1px 6px rgb(0 0 0 / 35%); }
 @page { size: letter; margin: 0; }
+/* Landscape forms (groundwater results) print on their own landscape letter pages. */
+@page landscape { size: letter landscape; margin: 0; }
 @media print {
   html, body { background: #ffffff !important; }
   .no-print, .timers { display: none !important; }
   .sheets { padding: 0; }
   .sheet { width: 8.5in; height: 11in; max-width: none; margin: 0; box-shadow: none; break-after: page; }
+  .sheet.landscape { page: landscape; width: 11in; height: 8.5in; }
   .sheet:last-child { break-after: auto; }
 }
 

@@ -2,8 +2,9 @@
 // and (later) in Dropbox, so the shape is versioned and migrated on load.
 import type { Georef } from './georef';
 import type { Stamp } from './merge';
+import type { ObservationWell } from '../groundwater/wells';
 
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 /** Header values are always text: `0999.001`, `SE 00001`, `3B` print exactly as entered. */
 export interface Header {
@@ -202,6 +203,8 @@ export interface FieldRecord {
   design: Design;
   testPits: TestPit[];
   percTests: PercTest[];
+  /** Groundwater observation wells (separate module: src/groundwater). */
+  wells: ObservationWell[];
   /** Certifications by perc test id. */
   certifications: Record<string, Certification>;
   /** Pre-filled header values to confirm on site, with why; marked on deliverables until confirmed. */
@@ -247,6 +250,7 @@ export function newSiteEvaluation(header: Partial<Header> = {}): FieldRecord {
     design: emptyDesign(),
     testPits: [],
     percTests: [],
+    wells: [],
     certifications: {},
     unconfirmed: {},
     siteMap: null,
@@ -492,6 +496,8 @@ const migrations: Record<number, (r: any) => any> = {
   5: (r) => ({ ...r, schemaVersion: 6, edits: {}, filed: {} }),
   // v6 → v7: proposed system inputs for the rule checks.
   6: (r) => ({ ...r, schemaVersion: 7, design: emptyDesign() }),
+  // v7 → v8: groundwater observation wells.
+  7: (r) => ({ ...r, schemaVersion: 8, wells: [] }),
 };
 
 export function migrate(raw: unknown): FieldRecord {

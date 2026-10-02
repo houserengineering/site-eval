@@ -7,6 +7,8 @@ import { extraPhotoPages, mapPages, percTestPages, soilLogPages, type PhotoSourc
 import { percTestWorkbook } from './percTest';
 import { soilLogWorkbook } from './soilLog';
 import { forDeliverables } from './marking';
+import { groundwaterWorkbook } from '../groundwater/resultsWorkbook';
+import { layoutSheet } from './sheetPage';
 
 export type { PhotoSource, PrintKind } from './printed';
 export { forDeliverables } from './marking';
@@ -18,6 +20,8 @@ export type DeliverableKind =
   | 'perc-test-xlsx'
   | 'perc-test-pdf'
   | 'site-evaluation-pdf'
+  | 'groundwater-xlsx'
+  | 'groundwater-pdf'
   | 'field-record-json';
 
 export interface GeneratedFile {
@@ -40,10 +44,12 @@ export async function generate(fieldRecord: FieldRecord, templates: TemplateSet,
   const record = forDeliverables(fieldRecord);
   const soilWb = soilLogWorkbook(record, templates);
   const percWb = record.percTests.length ? percTestWorkbook(record, templates) : null;
+  const gwWb = record.wells.length ? groundwaterWorkbook(record) : null;
   // Workbook bytes first: rendering pages only reads the workbooks.
   const soilXlsx = new Uint8Array(await soilWb.xlsx.writeBuffer());
   const percXlsx = percWb && new Uint8Array(await percWb.xlsx.writeBuffer());
-  const pages = await printPages(record, templates, opts, { soilWb, percWb });
+  const gwXlsx = gwWb && new Uint8Array(await gwWb.xlsx.writeBuffer());
+  const pages = await printPages(record, templates, opts, { soilWb, percWb, gwWb });
   const date = new Date(record.updatedAt);
   const title = (what: string) => [record.header.projectNumber, record.header.projectName, what].filter(Boolean).join(' ');
 
@@ -57,6 +63,15 @@ export async function generate(fieldRecord: FieldRecord, templates: TemplateSet,
       kind: 'perc-test-pdf',
       path: 'Percolation Tests.pdf',
       bytes: await writePdf(pages['perc-tests'], { title: title('Percolation Tests'), date }),
+      mimeType: PDF,
+    });
+  }
+  if (gwXlsx) {
+    files.push({ kind: 'groundwater-xlsx', path: 'Groundwater Observation Results.xlsx', bytes: gwXlsx, mimeType: XLSX });
+    files.push({
+      kind: 'groundwater-pdf',
+      path: 'Groundwater Observation Results.pdf',
+      bytes: await writePdf(pages.groundwater, { title: title('Groundwater Observation Results'), date }),
       mimeType: PDF,
     });
   }
@@ -80,7 +95,11 @@ export async function printPages(
   record: FieldRecord,
   templates: TemplateSet,
   opts: GenerateOptions = {},
-  books = { soilWb: soilLogWorkbook(record, templates), percWb: record.percTests.length ? percTestWorkbook(record, templates) : null },
+  books = {
+    soilWb: soilLogWorkbook(record, templates),
+    percWb: record.percTests.length ? percTestWorkbook(record, templates) : null,
+    gwWb: record.wells.length ? groundwaterWorkbook(record) : null,
+  },
 ): Promise<Record<PrintKind, Page[]>> {
   const measure = await pdfMeasure();
   const photo = opts.photo ?? noPhotos;
@@ -89,6 +108,8 @@ export async function printPages(
   return {
     'soil-logs': soil,
     'perc-tests': perc,
+    // Separate module: monitored over a season, so not part of the site evaluation packet.
+    groundwater: books.gwWb ? books.gwWb.worksheets.map((ws) => layoutSheet(books.gwWb!, ws, measure).page) : [],
     'site-evaluation': [...mapPages(record, templates, measure), ...soil, ...perc, ...(await extraPhotoPages(record, templates, measure, photo))],
   };
 }

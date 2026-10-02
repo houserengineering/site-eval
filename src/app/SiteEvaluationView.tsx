@@ -17,6 +17,7 @@ import { lastEdit, pitPath } from '../domain/merge';
 import { DropboxSection, SyncStatus } from './SyncPanel';
 import { allWarnings } from '../domain/rules';
 import { DesignSection, RuleWarnings } from './RuleWarnings';
+import { wellSummary } from './GroundwaterView';
 
 export function SiteEvaluationView(props: { record: FieldRecord; save: (r: FieldRecord) => void; store: RecordStore }) {
   const r = props.record;
@@ -159,13 +160,22 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
         <CertifyPanel record={r} save={props.save} store={props.store} />
       </section>
 
+      <section aria-labelledby="gw">
+        <h2 id="gw">Groundwater monitoring</h2>
+        <p class="hint">Separate module: observation wells read weekly through the seasonal high, with their own results form.</p>
+        <a class="row-link" href={`#/se/${r.id}/gw`}>
+          <span class="row-title">Observation wells{r.wells.length > 0 && ` (${r.wells.length})`}</span>
+          <span class="row-sub">{r.wells.length ? r.wells.map((w) => `Well # ${w.label}: ${wellSummary(w)}`).join(' · ') : 'Register wells and enter readings'}</span>
+        </a>
+      </section>
+
       <section aria-labelledby="out">
         <h2 id="out">Deliverables</h2>
         <RuleWarnings warnings={allWarnings(r, now)} title="Rule checks before export" showSubject />
         <p class="hint">Print or save PDF (letter):</p>
         <ul class="list">
           {(Object.keys(PRINT_KINDS) as PrintKind[])
-            .filter((k) => k !== 'perc-tests' || r.percTests.length > 0)
+            .filter((k) => k !== 'groundwater' && (k !== 'perc-tests' || r.percTests.length > 0))
             .map((k) => (
               <li key={k}>
                 <a class="row-link" href={`#/se/${r.id}/print/${k}`}>
@@ -218,4 +228,5 @@ const PRINT_SUB: Record<PrintKind, string> = {
   'soil-logs': 'One page per test pit, with photo and location',
   'perc-tests': 'One page per perc test',
   'site-evaluation': 'Location map, all soil logs and perc tests, further photos',
+  groundwater: 'One page per observation well',
 };

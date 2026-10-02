@@ -144,7 +144,7 @@ async function fileOne(path: string, bytes: Uint8Array, hash: string, filed: Fie
   }
 }
 
-export type PrintableKind = 'soil-log-pdf' | 'perc-test-pdf' | 'site-evaluation-pdf';
+export type PrintableKind = 'soil-log-pdf' | 'perc-test-pdf' | 'site-evaluation-pdf' | 'groundwater-pdf';
 
 /** Drops PDFs into the office print queue (new, time-stamped names: never replaces anything). */
 export async function sendToPrintQueue(record: FieldRecord, files: GeneratedFile[], kinds: PrintableKind[], ctx: SyncContext, at = new Date()) {

@@ -21,6 +21,9 @@ export const DELIVERABLE_NAMES: Record<Exclude<DeliverableKind, 'field-record-js
   'perc-test-xlsx': 'Percolation Tests.xlsx',
   'perc-test-pdf': 'Percolation Tests.pdf',
   'site-evaluation-pdf': 'Site Evaluation.pdf',
+  // 0105.003 filed `11 Groundwater Observation Results _ Cottonwood.pdf` (packet number and subdivision added at packet time).
+  'groundwater-xlsx': 'Groundwater Observation Results.xlsx',
+  'groundwater-pdf': 'Groundwater Observation Results.pdf',
 };
 
 /**
