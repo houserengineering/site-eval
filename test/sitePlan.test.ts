@@ -24,6 +24,7 @@ describe('site plan labels', () => {
     pit('12', base.lat - 0.0003, base.lon + 0.0024),
     pit('13', base.lat - 0.0003, base.lon + 0.00232),
     pit('20', base.lat + 0.002, base.lon + 0.004),
+    pit('21', base.lat + 0.00197, base.lon + 0.00396), // crowds the top-right corner, by the north arrow
   ];
   const box = { x: 40, y: 100, w: 532, h: 330 };
 
@@ -35,10 +36,15 @@ describe('site plan labels', () => {
     const dots: Box[] = ops
       .filter((o: any) => o.k === 'circle' && o.fill)
       .map((o: any) => ({ x0: o.x - o.r, x1: o.x + o.r, y0: o.y - o.r, y1: o.y + o.r }));
+    // North arrow and scale bar strokes, and the scale label.
+    for (const o of ops as any[]) {
+      if (o.k === 'line') dots.push({ x0: Math.min(o.x1, o.x2) - 0.5, x1: Math.max(o.x1, o.x2) + 0.5, y0: Math.min(o.y1, o.y2) - 0.5, y1: Math.max(o.y1, o.y2) + 0.5 });
+      if (o.k === 'text' && !/^TP /.test(o.text)) dots.push({ x0: o.x, x1: o.x + o.w, y0: o.y - o.size * 0.75, y1: o.y + o.size * 0.2 });
+    }
     expect(labels).toHaveLength(pits.length);
     for (let i = 0; i < labels.length; i++) {
       for (let j = i + 1; j < labels.length; j++) expect(overlaps(labels[i], labels[j]), `labels ${i} and ${j}`).toBe(false);
-      for (const d of dots) expect(overlaps(labels[i], d), `label ${i} over a marker`).toBe(false);
+      for (const d of dots) expect(overlaps(labels[i], d), `label ${i} over a marker, arrow or scale bar`).toBe(false);
       expect(labels[i].x0).toBeGreaterThanOrEqual(box.x);
       expect(labels[i].x1).toBeLessThanOrEqual(box.x + box.w);
     }

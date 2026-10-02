@@ -20,17 +20,20 @@ const fakePaths = (page: Page) => page.evaluate(() => [...(window as any).__fake
 const jobPath = process.env.REHEARSAL_JOB ?? 'test/fixtures/example-job.json';
 const job = JSON.parse(readFileSync(jobPath, 'utf8'));
 const project: string = job.header.projectNumber;
+if (!job.deliverableFolder) throw new Error(`${jobPath} has no deliverableFolder`);
 const folder = '/Server/' + String(job.deliverableFolder).replace(/\\/g, '/').replace(/\/+$/, '');
-const planned: { label: string; planned?: { lat: number; lon: number } }[] = job.testPits;
-const PITS = 20;
+const planned: { label: string; planned?: { lat: number; lon: number } }[] = job.testPits ?? [];
+const PITS = Math.max(20, planned.length);
 const labels = [...planned.map((p) => p.label)];
 for (let n = 1; labels.length < PITS; n++) if (!labels.includes(String(n))) labels.push(String(n));
 const where = (i: number) => {
-  const p = planned[i]?.planned ?? { lat: planned[0].planned!.lat - 0.0001 * i, lon: planned[0].planned!.lon };
+  const first = planned.find((x) => x.planned)?.planned ?? { lat: 45.68, lon: -111.04 };
+  const p = planned[i]?.planned ?? { lat: first.lat - 0.0001 * i, lon: first.lon };
   return { latitude: p.lat, longitude: p.lon, accuracy: 2.5 };
 };
 
-const pitLink = (page: Page, label: string) => page.getByRole('link', { name: new RegExp(`^Test pit ${label} `) });
+const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const pitLink = (page: Page, label: string) => page.getByRole('link', { name: new RegExp(`^Test pit ${esc(label)} `) });
 const back = (page: Page) => page.getByRole('link', { name: 'Back to site evaluation' }).click();
 
 /** The pit summary every pit needs: no water, SHGW deeper than the pit, no limiting layer, slope. */
@@ -61,9 +64,9 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
   await expect(page.getByRole('heading', { name: project })).toBeVisible();
   await page.getByRole('region', { name: 'Dropbox and office printing' }).getByLabel('Your name').fill('Nathan Hart');
   const confirmBox = page.getByRole('region', { name: 'Confirm on site' });
-  await expect(confirmBox).toBeVisible();
   await shot(page, 'r01-job-loaded');
-  while (await confirmBox.count()) await confirmBox.getByRole('button', { name: /^Confirm / }).first().click();
+  for (let k = 0; k < 20 && (await confirmBox.count()); k++) await confirmBox.getByRole('button', { name: /^Confirm / }).first().click();
+  await expect(confirmBox).toHaveCount(0);
   await expect(page.getByText(`0 complete · 0 in progress · ${planned.length} not started`)).toBeVisible();
 
   // Test pit 1 in full.
@@ -114,7 +117,7 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
       await page.getByLabel('New test pit #').fill(label);
       await page.getByRole('button', { name: 'Add test pit' }).click();
     }
-    await expect(page.getByRole('heading', { name: new RegExp(`Test pit ${label}\\b`) })).toBeVisible();
+    await expect(page.getByRole('heading', { name: new RegExp(`Test pit ${esc(label)}(?!\\w)`) })).toBeVisible();
     await page.getByRole('button', { name: /^Copy horizons from test pit / }).click();
     await expect(page.getByRole('region', { name: 'Horizon 2' })).toBeVisible();
     await summary(page, i);
@@ -211,7 +214,7 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
       `${folder}/Percolation Tests.xlsx`,
       `${folder}/Percolation Tests.pdf`,
       `${folder}/Site Evaluation.pdf`,
-      expect.stringMatching(new RegExp(`^${folder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/Site Eval App/Field Record [0-9a-f]{8}\\.json$`)),
+      expect.stringMatching(new RegExp(`^${esc(folder)}/Site Eval App/Field Record [0-9a-f]{8}\\.json$`)),
     ]),
   );
   const read = (p: string) => page.evaluate((x) => [...(window as any).__fakeDropbox.files.get(x.toLowerCase()).bytes], p).then((b) => Uint8Array.from(b));
@@ -219,7 +222,7 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
   await soil.xlsx.load((await read(`${folder}/Soil Logs.xlsx`)) as any);
   expect(soil.worksheets).toHaveLength(PITS);
   expect(soil.worksheets[0].getCell('B4').value).toBe(project);
-  expect(soil.worksheets[0].getCell('H10').value).toBe(job.header.confirmationNumber); // confirmed: no (UNCONFIRMED)
+  expect(soil.worksheets[0].getCell('H10').value ?? null).toBe(job.header.confirmationNumber || null); // confirmed: no (UNCONFIRMED)
   const perc = new ExcelJS.Workbook();
   await perc.xlsx.load((await read(`${folder}/Percolation Tests.xlsx`)) as any);
   expect(perc.worksheets.map((w) => w.name)).toEqual(['Perc Test 1', 'Perc Test 2']);
@@ -240,6 +243,6 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
   await page.emulateMedia({ media: 'screen' });
   await back(page);
   await dropbox.getByRole('button', { name: 'Print at office' }).click();
-  await expect(dropbox.getByText(new RegExp(`Sent to the office print queue: ${project.replace('.', '\\.')} Site Evaluation`))).toBeVisible({ timeout: 60_000 });
+  await expect(dropbox.getByText(new RegExp(`Sent to the office print queue: ${esc(project)} Site Evaluation`))).toBeVisible({ timeout: 60_000 });
   await shot(page, 'r09-print-at-office');
 });

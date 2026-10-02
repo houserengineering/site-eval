@@ -62,6 +62,22 @@ export function drawSitePlan(box: Rect, pits: TestPit[], measure: Measure, opts:
   // first, then the rest; each takes the first clear spot of several around its point.
   type Box = { x0: number; x1: number; y0: number; y1: number };
   const taken: Box[] = placed.map((p) => ({ x0: p.x - p.r, x1: p.x + p.r, y0: p.y - p.r, y1: p.y + p.r }));
+  // The north arrow and scale bar (drawn below) are off limits too.
+  const ax = box.x + box.w - pad * 0.6;
+  const ay = box.y + pad * 0.35;
+  const al = size * 2.2;
+  const target = box.w / 4 / ptPerFt;
+  const nice = [5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000].reduce((a, b) => (Math.abs(b - target) < Math.abs(a - target) ? b : a));
+  const sx = box.x + pad * 0.5;
+  const sy = box.y + box.h - pad * 0.45;
+  const sl = nice * ptPerFt;
+  const scaleLabel = `${nice} ft`;
+  const scaleW = measure(scaleLabel, 'sans', size * 0.9);
+  const furniture: Box[] = [
+    { x0: ax - size * 0.6, x1: ax + size * 0.6, y0: ay - size * 0.6, y1: ay + al },
+    { x0: sx, x1: sx + sl + size * 0.4 + scaleW, y0: sy - size * 0.8, y1: sy + size * 0.4 },
+  ];
+  taken.push(...furniture);
   const overlap = (a: Box, b: Box) => Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0)) * Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
   const gap = size * 0.7;
   for (const p of [...placed].sort((a, b) => Number(b.hi) - Number(a.hi))) {
@@ -104,9 +120,6 @@ export function drawSitePlan(box: Rect, pits: TestPit[], measure: Measure, opts:
     ops.push({ k: 'text', x: p.lx, y: p.ly, size, font: p.font, text: p.label, w: p.w, color: p.hi ? HIGHLIGHT : undefined });
 
   // North arrow, top right.
-  const ax = box.x + box.w - pad * 0.6;
-  const ay = box.y + pad * 0.35;
-  const al = size * 2.2;
   ops.push({ k: 'line', x1: ax, y1: ay + al, x2: ax, y2: ay + size * 0.6, w: 0.8 });
   ops.push({ k: 'line', x1: ax - size * 0.4, y1: ay + size * 1.2, x2: ax, y2: ay + size * 0.6, w: 0.8 });
   ops.push({ k: 'line', x1: ax + size * 0.4, y1: ay + size * 1.2, x2: ax, y2: ay + size * 0.6, w: 0.8 });
@@ -114,14 +127,8 @@ export function drawSitePlan(box: Rect, pits: TestPit[], measure: Measure, opts:
   ops.push({ k: 'text', x: ax - nw / 2, y: ay + size * 0.4, size, font: 'sans-bold', text: 'N', w: nw });
 
   // Scale bar, bottom left: a round length near a quarter of the box.
-  const target = box.w / 4 / ptPerFt;
-  const nice = [5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000].reduce((a, b) => (Math.abs(b - target) < Math.abs(a - target) ? b : a));
-  const sx = box.x + pad * 0.5;
-  const sy = box.y + box.h - pad * 0.45;
-  const sl = nice * ptPerFt;
   ops.push({ k: 'line', x1: sx, y1: sy, x2: sx + sl, y2: sy, w: 1 });
   for (const t of [sx, sx + sl]) ops.push({ k: 'line', x1: t, y1: sy - size * 0.4, x2: t, y2: sy + size * 0.1, w: 0.8 });
-  const label = `${nice} ft`;
-  ops.push({ k: 'text', x: sx + sl + size * 0.4, y: sy + size * 0.3, size: size * 0.9, font: 'sans', text: label, w: measure(label, 'sans', size * 0.9) });
+  ops.push({ k: 'text', x: sx + sl + size * 0.4, y: sy + size * 0.3, size: size * 0.9, font: 'sans', text: scaleLabel, w: scaleW });
   return ops;
 }
