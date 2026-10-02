@@ -36,7 +36,9 @@ export function structureText(h: Horizon): string {
 function rockNote(h: Horizon): string {
   if (h.rock.pct == null) return '';
   if (h.rock.pct === 0) return 'NO ROCKS';
-  const size = up(h.rock.kind);
+  const from = up(h.rock.kind);
+  const to = up(h.rock.kind2 ?? '');
+  const size = to && to !== from ? `${from} TO ${to}` : from;
   return `${h.rock.pct}% ROCKS${size && size !== 'ROCKS' ? ` (${size})` : ''}`;
 }
 

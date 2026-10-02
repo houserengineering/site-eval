@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { emptyHorizon, emptyTestPit, type Horizon, type TestPit } from '../src/domain/fieldRecord';
 import { colorText, horizonNotes, missingItems, pitSummary, structureText, textureText } from '../src/domain/soilLogText';
-import { chromasFor, munsellName, rockModifier } from '../src/domain/vocabulary';
+import { chromasFor, munsellName, rockModifier, rockPctProblem, rockRangeTo } from '../src/domain/vocabulary';
 
 const hz = (p: Partial<Omit<Horizon, 'id'>> = {}): Horizon => ({ id: 'h', ...emptyHorizon(), ...p });
 const pit = (p: Partial<TestPit> = {}): TestPit => ({ id: 'p', label: '1', ...emptyTestPit(), ...p });
@@ -29,6 +29,22 @@ describe('Munsell names (Munsell Soil Color Book)', () => {
   it('has no name for chips that are not on the chart', () => {
     expect(munsellName('10YR', '2', '6')).toBe('');
     expect(chromasFor('10YR', '2')).toEqual(['1', '2']);
+  });
+});
+
+describe('rock fragments: percent and size range (ticket 02)', () => {
+  it('refuses 60% or more: that is bedrock', () => {
+    expect(rockPctProblem(59)).toBeUndefined();
+    expect(rockPctProblem(null)).toBeUndefined();
+    expect(rockPctProblem(60)).toBe('60% or more is bedrock, not a test pit horizon');
+    expect(rockPctProblem(85)).toBe('60% or more is bedrock, not a test pit horizon');
+  });
+  it('offers the larger sizes of the same family as the range end', () => {
+    expect(rockRangeTo('GRAVEL')).toEqual(['COBBLES', 'STONES', 'BOULDERS']);
+    expect(rockRangeTo('STONES')).toEqual(['BOULDERS']);
+    expect(rockRangeTo('CHANNERS')).toEqual(['FLAGSTONES']);
+    expect(rockRangeTo('BOULDERS')).toEqual([]);
+    expect(rockRangeTo('ROCKS')).toEqual([]);
   });
 });
 
@@ -105,6 +121,12 @@ describe('NOTES composer (office wording, research/01 §1.9)', () => {
     expect(horizonNotes(pit({ horizons: [hz({ rock: { pct: 0, kind: 'ROCKS' } })] }), 0)).toBe('NO ROCKS');
     expect(horizonNotes(pit({ horizons: [hz({ rock: { pct: 30, kind: 'GRAVEL' } })] }), 0)).toBe('30% ROCKS (GRAVEL)');
     expect(horizonNotes(pit({ horizons: [hz({ rock: { pct: 40, kind: 'GRAVEL TO COBBLES' } })] }), 0)).toBe('40% ROCKS (GRAVEL TO COBBLES)');
+  });
+
+  it('writes a picked size range in the office wording (ticket 02)', () => {
+    expect(horizonNotes(pit({ horizons: [hz({ rock: { pct: 40, kind: 'GRAVEL', kind2: 'COBBLES' } })] }), 0)).toBe('40% ROCKS (GRAVEL TO COBBLES)');
+    expect(horizonNotes(pit({ horizons: [hz({ rock: { pct: 20, kind: 'GRAVEL', kind2: 'GRAVEL' } })] }), 0)).toBe('20% ROCKS (GRAVEL)');
+    expect(horizonNotes(pit({ horizons: [hz({ rock: { pct: 20, kind: 'GRAVEL', kind2: '' } })] }), 0)).toBe('20% ROCKS (GRAVEL)');
     expect(horizonNotes(pit({ horizons: [hz()] }), 0)).toBe('');
   });
 

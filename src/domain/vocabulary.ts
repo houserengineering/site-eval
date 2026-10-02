@@ -156,6 +156,20 @@ export const ROCK_KIND_HELP: Record<string, string> = {
   FLAGSTONES: 'flat, 150–380 mm',
 };
 
+/** Rock size families, smallest first: a size range runs within one family. */
+const ROCK_FAMILIES = [['GRAVEL', 'COBBLES', 'STONES', 'BOULDERS'], ['CHANNERS', 'FLAGSTONES']];
+
+/** Sizes a range starting at `kind` can run to ("GRAVEL TO COBBLES"). */
+export function rockRangeTo(kind: string): string[] {
+  const family = ROCK_FAMILIES.find((f) => f.includes(kind));
+  return family ? family.slice(family.indexOf(kind) + 1) : [];
+}
+
+/** 60% or more rock by volume is bedrock, not a soil horizon (Justin, 2026-10-02). */
+export function rockPctProblem(pct: number | null): string | undefined {
+  return pct != null && pct >= 60 ? '60% or more is bedrock, not a test pit horizon' : undefined;
+}
+
 /**
  * DEQ-4 Appendix B rock-fragment texture modifier from percent by volume:
  * <15 none; 15–<35 GRAVELLY; 35–<60 VERY GRAVELLY; 60–<90 EXTREMELY GRAVELLY;

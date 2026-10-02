@@ -44,7 +44,7 @@ export interface Horizon {
   /** USDA class (or free text) plus sand-size modifier for the sandy classes. */
   texture: { cls: string; sandSize: string };
   /** Rock fragments: percent by volume and size class (DEQ-4 §2.1.4.1.G, App. B). */
-  rock: { pct: number | null; kind: string };
+  rock: { pct: number | null; kind: string; /** Size range end ("GRAVEL TO COBBLES"); absent or '' = one size. */ kind2?: string };
   /** Grade + size (optionally a range size..size2) + shape; or free text in `other`. */
   structure: { grade: string; size: string; size2: string; shape: string; other: string };
   roots: YesNo;

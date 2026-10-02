@@ -42,7 +42,7 @@ const copy: Record<FillField, (to: Horizon, from: Horizon) => Horizon> = {
 const show: Record<FillField, (h: Horizon) => string> = {
   color: (h) => h.color.other || `${h.color.hue} ${h.color.value}/${h.color.chroma}`,
   texture: (h) => h.texture.cls,
-  rock: (h) => `${h.rock.pct}% ${h.rock.kind}`.trim(),
+  rock: (h) => `${h.rock.pct}% ${h.rock.kind}${h.rock.kind2 && h.rock.kind2 !== h.rock.kind ? ` TO ${h.rock.kind2}` : ''}`.trim(),
   structure: (h) => h.structure.other || [h.structure.grade, h.structure.size, h.structure.shape].filter(Boolean).join(' '),
   roots: (h) => h.roots,
   mottling: (h) => h.mottling.present,

@@ -109,6 +109,7 @@ function HorizonCard(props: {
   const sandy = V.SANDY_TEXTURES.includes(hz.texture.cls);
   const structureless = V.STRUCTURELESS.includes(hz.structure.shape);
   const quickBottoms = i === 0 ? V.FIRST_BOTTOMS : V.PIT_BOTTOMS;
+  const [rockProblem, setRockProblem] = useState<string>();
 
   return (
     <section class="card" aria-label={`Horizon ${i + 1}`}>
@@ -140,13 +141,34 @@ function HorizonCard(props: {
           <Chips label="USDA class" options={V.TEXTURES} value={hz.texture.cls} onChange={(v) => set({ texture: { ...hz.texture, cls: v } })} other />
           <TextureGuide current={hz.texture.cls} onUse={(cls) => set({ texture: { ...hz.texture, cls } })} />
           {sandy && <Chips label="Sand size" options={V.SAND_SIZES} value={hz.texture.sandSize} onChange={(v) => set({ texture: { ...hz.texture, sandSize: v } })} />}
-          <NumberField label="Rock fragments (by volume)" unit="%" value={hz.rock.pct} onInput={(v) => set({ rock: { ...hz.rock, pct: v } })} />
+          <NumberField
+            label="Rock fragments (by volume)"
+            unit="%"
+            value={hz.rock.pct}
+            onInput={(v) => {
+              setRockProblem(V.rockPctProblem(v));
+              if (!V.rockPctProblem(v)) set({ rock: { ...hz.rock, pct: v } });
+            }}
+          />
+          {rockProblem && (
+            <p class="alert" role="alert">
+              {rockProblem}
+            </p>
+          )}
           {(hz.rock.pct ?? 0) > 0 && (
             <Chips
               label="Rock size"
               options={V.ROCK_KINDS.map((k) => ({ value: k, label: k, help: V.ROCK_KIND_HELP[k] }))}
               value={hz.rock.kind}
-              onChange={(v) => set({ rock: { ...hz.rock, kind: v || 'ROCKS' } })}
+              onChange={(v) => set({ rock: { ...hz.rock, kind: v || 'ROCKS', kind2: '' } })}
+            />
+          )}
+          {(hz.rock.pct ?? 0) > 0 && V.rockRangeTo(hz.rock.kind).length > 0 && (
+            <Chips
+              label="Rock size range to (optional)"
+              options={V.rockRangeTo(hz.rock.kind).map((k) => ({ value: k, label: k, help: V.ROCK_KIND_HELP[k] }))}
+              value={hz.rock.kind2 ?? ''}
+              onChange={(v) => set({ rock: { ...hz.rock, kind2: v } })}
             />
           )}
           {textureText(hz) && <p class="readout">Prints as <strong>{textureText(hz)}</strong></p>}

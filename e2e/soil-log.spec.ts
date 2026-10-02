@@ -54,8 +54,14 @@ test('full test pit capture: picks, mottles, rock modifier, pit summary, copy pr
   await pick(h2, 'Chroma', '3');
   await pick(h2, 'USDA class', 'SANDY LOAM');
   await pick(h2, 'Sand size', 'COARSE');
+  // 60% or more is bedrock: refused with the reason, nothing saved.
+  await h2.getByLabel('Rock fragments (by volume)').fill('65');
+  await expect(h2.getByRole('alert')).toHaveText('60% or more is bedrock, not a test pit horizon');
   await h2.getByLabel('Rock fragments (by volume)').fill('40');
+  await expect(h2.getByRole('alert')).toHaveCount(0);
   await pick(h2, 'Rock size', 'GRAVEL 2–75 mm');
+  await pick(h2, 'Rock size range to (optional)', 'COBBLES 75–250 mm');
+  await expect(h2.getByLabel('Horizon 2 soil log preview')).toContainText('40% ROCKS (GRAVEL TO COBBLES)');
   await expect(h2.getByText('COARSE SANDY LOAM', { exact: true })).toBeVisible(); // rock prints in NOTES, not as a texture modifier
   await pick(h2, 'Shape', 'SINGLE GRAIN');
   await pick(h2, 'Consistence', 'LOOSE');
@@ -102,7 +108,7 @@ test('full test pit capture: picks, mottles, rock modifier, pit summary, copy pr
   expect(row(13)).toEqual(['A', '0"-18"', '10YR 2/2, VERY DARK BROWN, MOIST, RUBBED', 'CLAY LOAM', 'WEAK, FINE TO MEDIUM SUBANGULAR BLOCKY', 'Y', 'N', 'NO ROCKS, FIRM, MODERATELY PLASTIC']);
   expect(row(14)).toEqual([
     'B', '18"-102"', '2.5Y 5/3, LIGHT OLIVE BROWN, MOIST, RUBBED', 'COARSE SANDY LOAM', 'SINGLE GRAIN', 'N', 'Y',
-    '40% ROCKS (GRAVEL), LOOSE, NON-PLASTIC, COMMON MEDIUM DISTINCT 7.5YR 5/6 MOTTLES, LIMITING LAYER AT 60" (SEASONAL HIGH GROUNDWATER), GROUNDWATER SEEPS AT 90"',
+    '40% ROCKS (GRAVEL TO COBBLES), LOOSE, NON-PLASTIC, COMMON MEDIUM DISTINCT 7.5YR 5/6 MOTTLES, LIMITING LAYER AT 60" (SEASONAL HIGH GROUNDWATER), GROUNDWATER SEEPS AT 90"',
   ]);
   expect(ws.getCell('A16').value).toBe('TOTAL DEPTH 102". GROUNDWATER SEEPS AT 90". REDOXIMORPHIC FEATURES. LIMITING LAYER AT 60" (SEASONAL HIGH GROUNDWATER). SLOPE 4% (ESTIMATED).');
   expect(wb.worksheets[1].getCell('A14').value).toBe('B');
