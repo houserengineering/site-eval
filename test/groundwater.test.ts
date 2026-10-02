@@ -201,9 +201,9 @@ describe('groundwater deliverables', () => {
     const back = new ExcelJS.Workbook();
     await back.xlsx.load(xlsx.bytes as any);
     expect(back.worksheets.map((w) => w.name)).toEqual(['Well # 1', 'Well # 2']);
-    // Not part of the site evaluation packet.
-    const sitePdf = await PDFDocument.load(files.find((f) => f.kind === 'site-evaluation-pdf')!.bytes);
-    expect(sitePdf.getPages().every((p) => p.getSize().width === 612)).toBe(true);
+    // Not part of the soil logs.
+    const soilPdf = await PDFDocument.load(files.find((f) => f.kind === 'soil-log-pdf')!.bytes);
+    expect(soilPdf.getPages().every((p) => p.getSize().width === 612)).toBe(true);
   });
 });
 

@@ -87,7 +87,7 @@ test('photo, GPS, certify on the certifier device, print preview and PDFs', asyn
   }
   await page.emulateMedia({ media: 'screen' });
 
-  // The perc test PDF carries the applied signature; the combined PDF has map + soil log + perc test.
+  // The perc test PDF carries the applied signature.
   await page.getByRole('link', { name: 'Back to site evaluation' }).click();
   await page.getByRole('link', { name: /^Perc tests/ }).click();
   await expect(page.getByRole('img', { name: 'Perc tests page 1 of 1' }).locator('image')).toHaveCount(1);
@@ -99,10 +99,9 @@ test('photo, GPS, certify on the certifier device, print preview and PDFs', asyn
   expect((await PDFDocument.load(readFileSync((await file.path())!))).getPageCount()).toBe(1);
 
   await page.getByRole('link', { name: 'Back to site evaluation' }).click();
-  await page.getByRole('link', { name: /^Site evaluation/ }).click();
-  await expect(page.getByRole('img', { name: 'Site evaluation page 3 of 3' })).toBeVisible();
-  await expect(page.getByRole('img', { name: 'Site evaluation page 1 of 3' }).locator('text', { hasText: 'TEST PIT LOCATIONS' })).toHaveCount(1);
-  await shot(page, '47-print-site-evaluation');
+  await page.getByRole('link', { name: /^Soil logs/ }).click();
+  await expect(page.getByRole('img', { name: /^Soil logs page 1 of / }).locator('text', { hasText: 'LOCATION OF TEST PIT WITHIN PROPERTY' })).not.toHaveCount(0);
+  await shot(page, '47-print-soil-logs');
 
   // Editing a certified perc test removes the signature until certified again.
   await page.getByRole('link', { name: 'Back to site evaluation' }).click();

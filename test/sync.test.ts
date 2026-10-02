@@ -35,7 +35,7 @@ describe('naming', () => {
     const r = record();
     expect(fieldRecordPath(r)).toBe(`${DBX}/Site Eval App/Field Record ${r.id.slice(0, 8)}.json`);
     expect(alternatePath(`${DBX}/Soil Logs.xlsx`)).toBe(`${DBX}/Soil Logs (Site Eval App).xlsx`);
-    expect(printQueuePath(r, 'site-evaluation-pdf', new Date(2026, 9, 2, 14, 5, 9))).toBe('/Server/Office/Site Eval App/Print Queue/0999.001 Site Evaluation 2026-10-02 140509.pdf');
+    expect(printQueuePath(r, 'soil-log-pdf', new Date(2026, 9, 2, 14, 5, 9))).toBe('/Server/Office/Site Eval App/Print Queue/0999.001 Soil Logs 2026-10-02 140509.pdf');
   });
 
   it('computes the Dropbox content hash (published test vector: empty file)', async () => {
@@ -197,7 +197,7 @@ describe('filing deliverables', () => {
 
   it('print at office drops time-stamped PDFs in the print queue', async () => {
     const c = ctx();
-    const sent = await sendToPrintQueue(record(), [file('site-evaluation-pdf', 'pdf'), file('soil-log-pdf', 'x')], ['site-evaluation-pdf'], c, new Date(2026, 9, 2, 9, 30, 0));
-    expect(sent).toEqual(['/Server/Office/Site Eval App/Print Queue/0999.001 Site Evaluation 2026-10-02 093000.pdf']);
+    const sent = await sendToPrintQueue(record(), [file('soil-log-pdf', 'pdf'), file('soil-log-xlsx', 'x')], ['soil-log-pdf'], c, new Date(2026, 9, 2, 9, 30, 0));
+    expect(sent).toEqual(['/Server/Office/Site Eval App/Print Queue/0999.001 Soil Logs 2026-10-02 093000.pdf']);
   });
 });

@@ -50,7 +50,7 @@ test('full test pit capture: picks, mottles, rock modifier, pit summary, copy pr
   await pick(h2, 'Sand size', 'COARSE');
   await h2.getByLabel('Rock fragments (by volume)').fill('40');
   await pick(h2, 'Rock size', 'GRAVEL 2–75 mm');
-  await expect(h2.getByText('VERY GRAVELLY COARSE SANDY LOAM')).toBeVisible();
+  await expect(h2.getByText('COARSE SANDY LOAM', { exact: true })).toBeVisible(); // rock prints in NOTES, not as a texture modifier
   await pick(h2, 'Shape', 'SINGLE GRAIN');
   await pick(h2, 'Consistence', 'LOOSE');
   await pick(h2, 'Plasticity', 'NON-PLASTIC');
@@ -98,9 +98,9 @@ test('full test pit capture: picks, mottles, rock modifier, pit summary, copy pr
   const row = (n: number) => ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map((c) => ws.getCell(`${c}${n}`).value);
   expect(row(13)).toEqual(['A', '0"-18"', '10YR 2/2, VERY DARK BROWN, MOIST, RUBBED', 'CLAY LOAM', 'WEAK, FINE TO MEDIUM SUBANGULAR BLOCKY', 'Y', 'N', 'NO ROCKS, FIRM, MODERATELY PLASTIC']);
   expect(row(14)).toEqual([
-    'B', '18"-102"', '2.5Y 5/3, LIGHT OLIVE BROWN, MOIST, RUBBED', 'VERY GRAVELLY COARSE SANDY LOAM', 'SINGLE GRAIN', 'N', 'Y',
-    '40% GRAVEL, LOOSE, NON-PLASTIC, COMMON MEDIUM DISTINCT 7.5YR 5/6 MOTTLES, LIMITING LAYER AT 60" (SEASONAL HIGH GROUNDWATER), GROUNDWATER SEEPS AT 90"',
+    'B', '18"-102"', '2.5Y 5/3, LIGHT OLIVE BROWN, MOIST, RUBBED', 'COARSE SANDY LOAM', 'SINGLE GRAIN', 'N', 'Y',
+    '40% ROCKS (GRAVEL), LOOSE, NON-PLASTIC, COMMON MEDIUM DISTINCT 7.5YR 5/6 MOTTLES, LIMITING LAYER AT 60" (SEASONAL HIGH GROUNDWATER), GROUNDWATER SEEPS AT 90"',
   ]);
-  expect(ws.getCell('A16').value).toBe('TOTAL DEPTH 102". EST. SEASONAL HIGH GROUNDWATER 60" (REDOXIMORPHIC FEATURES). SLOPE 4%, PLANE, NE (CLINOMETER)');
+  expect(ws.getCell('A16').value).toBe('TOTAL DEPTH 102". GROUNDWATER SEEPS AT 90". REDOXIMORPHIC FEATURES. LIMITING LAYER AT 60" (SEASONAL HIGH GROUNDWATER). SLOPE 4% (ESTIMATED).');
   expect(wb.worksheets[1].getCell('A14').value).toBe('B');
 });

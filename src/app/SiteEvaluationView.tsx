@@ -225,8 +225,7 @@ function pitCounts(r: FieldRecord): string {
 }
 
 const PRINT_SUB: Record<PrintKind, string> = {
-  'soil-logs': 'One page per test pit, with photo and location',
+  'soil-logs': 'One page per test pit (both walls), with photos and locations',
   'perc-tests': 'One page per perc test',
-  'site-evaluation': 'Location map, all soil logs and perc tests, further photos',
   groundwater: 'One page per observation well',
 };

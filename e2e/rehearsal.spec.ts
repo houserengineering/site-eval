@@ -205,7 +205,7 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
   const dropbox = page.getByRole('region', { name: 'Dropbox and office printing' });
   await expect(dropbox.getByText(folder, { exact: true })).toBeVisible();
   await dropbox.getByRole('button', { name: 'Sync now' }).click();
-  await expect(dropbox.getByText('Site Evaluation.pdf filed', { exact: false })).toBeVisible({ timeout: 60_000 });
+  await expect(dropbox.getByText('Percolation Tests.pdf filed', { exact: false })).toBeVisible({ timeout: 60_000 });
   const paths = await fakePaths(page);
   expect(paths).toEqual(
     expect.arrayContaining([
@@ -213,7 +213,6 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
       `${folder}/Soil Logs.pdf`,
       `${folder}/Percolation Tests.xlsx`,
       `${folder}/Percolation Tests.pdf`,
-      `${folder}/Site Evaluation.pdf`,
       expect.stringMatching(new RegExp(`^${esc(folder)}/Site Eval App/Field Record [0-9a-f]{8}\\.json$`)),
     ]),
   );
@@ -222,27 +221,28 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
   await soil.xlsx.load((await read(`${folder}/Soil Logs.xlsx`)) as any);
   expect(soil.worksheets).toHaveLength(PITS);
   expect(soil.worksheets[0].getCell('B4').value).toBe(project);
-  expect(soil.worksheets[0].getCell('H10').value ?? null).toBe(job.header.confirmationNumber || null); // confirmed: no (UNCONFIRMED)
+  expect(soil.worksheets[0].getCell('F9').value ?? null).toBe(job.header.confirmationNumber || null); // confirmed: no (UNCONFIRMED)
   const perc = new ExcelJS.Workbook();
   await perc.xlsx.load((await read(`${folder}/Percolation Tests.xlsx`)) as any);
   expect(perc.worksheets.map((w) => w.name)).toEqual(['Perc Test 1', 'Perc Test 2']);
-  const combined = await PDFDocument.load(await read(`${folder}/Site Evaluation.pdf`));
-  expect(combined.getPageCount()).toBeGreaterThanOrEqual(1 + PITS + 2); // map + soil logs + perc tests
+  const soilPdf = await PDFDocument.load(await read(`${folder}/Soil Logs.pdf`));
+  expect(soilPdf.getPageCount()).toBe(PITS); // one page per pit (labels here have no A/B walls)
+  expect(paths).not.toContain(`${folder}/Site Evaluation.pdf`);
   const record = JSON.parse(new TextDecoder().decode(await read(paths.find((p) => /Field Record/.test(p))!)));
   expect(record.testPits).toHaveLength(PITS);
   expect(record.unconfirmed ?? {}).toEqual({});
   await shot(page, 'r07-filed');
 
-  // Print preview of the combined PDF, then the copier queue.
-  await page.getByRole('link', { name: /^Site evaluation/ }).click();
-  await expect(page.getByRole('img', { name: `Site evaluation page 1 of ${combined.getPageCount()}` })).toBeVisible();
+  // Print preview of the soil logs, then the copier queue.
+  await page.getByRole('link', { name: /^Soil logs/ }).click();
+  await expect(page.getByRole('img', { name: `Soil logs page 1 of ${soilPdf.getPageCount()}` })).toBeVisible();
   await shot(page, 'r08-print-preview', false);
   await page.emulateMedia({ media: 'print' });
   const printed = await PDFDocument.load(await page.pdf({ preferCSSPageSize: true }));
-  expect(printed.getPageCount()).toBe(combined.getPageCount());
+  expect(printed.getPageCount()).toBe(soilPdf.getPageCount());
   await page.emulateMedia({ media: 'screen' });
   await back(page);
   await dropbox.getByRole('button', { name: 'Print at office' }).click();
-  await expect(dropbox.getByText(new RegExp(`Sent to the office print queue: ${esc(project)} Site Evaluation`))).toBeVisible({ timeout: 60_000 });
+  await expect(dropbox.getByText(new RegExp(`Sent to the office print queue: ${esc(project)} Soil Logs`))).toBeVisible({ timeout: 60_000 });
   await shot(page, 'r09-print-at-office');
 });

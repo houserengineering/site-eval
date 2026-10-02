@@ -12,7 +12,7 @@ import {
   type Horizon,
   type TestPit,
 } from '../domain/fieldRecord';
-import { colorText, horizonNotes, missingItems, pitFootnotes, structureText, textureText } from '../domain/soilLogText';
+import { colorText, horizonNotes, missingItems, pitSummary, structureText, textureText } from '../domain/soilLogText';
 import * as V from '../domain/vocabulary';
 import { go } from './App';
 import { Chips, NumberField, TextField, YesNoChips } from './fields';
@@ -208,7 +208,8 @@ function PitSummary(props: { pit: TestPit; missing: string[]; save: (patch: Part
   const g = pit.shgw;
   const s = pit.slope;
   const autoDepth = pit.horizons.at(-1)?.bottomIn;
-  const foot = pitFootnotes(pit);
+  const summary = pitSummary(pit);
+  const foot = summary ? [summary] : [];
   return (
     <section class="card" aria-label="Test pit summary">
       <h2>Test pit summary</h2>

@@ -65,8 +65,8 @@ export function DropboxSection(props: { record: FieldRecord; save: (r: FieldReco
     setNote(`Saved ${name}. Keep it off this phone (email it or save it to Drive).`);
   };
   const print = async () => {
-    await sync.printAtOffice(r.id, ['site-evaluation-pdf']);
-    setNote(s.online ? 'Sending the site evaluation PDF to the office printer…' : 'Will send to the office printer when there is signal.');
+    await sync.printAtOffice(r.id, r.percTests.length ? ['soil-log-pdf', 'perc-test-pdf'] : ['soil-log-pdf']);
+    setNote(s.online ? 'Sending the soil logs to the office printer…' : 'Will send to the office printer when there is signal.');
   };
 
   return (

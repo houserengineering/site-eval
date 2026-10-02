@@ -17,13 +17,9 @@ export function colorText(h: Horizon): string {
   return join([notation, munsellName(c.hue, c.value, c.chroma), up(c.moisture), up(c.physicalState)]);
 }
 
-/** USDA texture with sand-size and DEQ-4 rock-fragment modifiers: `VERY GRAVELLY COARSE SANDY LOAM`. */
+/** USDA texture with sand size: `COARSE SANDY LOAM`. Rock content prints in NOTES (office template). */
 export function textureText(h: Horizon): string {
-  const mod = rockModifier(h.rock.pct, h.rock.kind);
-  if (mod.noun) return mod.noun;
-  const base = textureWithSandSize(up(h.texture.cls), h.texture.sandSize);
-  if (!base) return '';
-  return join([mod.prefix, base], ' ');
+  return textureWithSandSize(up(h.texture.cls), h.texture.sandSize);
 }
 
 /** `WEAK, FINE TO MEDIUM GRANULAR`; structureless shapes print alone. */
@@ -36,10 +32,12 @@ export function structureText(h: Horizon): string {
   return body ? join([s.grade, body]) : '';
 }
 
+/** `40% ROCKS (GRAVEL TO COBBLES)`: percent by volume, then the size range seen. */
 function rockNote(h: Horizon): string {
   if (h.rock.pct == null) return '';
   if (h.rock.pct === 0) return 'NO ROCKS';
-  return `${h.rock.pct}% ${h.rock.kind || 'ROCKS'}`;
+  const size = up(h.rock.kind);
+  return `${h.rock.pct}% ROCKS${size && size !== 'ROCKS' ? ` (${size})` : ''}`;
 }
 
 function mottleNote(h: Horizon): string {
@@ -79,27 +77,42 @@ export function horizonNotes(pit: TestPit, i: number): string {
   return join([rockNote(h), up(h.consistence), up(h.plasticity), mottleNote(h), up(h.notes), ...depthNotes(pit, i)]);
 }
 
-/** Lines printed under the horizon table: the office's "no evidence" footnote and a pit summary. */
-export function pitFootnotes(pit: TestPit): string[] {
-  const lines: string[] = [];
-  const noWater = pit.observedWater.kind === 'NONE';
-  const noLimit = pit.limitingLayer.type === 'NONE';
-  if (noWater && noLimit) lines.push('*NO EVIDENCE OF GROUNDWATER, BEDROCK OR LIMITING LAYER');
-  else if (noWater) lines.push('*NO GROUNDWATER OBSERVED');
-  else if (noLimit) lines.push('*NO LIMITING LAYER OBSERVED');
+export const DEFAULT_BASIS = 'NO REDOXIMORPHIC FEATURES TO PIT DEPTH';
 
+/**
+ * The summary row under a wall's horizon table: total depth, groundwater, its basis, limiting
+ * layer and slope (always estimated), then the pit's own notes.
+ */
+export function pitSummary(pit: TestPit): string {
   const depth = pitDepth(pit);
-  const g = pit.shgw;
-  const s = pit.slope;
-  const slopeBits = join([s.pct != null && `${s.pct}%`, s.shape, s.direction]);
-  const details = [
-    g.depthIn != null && `EST. SEASONAL HIGH GROUNDWATER ${g.deeperThan ? '>' : ''}${inches(g.depthIn)}${g.basis ? ` (${up(g.basis)})` : ''}`,
-    slopeBits && `SLOPE ${slopeBits}${s.method ? ` (${s.method})` : ''}`,
-    up(pit.notes),
-  ].filter(Boolean);
-  // Total depth alone repeats the table, so it prints only alongside other summary items.
-  if (details.length || (lines.length && depth != null)) lines.push(join([depth != null && `TOTAL DEPTH ${inches(depth)}`, ...details], '. '));
-  return lines;
+  const w = pit.observedWater;
+  const water =
+    w.kind === 'NONE'
+      ? 'NO GROUNDWATER OBSERVED'
+      : (w.kind === 'SEEPAGE' || w.kind === 'STANDING') && w.depthIn != null
+        ? `${w.kind === 'SEEPAGE' ? 'GROUNDWATER SEEPS AT' : 'GROUNDWATER AT'} ${inches(w.depthIn)}`
+        : '';
+  const l = pit.limitingLayer;
+  const limit =
+    l.type === 'NONE'
+      ? 'LIMITING LAYER: NONE TO PIT DEPTH'
+      : l.type === 'BEDROCK' && l.depthIn != null
+        ? `BEDROCK AT ${inches(l.depthIn)}`
+        : l.type && l.depthIn != null
+          ? `LIMITING LAYER AT ${inches(l.depthIn)} (${l.type === 'OTHER' ? up(l.other) || 'OTHER' : LIMITING_WORDS[l.type]})`
+          : '';
+  return join(
+    [
+      depth != null && `TOTAL DEPTH ${inches(depth)}`,
+      water,
+      up(pit.shgw.basis),
+      limit,
+      pit.slope.pct != null && `SLOPE ${pit.slope.pct}% (ESTIMATED)`,
+      up(pit.notes).replace(/\.$/, ''),
+    ],
+    '. ',
+  ).concat('.')
+    .replace(/^\.$/, '');
 }
 
 /** DEQ-4-required items still blank. Hints only; nothing blocks the evaluator. */

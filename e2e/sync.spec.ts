@@ -27,14 +27,12 @@ test('Dropbox: sync, filing to convention beside office files, offline queue, pr
   await dropbox.getByRole('button', { name: 'Sync now' }).click();
   await expect(dropbox.getByText('Soil Logs.xlsx filed', { exact: false })).toBeVisible({ timeout: 30_000 });
   await expect(dropbox.getByText('Soil Logs (Site Eval App).pdf filed under this name')).toBeVisible();
-  await expect(dropbox.getByText('Site Evaluation.pdf filed', { exact: false })).toBeVisible();
   const paths = await fakePaths(page);
   expect(paths).toEqual(
     expect.arrayContaining([
       `${DBX}/Soil Logs.pdf`,
       `${DBX}/Soil Logs.xlsx`,
       `${DBX}/Soil Logs (Site Eval App).pdf`,
-      `${DBX}/Site Evaluation.pdf`,
       expect.stringMatching(/^\/Server\/0999\/Site Evaluation\/Site Eval App\/Field Record [0-9a-f]{8}\.json$/),
       expect.stringMatching(/^\/Server\/0999\/Site Evaluation\/Site Eval App\/Photos\/.+\.jpg$/), // the map image
     ]),
@@ -58,8 +56,8 @@ test('Dropbox: sync, filing to convention beside office files, offline queue, pr
 
   // Print at office: the combined PDF lands in the print queue.
   await dropbox.getByRole('button', { name: 'Print at office' }).click();
-  await expect(dropbox.getByText(/Sent to the office print queue: 0999\.007 Site Evaluation \d{4}-\d\d-\d\d \d{6}\.pdf/)).toBeVisible({ timeout: 30_000 });
-  expect((await fakePaths(page)).some((p) => p.startsWith('/Server/Office/Site Eval App/Print Queue/0999.007 Site Evaluation '))).toBe(true);
+  await expect(dropbox.getByText(/Sent to the office print queue: 0999\.007 Soil Logs \d{4}-\d\d-\d\d \d{6}\.pdf/)).toBeVisible({ timeout: 30_000 });
+  expect((await fakePaths(page)).some((p) => p.startsWith('/Server/Office/Site Eval App/Print Queue/0999.007 Soil Logs '))).toBe(true);
 
   // Backup to a file.
   const dl = page.waitForEvent('download');

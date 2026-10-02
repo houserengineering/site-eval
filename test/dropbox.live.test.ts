@@ -52,13 +52,12 @@ describe.skipIf(!tokenFile)('Dropbox live round trip', () => {
       'Soil Logs (Site Eval App).pdf': 'renamed',
       'Percolation Tests.xlsx': 'written',
       'Percolation Tests.pdf': 'written',
-      'Site Evaluation.pdf': 'written',
     });
     expect((await dropbox.stat(`${folder}/Soil Logs.pdf`))!.rev).toBe(foreign.rev);
     const listed = (await dropbox.list(folder)).map((e) => e.name);
-    expect(listed).toEqual(expect.arrayContaining(['Site Eval App', 'Soil Logs.xlsx', 'Site Evaluation.pdf']));
-    const back = await dropbox.read(`${folder}/Site Evaluation.pdf`);
-    expect(back!.file.hash).toBe(await contentHash(files.find((f) => f.kind === 'site-evaluation-pdf')!.bytes));
+    expect(listed).toEqual(expect.arrayContaining(['Site Eval App', 'Soil Logs.xlsx', 'Percolation Tests.pdf']));
+    const back = await dropbox.read(`${folder}/Percolation Tests.pdf`);
+    expect(back!.file.hash).toBe(await contentHash(files.find((f) => f.kind === 'perc-test-pdf')!.bytes));
     await syncRecord(out.record, B);
     console.log(`live round trip OK in ${folder}`);
   }, 180_000);

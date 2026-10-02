@@ -1,8 +1,11 @@
-// Soil log workbook in the office Soil Log Template layout: one test pit per sheet.
+// Soil log workbook in the office Soil Log Template layout: one sheet per test pit, its two walls
+// (A over B) in the template's two blocks, each with its horizon table, summary row, photo and location.
 import ExcelJS from 'exceljs';
 import { dateText, depthText, type FieldRecord, type TestPit } from '../domain/fieldRecord';
-import { colorText, horizonNotes, pitFootnotes, structureText, textureText } from '../domain/soilLogText';
+import { pitPages, wallLocation, type PitPage } from '../domain/pitWalls';
+import { colorText, horizonNotes, pitSummary, structureText, textureText } from '../domain/soilLogText';
 import type { SoilLogSnapshot, TemplateSet } from '../templates/types';
+import { imageSize } from './page';
 import { splitAddr, styleCell } from './xlsx';
 
 const EMU_PER_PX = 9525;
@@ -11,28 +14,98 @@ export async function soilLogXlsx(record: FieldRecord, templates: TemplateSet): 
   return new Uint8Array(await soilLogWorkbook(record, templates).xlsx.writeBuffer());
 }
 
-/** One sheet per test pit (the same order as `record.testPits`; one blank form when there are none). */
-export function soilLogWorkbook(record: FieldRecord, templates: TemplateSet): ExcelJS.Workbook {
+/** Where one wall's block lands on a sheet once extra horizon rows are inserted. */
+export interface WallBlock {
+  wall: TestPit | null;
+  labelRow: number;
+  firstRow: number;
+  summaryRow: number;
+  photo: string;
+  location: string;
+}
+
+export interface SheetLayout {
+  /** Template row → sheet row. */
+  row(r: number): number;
+  blocks: WallBlock[];
+  lastRow: number;
+  /** Extra rows inserted after each block's last template horizon row. */
+  inserts: { after: number; count: number }[];
+}
+
+/** Rows of the template's horizon table in block `k`. */
+const blockRows = (spec: SoilLogSnapshot, k: number) => spec.horizonTable.firstRow + k * spec.wallOffset;
+
+export function sheetLayout(spec: SoilLogSnapshot, walls: (TestPit | null)[]): SheetLayout {
+  const t = spec.horizonTable;
+  const slots = spec.wallOffset ? 2 : 1;
+  const inserts = Array.from({ length: slots }, (_, k) => ({
+    after: blockRows(spec, k) + t.rows - 1,
+    count: Math.max(0, (walls[k]?.horizons.length ?? 0) - t.rows),
+  }));
+  const row = (r: number) => r + inserts.reduce((n, ins) => n + (r > ins.after ? ins.count : 0), 0);
+  const labelRow = Number(spec.inputs.testPitLabel.replace(/\D/g, ''));
+  const shiftRange = (range: string, k: number) =>
+    range.replace(/(\D+)(\d+)/g, (_, col, r) => `${col}${row(Number(r) + k * spec.wallOffset)}`);
+  const blocks = Array.from({ length: slots }, (_, k): WallBlock => {
+    const n = Math.max(t.rows, walls[k]?.horizons.length ?? 0);
+    return {
+      wall: walls[k] ?? null,
+      labelRow: row(labelRow + k * spec.wallOffset),
+      firstRow: row(blockRows(spec, k)),
+      summaryRow: row(blockRows(spec, k)) + n,
+      photo: shiftRange(spec.areas.photo.range, k),
+      location: shiftRange(spec.areas.location.range, k),
+    };
+  });
+  const lastTemplateRow = Number((spec.areas.photo.range.split(':')[1] ?? '').replace(/\D/g, '')) + (slots - 1) * spec.wallOffset;
+  return { row, blocks, lastRow: row(lastTemplateRow), inserts };
+}
+
+/** One sheet per pit page (both walls; one blank form when there are no pits). */
+export function soilLogWorkbook(record: FieldRecord, templates: TemplateSet, photos: Map<string, Uint8Array> = new Map()): ExcelJS.Workbook {
   const { spec, logo } = templates.soilLog;
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Houser Engineering site evaluation app';
   wb.created = wb.modified = new Date(record.updatedAt);
   const logoId = wb.addImage({ buffer: logo as any, extension: spec.images[0].file.endsWith('.png') ? 'png' : 'jpeg' });
 
-  const pits: (TestPit | null)[] = record.testPits.length ? record.testPits : [null];
+  const pages: (PitPage | null)[] = record.testPits.length ? pitPages(record.testPits) : [null];
   const used = new Set<string>();
-  for (const pit of pits) {
-    const ws = wb.addWorksheet(sheetName(pit, used));
-    // The template prints 3 horizon rows; extra horizons get extra rows and push the photo/map boxes down.
-    const extraRows = Math.max(0, (pit?.horizons.length ?? 0) - spec.horizonTable.rows);
-    drawTemplate(ws, spec, logoId, extraRows);
-    fill(ws, spec, record, pit);
+  for (const page of pages) {
+    const ws = wb.addWorksheet(sheetName(page, used));
+    const layout = sheetLayout(spec, page?.walls ?? []);
+    drawTemplate(ws, spec, logoId, layout);
+    fillHeader(ws, spec, record);
+    for (const block of layout.blocks) if (block.wall) fillWall(ws, spec, block, block.wall, record.testPits, wb, photos);
+    fitAreas(ws, spec, layout);
   }
   return wb;
 }
 
-function sheetName(pit: TestPit | null, used: Set<string>): string {
-  const base = (pit ? `TP ${pit.label || '?'}` : 'Soil Logs').replace(/[\[\]:*?/\\]/g, '-').slice(0, 31);
+/**
+ * Even header rows, then give the page's spare height to the photo/location boxes so the
+ * printed page fills the sheet (fit to page is limited by width; height is left over).
+ */
+function fitAreas(ws: ExcelJS.Worksheet, spec: SoilLogSnapshot, layout: SheetLayout) {
+  for (const b of layout.blocks) ws.getRow(b.firstRow - 1).height = HEADER_ROW_PT;
+  const widthPt = Object.entries(spec.columns)
+    .filter(([c]) => c <= 'H')
+    .reduce((n, [, w]) => n + Math.trunc(((256 * w + 18) / 256) * 7) * 0.75, 0);
+  const avail = (11 - MARGINS.top - MARGINS.bottom) * 72 * (widthPt / ((8.5 - MARGINS.left - MARGINS.right) * 72));
+  let used = 0;
+  for (let r = 1; r <= layout.lastRow; r++) used += ws.getRow(r).height ?? DEFAULT_ROW_PT;
+  const areaRows = layout.blocks.flatMap((b) => {
+    const [a, z] = b.photo.split(':').map((x) => splitAddr(x).row);
+    return Array.from({ length: z - a + 1 }, (_, i) => a + i);
+  });
+  const spare = avail - used - 6;
+  if (spare <= 0) return;
+  for (const r of areaRows) ws.getRow(r).height = (ws.getRow(r).height ?? DEFAULT_ROW_PT) + spare / areaRows.length;
+}
+
+function sheetName(page: PitPage | null, used: Set<string>): string {
+  const base = (page ? `TP ${page.walls.map((w) => w.label || '?').join(' ')}` : 'Soil Logs').replace(/[\[\]:*?/\\]/g, '-').slice(0, 31);
   let name = base;
   for (let i = 2; used.has(name.toLowerCase()); i++) {
     const suffix = ` (${i})`;
@@ -42,77 +115,59 @@ function sheetName(pit: TestPit | null, used: Set<string>): string {
   return name;
 }
 
-/** Last row of the printed form (bottom of the photo/location boxes), before any horizon rows are added. */
-export function formLastRow(spec: SoilLogSnapshot): number {
-  const range = spec.areas.photo?.range ?? spec.areas.location?.range;
-  if (range) return Number(range.split(':')[1].replace(/\D/g, ''));
-  return Math.max(...Object.keys(spec.cells).map((a) => Number(a.replace(/\D/g, ''))));
-}
-
-function drawTemplate(ws: ExcelJS.Worksheet, spec: SoilLogSnapshot, logoId: number, extraRows: number) {
-  const t = spec.horizonTable;
-  const lastHorizonRow = t.firstRow + t.rows - 1;
-  const shift = (row: number) => (row > lastHorizonRow ? row + extraRows : row);
-  const at = splitAddr;
-
-  // The office template is an Arial 10 workbook (12.75 pt default rows).
+function drawTemplate(ws: ExcelJS.Worksheet, spec: SoilLogSnapshot, logoId: number, layout: SheetLayout) {
   ws.properties.defaultRowHeight = DEFAULT_ROW_PT;
-  for (const [col, width] of Object.entries(spec.columns)) ws.getColumn(col).width = width;
-  for (const [row, height] of Object.entries(spec.rows)) ws.getRow(shift(Number(row))).height = height;
-  for (let i = 1; i <= extraRows; i++) ws.getRow(lastHorizonRow + i).height = t.rowHeight;
+  for (const [col, width] of Object.entries(spec.columns)) if (col <= 'H') ws.getColumn(col).width = width;
+  for (const [row, height] of Object.entries(spec.rows)) ws.getRow(layout.row(Number(row))).height = height;
 
-  const cells = Object.entries(spec.cells).map(([addr, c]) => {
-    const { col, row } = at(addr);
-    return [`${col}${shift(row)}`, c] as const;
-  });
   for (const [addr, c] of Object.entries(spec.cells)) {
-    const { col, row } = at(addr);
-    if (row !== lastHorizonRow) continue;
-    for (let i = 1; i <= extraRows; i++) cells.push([`${col}${row + i}`, c]);
+    const { col, row } = splitAddr(addr);
+    if (col > 'H') continue;
+    styleCell(ws.getCell(`${col}${layout.row(row)}`), c);
+    // Inserted horizon rows take the style of the template's last horizon row.
+    for (const ins of layout.inserts)
+      if (row === ins.after) for (let i = 1; i <= ins.count; i++) styleCell(ws.getCell(`${col}${layout.row(row) + i}`), c);
   }
 
-  for (const [addr, c] of cells) styleCell(ws.getCell(addr), c);
-
   const ps = spec.pageSetup;
-  const lastRow = shift(formLastRow(spec));
   ws.pageSetup = {
     ...ws.pageSetup,
     paperSize: ps.paperSize as any,
     orientation: ps.orientation,
-    fitToPage: ps.fitToPage,
-    fitToWidth: ps.fitToWidth,
-    fitToHeight: ps.fitToHeight,
-    margins: ps.margins,
-    printArea: `A1:H${lastRow}`,
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 1,
+    margins: MARGINS,
+    printArea: `A1:H${layout.lastRow}`,
   };
 
   for (const img of spec.images) {
     ws.addImage(logoId, {
-      tl: { nativeCol: img.from.col, nativeColOff: img.from.colOff, nativeRow: shift(img.from.row + 1) - 1, nativeRowOff: img.from.rowOff } as any,
+      tl: { nativeCol: img.from.col, nativeColOff: img.from.colOff, nativeRow: layout.row(img.from.row + 1) - 1, nativeRowOff: img.from.rowOff } as any,
       ext: { width: img.extEmu.cx / EMU_PER_PX, height: img.extEmu.cy / EMU_PER_PX },
       editAs: 'oneCell',
     });
   }
 }
 
-function fill(ws: ExcelJS.Worksheet, spec: SoilLogSnapshot, record: FieldRecord, pit: TestPit | null) {
+function fillHeader(ws: ExcelJS.Worksheet, spec: SoilLogSnapshot, record: FieldRecord) {
   const h = record.header;
-  const put = (addr: string, v: string) => {
-    ws.getCell(addr).value = v === '' ? null : v;
-  };
+  const put = (addr: string, v: string) => (ws.getCell(addr).value = v === '' ? null : v);
   put(spec.inputs.projectNumber, h.projectNumber);
   put(spec.inputs.projectName, h.projectName);
   put(spec.inputs.location, h.location);
   put(spec.inputs.evalBy, h.evalBy);
   put(spec.inputs.date, dateText(h.date));
   put(spec.inputs.confirmationNumber, h.confirmationNumber);
-  if (!pit) return;
-  put(spec.inputs.testPitLabel, pit.label);
+}
 
-  const t = spec.horizonTable;
-  const c = t.columns;
-  pit.horizons.forEach((hz, i) => {
-    const row = ws.getRow(t.firstRow + i);
+function fillWall(ws: ExcelJS.Worksheet, spec: SoilLogSnapshot, b: WallBlock, wall: TestPit, all: TestPit[], wb: ExcelJS.Workbook, photos: Map<string, Uint8Array>) {
+  const labelCol = splitAddr(spec.inputs.testPitLabel).col;
+  ws.getCell(`${labelCol}${b.labelRow}`).value = wall.label || null;
+
+  const c = spec.horizonTable.columns;
+  wall.horizons.forEach((hz, i) => {
+    const row = ws.getRow(b.firstRow + i);
     const cells: [string, string][] = [
       [c.designation, hz.designation.trim()],
       [c.depth, depthText(hz)],
@@ -121,27 +176,67 @@ function fill(ws: ExcelJS.Worksheet, spec: SoilLogSnapshot, record: FieldRecord,
       [c.structure, structureText(hz)],
       [c.roots, hz.roots],
       [c.mottling, hz.mottling.present],
-      [c.notes, horizonNotes(pit, i)],
+      [c.notes, horizonNotes(wall, i)],
     ];
     for (const [col, v] of cells) row.getCell(col).value = v || null;
+    row.height = Math.max(HORIZON_MIN_PT, ...cells.map(([col, v]) => linesIn(v, ws.getColumn(col).width ?? 9) * LINE_PT + 4));
   });
 
-  // Pit-level DEQ-4 items print under the table the way the office writes footnote rows.
-  const firstFoot = t.firstRow + Math.max(t.rows, pit.horizons.length);
-  pitFootnotes(pit).forEach((text, i) => {
-    const r = firstFoot + i;
-    // Snapshot templates have no merged cells; a future template edit could add some here.
-    if (![...'ABCDEFGH'].some((col) => ws.getCell(`${col}${r}`).isMerged)) ws.mergeCells(`A${r}:H${r}`);
-    const cell = ws.getCell(`A${r}`);
-    cell.value = text;
-    cell.font = { name: FOOTNOTE_FONT.name, size: FOOTNOTE_FONT.size, bold: false };
-    cell.alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
-    ws.getRow(r).height = Math.max(1, Math.ceil(text.length / FOOTNOTE_CHARS_PER_LINE)) * FOOTNOTE_LINE_PT;
-  });
+  // Summary row: the last row of the table, across all columns.
+  const text = pitSummary(wall);
+  const r = b.summaryRow;
+  ws.mergeCells(`A${r}:H${r}`);
+  const cell = ws.getCell(`A${r}`);
+  cell.value = text || null;
+  cell.font = { name: 'Times New Roman', size: 9, bold: false };
+  cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+  cell.border = { left: { style: 'thin' }, right: { style: 'double' }, bottom: { style: 'double' }, top: { style: 'thin' } };
+  ws.getRow(r).height = Math.max(1, linesIn(text, SUMMARY_WIDTH_CHARS)) * 11 + 4;
+
+  // The photo goes in the workbook too; the location map is drawn on the printed page only.
+  const ref = wall.photos[0];
+  const bytes = ref && photos.get(ref.id);
+  if (bytes) {
+    const id = wb.addImage({ buffer: bytes as any, extension: bytes[0] === 0x89 ? 'png' : 'jpeg' });
+    const [tl, br] = b.photo.split(':').map(splitAddr);
+    // Fit the photo inside the box at its own proportions (Excel column widths → pixels).
+    let boxW = 0;
+    for (let c = colNum(tl.col); c <= colNum(br.col); c++) boxW += Math.trunc(((256 * (ws.getColumn(c).width ?? 9) + 18) / 256) * 7);
+    let boxH = 0;
+    for (let r = tl.row; r <= br.row; r++) boxH += ((ws.getRow(r).height ?? DEFAULT_ROW_PT) * 4) / 3;
+    const size = imageSize(bytes) ?? { width: ref.width, height: ref.height };
+    const k = Math.min(boxW / size.width, boxH / size.height);
+    ws.addImage(id, { tl: { col: colNum(tl.col) - 1, row: tl.row - 1 } as any, ext: { width: size.width * k, height: size.height * k }, editAs: 'oneCell' });
+  }
+  const loc = wallLocation(wall, all);
+  const locCell = ws.getCell(b.location.split(':')[0]);
+  locCell.value = loc ? `${loc.lat.toFixed(6)}, ${loc.lon.toFixed(6)} (${LOCATION_SOURCE[loc.source]})` : 'Location not recorded';
+  locCell.font = { name: 'Times New Roman', size: 9 };
+}
+
+export const LOCATION_SOURCE = { field: 'field GPS', 'other-wall': 'field GPS, same pit', planned: 'planned location' } as const;
+
+const colNum = (col: string) => [...col].reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0);
+
+/** Wrapped line count of upper-case Times 10 pt text in a column `width` characters wide. */
+function linesIn(text: string, width: number): number {
+  if (!text) return 1;
+  const perLine = Math.max(4, Math.floor(width * 0.92));
+  let lines = 1;
+  let len = 0;
+  for (const word of text.split(' ')) {
+    if (len && len + 1 + word.length > perLine) {
+      lines++;
+      len = word.length;
+    } else len += (len ? 1 : 0) + word.length;
+  }
+  return lines;
 }
 
 const DEFAULT_ROW_PT = 12.75;
-const FOOTNOTE_FONT = { name: 'Times New Roman', size: 10 };
-/** Times New Roman 10 pt across A:H of the template (~125 character widths). */
-const FOOTNOTE_CHARS_PER_LINE = 120;
-const FOOTNOTE_LINE_PT = 12.75;
+const LINE_PT = 11.5;
+const HEADER_ROW_PT = 15;
+const HORIZON_MIN_PT = 27;
+/** Characters across A:H at 9 pt. */
+const SUMMARY_WIDTH_CHARS = 150;
+const MARGINS = { left: 0.5, right: 0.5, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 };

@@ -40,6 +40,16 @@ HORIZON_COLUMNS = {
 AREA_LABELS = {"PHOTO OF TEST PIT": "photo", "LOCATION OF TEST PIT WITHIN PROPERTY": "location"}
 
 
+def label(v):
+    """Label text compared without case, surrounding space or a trailing colon."""
+    return v.strip().rstrip(":").strip().upper() if isinstance(v, str) else None
+
+
+LABELS = {label(k): v for k, v in HEADER_LABELS.items()}
+HORIZON_COLUMNS = {label(k): v for k, v in HORIZON_COLUMNS.items()}
+AREA_LABELS = {label(k): v for k, v in AREA_LABELS.items()}
+
+
 def style_of(c):
     s = {
         "font": {"name": c.font.name, "size": c.font.sz, "bold": bool(c.font.b)},
@@ -65,21 +75,26 @@ def main(src_xls, src_xlsx, out_dir):
     wb = openpyxl.load_workbook(src_xlsx)
     ws = wb.worksheets[0]
 
-    inputs, horizon = {}, None
+    # The 2026-10-02 template stacks two pit walls (A over B) on one form: the first block's labels
+    # define the cell map, and the second block repeats it `wallOffset` rows lower.
+    inputs, horizon, label_rows = {}, None, []
     for row in ws.iter_rows():
         for c in row:
-            v = c.value.strip() if isinstance(c.value, str) else c.value
-            if v in HEADER_LABELS:
-                inputs[HEADER_LABELS[v]] = f"{get_column_letter(c.column + 1)}{c.row}"
-            if v == "HORIZON":
+            v = label(c.value)
+            if v == label("TEST PIT#:"):
+                label_rows.append(c.row)
+            if v in LABELS and LABELS[v] not in inputs:
+                inputs[LABELS[v]] = f"{get_column_letter(c.column + 1)}{c.row}"
+            if v == "HORIZON" and horizon is None:
                 cols = {}
                 for h in ws[c.row]:
-                    key = HORIZON_COLUMNS.get(h.value.strip() if isinstance(h.value, str) else None)
+                    key = HORIZON_COLUMNS.get(label(h.value))
                     if key:
                         cols[key] = h.column_letter
                 horizon = {"headerRow": c.row, "firstRow": c.row + 1, "columns": cols}
     if horizon is None or len(inputs) != len(HEADER_LABELS):
         sys.exit(f"template labels not found: inputs={inputs} horizon={horizon}")
+    wall_offset = label_rows[1] - label_rows[0] if len(label_rows) > 1 else 0
 
     # Horizon rows: consecutive bordered rows under the header.
     r = horizon["firstRow"]
@@ -92,12 +107,18 @@ def main(src_xls, src_xlsx, out_dir):
     for i in range(horizon["rows"]):
         for col in horizon["columns"].values():
             input_cells.add(f"{col}{horizon['firstRow'] + i}")
+    if wall_offset:
+        wall_first = int(inputs["testPitLabel"][1:])
+        for addr in list(input_cells):
+            col, row = addr[0], int(addr[1:])
+            if row >= wall_first:
+                input_cells.add(f"{col}{row + wall_offset}")
 
     cells, areas = {}, {}
     for row in ws.iter_rows():
         for c in row:
-            v = c.value.strip() if isinstance(c.value, str) else c.value
-            if v in AREA_LABELS:
+            v = label(c.value)
+            if v in AREA_LABELS and AREA_LABELS[v] not in areas:
                 areas[AREA_LABELS[v]] = {"label": c.coordinate}
             s = style_of(c)
             keep_value = c.value not in (None, "") and c.coordinate not in input_cells and "fill" not in s
@@ -113,7 +134,7 @@ def main(src_xls, src_xlsx, out_dir):
     for key, area in areas.items():
         lab = ws[area["label"]]
         filled = [(cell.row, cell.column) for cell in (ws[k] for k in cells if "fill" in cells[k])
-                  if cell.row > lab.row and lab.column <= cell.column <= lab.column + 2]
+                  if lab.row < cell.row < (label_rows[0] + wall_offset if wall_offset else 10**6) and lab.column <= cell.column <= lab.column + 2]
         if not filled:
             sys.exit(f"no input box found under {area['label']} ({key})")
         if filled:
@@ -134,6 +155,8 @@ def main(src_xls, src_xlsx, out_dir):
         for anchor in root:
             fr = anchor.find("xdr:from", ns)
             ext = anchor.find(".//a:xfrm/a:ext", ns)
+            if ext is None:  # one-cell anchors written by tools/xls_to_xlsx.py
+                ext = anchor.find("xdr:ext", ns)
             images.append({
                 "file": logo,
                 "from": {k: int(fr.find(f"xdr:{k}", ns).text) for k in ("col", "colOff", "row", "rowOff")},
@@ -164,6 +187,7 @@ def main(src_xls, src_xlsx, out_dir):
         },
         "inputs": inputs,
         "horizonTable": horizon,
+        "wallOffset": wall_offset,
         "areas": areas,
         "images": images,
         "cells": cells,

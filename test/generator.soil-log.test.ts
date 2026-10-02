@@ -77,7 +77,10 @@ describe('soil log xlsx', () => {
   it('reproduces every template cell: labels, fonts, number formats, alignment, borders', async () => {
     const { wb } = await soilLogWorkbook(sampleRecord());
     const ws = wb.worksheets[0];
+    const location = spec.areas.location.range.split(':')[0];
     for (const [addr, cell] of Object.entries(spec.cells)) {
+      // The form prints A:H; the location box's first cell holds the wall's coordinates.
+      if (addr.replace(/\d+/, '') > 'H' || addr === location) continue;
       const got = ws.getCell(addr);
       if (cell.value !== undefined) expect(got.value, addr).toBe(cell.value);
       expect(got.font?.name, `${addr} font`).toBe(cell.font.name);
@@ -98,19 +101,27 @@ describe('soil log xlsx', () => {
     const { wb } = await soilLogWorkbook(sampleRecord());
     const ws = wb.worksheets[0];
     for (const [col, width] of Object.entries(spec.columns)) {
-      expect(ws.getColumn(col).width, `col ${col}`).toBeCloseTo(width, 3);
+      if (col <= 'H') expect(ws.getColumn(col).width, `col ${col}`).toBeCloseTo(width, 3);
     }
+    // Header rows are evened to 15 pt; photo/location rows grow to fill the page; the rest keep the template's.
+    const areaRows = (k: number) => {
+      const [a, z] = spec.areas.photo.range.split(':').map((x) => Number(x.replace(/\D/g, '')) + k * spec.wallOffset);
+      return Array.from({ length: z - a + 1 }, (_, i) => a + i);
+    };
+    const changed = new Set([spec.horizonTable.headerRow, spec.horizonTable.headerRow + spec.wallOffset, ...areaRows(0), ...areaRows(1)]);
     for (const [row, height] of Object.entries(spec.rows)) {
-      expect(ws.getRow(Number(row)).height, `row ${row}`).toBe(height);
+      if (!changed.has(Number(row)) && Number(row) !== spec.horizonTable.firstRow) expect(ws.getRow(Number(row)).height, `row ${row}`).toBe(height);
     }
+    expect(ws.getRow(spec.horizonTable.headerRow).height).toBe(15);
+    for (const r of areaRows(0)) expect(ws.getRow(r).height!, `area row ${r}`).toBeGreaterThan(12.75);
     const ps = ws.pageSetup;
     expect(ps.paperSize).toBe(spec.pageSetup.paperSize);
     expect(ps.orientation).toBe('portrait');
     expect(ps.fitToPage).toBe(true);
     expect(ps.fitToWidth).toBe(1);
     expect(ps.fitToHeight).toBe(1);
-    expect(ps.margins).toMatchObject(spec.pageSetup.margins);
-    expect(ps.printArea).toBe(`A1:H${Number(spec.areas.photo.range.split(':')[1].replace(/\D/g, ''))}`);
+    expect(ps.margins).toMatchObject({ left: 0.5, right: 0.5, top: 0.5, bottom: 0.5 });
+    expect(ps.printArea).toBe(`A1:H${Number(spec.areas.photo.range.split(':')[1].replace(/\D/g, '')) + spec.wallOffset}`);
     const images = ws.getImages();
     expect(images).toHaveLength(1);
     const img = images[0];
@@ -120,11 +131,17 @@ describe('soil log xlsx', () => {
     expect(Buffer.from(media.buffer as ArrayBuffer).equals(Buffer.from(templates.soilLog.logo))).toBe(true);
   });
 
-  it('writes one sheet per test pit, named for the pit', async () => {
+  it('writes one sheet per test pit: wall A in the first block, wall B in the second', async () => {
     let r = sampleRecord();
     r = addTestPit(r, 'LOT 19');
+    r = addTestPit(r, '3A');
     const { wb } = await soilLogWorkbook(r);
-    expect(wb.worksheets.map((w) => w.name)).toEqual(['TP 3B', 'TP LOT 19']);
+    expect(wb.worksheets.map((w) => w.name)).toEqual(['TP 3A 3B', 'TP LOT 19']);
+    const ws = wb.worksheets[0];
+    const labelRow = Number(spec.inputs.testPitLabel.replace(/\D/g, ''));
+    expect(ws.getCell(spec.inputs.testPitLabel).value).toBe('3A');
+    expect(ws.getCell(`B${labelRow + spec.wallOffset}`).value).toBe('3B');
+    expect(ws.getRow(spec.horizonTable.firstRow + spec.wallOffset).getCell('A').value).toBe('O');
     expect(wb.worksheets[1].getCell(spec.inputs.testPitLabel).value).toBe('LOT 19');
     expect(wb.worksheets[1].getCell(spec.inputs.projectNumber).value).toBe('0999.001');
   });
@@ -140,29 +157,32 @@ describe('soil log xlsx', () => {
     expect([0, 1, 2, 3, 4].map((i) => ws.getRow(t.firstRow + i).getCell(c.designation).value)).toEqual(['O', 'A', 'B', 'BC', 'C']);
     expect(ws.getRow(t.firstRow + 4).getCell(c.depth).value).toBe('96"-120"');
     const extra = ws.getRow(t.firstRow + 4);
-    expect(extra.height).toBe(t.rowHeight);
+    expect(extra.height).toBeGreaterThanOrEqual(27);
     expect(extra.getCell(c.notes).border?.right?.style).toBe('double');
     expect(extra.getCell(c.designation).border?.bottom?.style).toBe('thin');
     const label = spec.areas.photo.label;
     const moved = `${label.replace(/\d+/, '')}${Number(label.replace(/\D/g, '')) + 2}`;
     expect(ws.getCell(moved).value).toBe('PHOTO OF TEST PIT');
-    expect(ws.getCell(label).value ?? null).toBeNull();
-    expect(ws.pageSetup.printArea).toBe('A1:H31');
+    // The pit summary row now sits where the label was.
+    expect(String(ws.getCell(label).value)).toMatch(/^TOTAL DEPTH 120"/);
+    expect(ws.pageSetup.printArea).toBe(`A1:H${Number(spec.areas.photo.range.split(':')[1].replace(/\D/g, '')) + spec.wallOffset + 2}`);
   });
 
-  it('prints pit-level DEQ-4 items as footnote rows under the horizon table', async () => {
+  it('prints the pit summary as the last row of the horizon table, across all columns', async () => {
     let r = sampleRecord();
     const pitId = r.testPits[0].id;
     r = updateTestPit(r, pitId, {
       observedWater: { kind: 'NONE', depthIn: null },
       limitingLayer: { type: 'NONE', depthIn: null, other: '' },
-      shgw: { depthIn: 12, deeperThan: true, basis: 'NO REDOXIMORPHIC FEATURES TO PIT DEPTH' },
+      shgw: { depthIn: null, deeperThan: false, basis: 'NO REDOXIMORPHIC FEATURES TO PIT DEPTH' },
+      slope: { pct: 2, shape: '', direction: '', method: 'ESTIMATED' },
     });
     const { wb } = await soilLogWorkbook(r);
     const ws = wb.worksheets[0];
     const row = spec.horizonTable.firstRow + spec.horizonTable.rows;
-    expect(ws.getCell(`A${row}`).value).toBe('*NO EVIDENCE OF GROUNDWATER, BEDROCK OR LIMITING LAYER');
-    expect(ws.getCell(`A${row + 1}`).value).toBe('TOTAL DEPTH 12". EST. SEASONAL HIGH GROUNDWATER >12" (NO REDOXIMORPHIC FEATURES TO PIT DEPTH)');
+    expect(ws.getCell(`A${row}`).value).toBe(
+      'TOTAL DEPTH 12". NO GROUNDWATER OBSERVED. NO REDOXIMORPHIC FEATURES TO PIT DEPTH. LIMITING LAYER: NONE TO PIT DEPTH. SLOPE 2% (ESTIMATED).',
+    );
     expect(ws.getCell(`H${row}`).isMerged).toBe(true);
     expect(ws.getCell(spec.areas.photo.label).value).toBe('PHOTO OF TEST PIT');
   });
@@ -193,6 +213,8 @@ it('template snapshot carries its source hash and no sample job values', () => {
     ...Object.values(spec.inputs),
     ...Array.from({ length: t.rows }, (_, i) => Object.values(t.columns).map((c) => `${c}${t.firstRow + i}`)).flat(),
   ];
+  // The second wall's block repeats the first's input cells.
+  inputCells.push(...inputCells.filter((a) => Number(a.replace(/\D/g, '')) >= t.firstRow - 2).map((a) => a.replace(/\d+/, (n) => String(Number(n) + spec.wallOffset))));
   for (const addr of inputCells) expect(spec.cells[addr]?.value, addr).toBeUndefined();
   for (const [addr, c] of Object.entries(spec.cells)) if (c.fill) expect(c.value, addr).toBeUndefined();
 });

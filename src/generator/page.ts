@@ -9,7 +9,8 @@ export type Op =
   | { k: 'line'; x1: number; y1: number; x2: number; y2: number; w: number; dash?: number[]; color?: string }
   | { k: 'rect'; x: number; y: number; w: number; h: number; stroke?: number; fill?: string; color?: string }
   | { k: 'circle'; x: number; y: number; r: number; stroke?: number; fill?: string; dash?: number[] }
-  | { k: 'image'; x: number; y: number; w: number; h: number; bytes: Uint8Array; mime: 'image/png' | 'image/jpeg' };
+  /** `clip` (page points) hides the parts of the image outside it: a crop of a larger image. */
+  | { k: 'image'; x: number; y: number; w: number; h: number; bytes: Uint8Array; mime: 'image/png' | 'image/jpeg'; clip?: { x: number; y: number; w: number; h: number } };
 
 export interface Page {
   w: number;

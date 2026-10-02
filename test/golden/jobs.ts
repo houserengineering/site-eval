@@ -32,8 +32,7 @@ const R = {
   sizeRange: 'Size ranges print as "FINE TO MEDIUM", the most common historical form (449 rows, research/01 §1.7).',
   zero: 'Horizon O typed as zero in the source; the app stores the letter O (75 historical rows had this error, research/01 §1.4).',
   yesNo: 'ROOTS/MOTTLING print as Y/N, the 2026 template convention.',
-  gravelly: 'DEQ-4 App. B: 15–35% gravel takes the GRAVELLY modifier; the source wrote 30% gravel in NOTES but left the texture unmodified.',
-  rockCase: 'Office NOTES wording in caps ("30% GRAVEL").',
+  rockInNotes: 'Rock content prints in NOTES as percent plus size ("30% ROCKS (GRAVEL)"), not as a texture modifier: the office 2026 template (Nathan, 2026-10-02).',
   firmNote: 'Consistence (DEQ-4 §2.1.4.1.B) prints first in NOTES; free notes follow unchanged.',
 };
 
@@ -107,13 +106,13 @@ export const GOLDEN_JOBS: GoldenJob[] = [
         ],
         expected: [
           ['O', `0"-${b1}"`, '7.5YR 2.5/1, BLACK, MOIST, RUBBED', 'CLAY LOAM', 'FINE TO MEDIUM GRANULAR', 'Y', 'N', ''],
-          ['A', `${b1}"-${b2}"`, '10YR 4/3, BROWN, MOIST, RUBBED', 'GRAVELLY LOAM', 'MEDIUM GRANULAR', 'Y', 'N', '30% GRAVEL'],
-          ['B', `${b2}"-56"`, '10YR 4/3, BROWN, MOIST, RUBBED', 'GRAVELLY LOAM', 'FINE TO MEDIUM GRANULAR', 'Y', 'N', '30% GRAVEL'],
+          ['A', `${b1}"-${b2}"`, '10YR 4/3, BROWN, MOIST, RUBBED', 'LOAM', 'MEDIUM GRANULAR', 'Y', 'N', '30% ROCKS (GRAVEL)'],
+          ['B', `${b2}"-56"`, '10YR 4/3, BROWN, MOIST, RUBBED', 'LOAM', 'FINE TO MEDIUM GRANULAR', 'Y', 'N', '30% ROCKS (GRAVEL)'],
         ],
         reasons: {
           '0,0': R.zero, '0,2': R.colorWords, '0,4': R.sizeRange, '0,5': R.yesNo, '0,6': R.yesNo,
-          '1,2': R.colorWords, '1,5': R.yesNo, '1,6': R.yesNo,
-          '2,2': R.colorWords, '2,3': R.gravelly, '2,4': R.sizeRange, '2,5': R.yesNo, '2,6': R.yesNo,
+          '1,2': R.colorWords, '1,3': R.rockInNotes, '1,5': R.yesNo, '1,6': R.yesNo, '1,7': R.rockInNotes,
+          '2,2': R.colorWords, '2,4': R.sizeRange, '2,5': R.yesNo, '2,6': R.yesNo, '2,7': R.rockInNotes,
         },
       })),
     ],

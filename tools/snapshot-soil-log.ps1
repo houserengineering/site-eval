@@ -1,22 +1,20 @@
-# Refresh src/templates/soil-log from the office template (office PC only: needs Excel and the Dropbox server).
+# Refresh src/templates/soil-log from the office template (office PC only: needs the Dropbox server).
+# The .xls is converted without Excel (tools/xls_to_xlsx.py); the committed logo is kept.
 param(
   [string]$Source = "$env:USERPROFILE\Dropbox\Server\Office\Tools\Wastewater Tools\SEPTIC\SITE EVALUATION\Soil Log Template.xls"
 )
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
+$templates = Join-Path $repo 'src\templates\soil-log'
 $tmp = Join-Path ([IO.Path]::GetTempPath()) "site-eval-snapshot-$PID"
 New-Item -ItemType Directory -Force $tmp | Out-Null
-$copy = Join-Path $tmp 'template.xls'
-Copy-Item -LiteralPath $Source $copy
-$xl = New-Object -ComObject Excel.Application
-$xl.Visible = $false; $xl.DisplayAlerts = $false
-try {
-  $wb = $xl.Workbooks.Open($copy, 0, $true)
-  $wb.SaveAs((Join-Path $tmp 'template.xlsx'), 51)
-  $wb.Close($false)
-} finally { $xl.Quit() }
 # Provenance hash is of the office original, not the copy.
-Copy-Item -LiteralPath $Source (Join-Path $tmp 'source.xls')
-(Get-Item (Join-Path $tmp 'source.xls')).LastWriteTime = (Get-Item -LiteralPath $Source).LastWriteTime
-python (Join-Path $PSScriptRoot 'snapshot_soil_log.py') (Join-Path $tmp 'source.xls') (Join-Path $tmp 'template.xlsx') (Join-Path $repo 'src\templates\soil-log')
+$copy = Join-Path $tmp 'source.xls'
+Copy-Item -LiteralPath $Source $copy
+(Get-Item $copy).LastWriteTime = (Get-Item -LiteralPath $Source).LastWriteTime
+$spec = Get-Content (Join-Path $templates 'snapshot.json') -Raw | ConvertFrom-Json
+$anchor = Join-Path $tmp 'anchor.json'
+$spec.images[0] | ConvertTo-Json -Depth 5 | Set-Content $anchor -Encoding utf8
+python (Join-Path $PSScriptRoot 'xls_to_xlsx.py') $copy (Join-Path $tmp 'template.xlsx') (Join-Path $templates $spec.images[0].file) $anchor
+python (Join-Path $PSScriptRoot 'snapshot_soil_log.py') $copy (Join-Path $tmp 'template.xlsx') $templates
 Remove-Item -Recurse -Force $tmp

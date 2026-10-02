@@ -59,7 +59,7 @@ test('create a site evaluation, log a test pit, export the soil log, work offlin
   const ws = wb.worksheets[0];
   expect(ws.name).toBe('TP 3B');
   expect(ws.getCell('B4').value).toBe('0999.001');
-  expect(ws.getCell('H10').value).toBe('SE 00001');
+  expect(ws.getCell('F9').value).toBe('SE 00001'); // 2026-10-02 template: confirmation number in the header
   expect(ws.getCell('B13').value).toBe('0"-12"');
   expect(ws.getCell('C13').value).toBe('10YR 3/2, VERY DARK GRAYISH BROWN, MOIST, RUBBED');
   expect(ws.getCell('E13').value).toBe('FINE GRANULAR');

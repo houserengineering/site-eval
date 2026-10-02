@@ -1,7 +1,7 @@
 // Table-driven tests of the pure soil-description functions the generator and UI share.
 import { describe, expect, it } from 'vitest';
 import { emptyHorizon, emptyTestPit, type Horizon, type TestPit } from '../src/domain/fieldRecord';
-import { colorText, horizonNotes, missingItems, pitFootnotes, structureText, textureText } from '../src/domain/soilLogText';
+import { colorText, horizonNotes, missingItems, pitSummary, structureText, textureText } from '../src/domain/soilLogText';
 import { chromasFor, munsellName, rockModifier } from '../src/domain/vocabulary';
 
 const hz = (p: Partial<Omit<Horizon, 'id'>> = {}): Horizon => ({ id: 'h', ...emptyHorizon(), ...p });
@@ -47,15 +47,15 @@ describe('rock fragment texture modifier (DEQ-4 App. B)', () => {
 
   it('uses the fragment noun at 90% and above', () => {
     expect(rockModifier(90, 'GRAVEL')).toEqual({ prefix: '', noun: 'GRAVEL' });
-    expect(textureText(hz({ texture: { cls: 'LOAMY SAND', sandSize: '' }, rock: { pct: 95, kind: 'COBBLES' } }))).toBe('COBBLES');
   });
 });
 
+// The office template prints rock content in NOTES, so texture is the USDA class alone.
 describe('texture', () => {
   it.each([
     [{ cls: 'SILT LOAM', sandSize: '' }, { pct: 5, kind: 'ROCKS' }, 'SILT LOAM'],
-    [{ cls: 'LOAM', sandSize: '' }, { pct: 30, kind: 'GRAVEL' }, 'GRAVELLY LOAM'],
-    [{ cls: 'SANDY LOAM', sandSize: 'COARSE' }, { pct: 40, kind: 'GRAVEL' }, 'VERY GRAVELLY COARSE SANDY LOAM'],
+    [{ cls: 'LOAM', sandSize: '' }, { pct: 30, kind: 'GRAVEL' }, 'LOAM'],
+    [{ cls: 'SANDY LOAM', sandSize: 'COARSE' }, { pct: 40, kind: 'GRAVEL' }, 'COARSE SANDY LOAM'],
     [{ cls: 'LOAMY SAND', sandSize: 'FINE' }, { pct: null, kind: 'ROCKS' }, 'LOAMY FINE SAND'],
     [{ cls: 'SAND', sandSize: 'MEDIUM' }, { pct: 0, kind: 'ROCKS' }, 'MEDIUM SAND'],
     [{ cls: 'CLAY', sandSize: 'FINE' }, { pct: null, kind: 'ROCKS' }, 'CLAY'],
@@ -103,7 +103,8 @@ describe('NOTES composer (office wording, research/01 §1.9)', () => {
 
   it('writes NO ROCKS for 0% and nothing when rock was not recorded', () => {
     expect(horizonNotes(pit({ horizons: [hz({ rock: { pct: 0, kind: 'ROCKS' } })] }), 0)).toBe('NO ROCKS');
-    expect(horizonNotes(pit({ horizons: [hz({ rock: { pct: 30, kind: 'GRAVEL' } })] }), 0)).toBe('30% GRAVEL');
+    expect(horizonNotes(pit({ horizons: [hz({ rock: { pct: 30, kind: 'GRAVEL' } })] }), 0)).toBe('30% ROCKS (GRAVEL)');
+    expect(horizonNotes(pit({ horizons: [hz({ rock: { pct: 40, kind: 'GRAVEL TO COBBLES' } })] }), 0)).toBe('40% ROCKS (GRAVEL TO COBBLES)');
     expect(horizonNotes(pit({ horizons: [hz()] }), 0)).toBe('');
   });
 
@@ -119,21 +120,21 @@ describe('NOTES composer (office wording, research/01 §1.9)', () => {
     expect(horizonNotes(p2, 1)).toBe('LIMITING LAYER AT 12" (IMPERVIOUS LAYER), GROUNDWATER AT 30"');
   });
 
-  it('adds the "no evidence" footnote and a pit summary line', () => {
+  it('summarizes the pit in one row: depth, groundwater, basis, limiting layer, estimated slope, notes', () => {
     const p = pit({
       horizons: [hz({ topIn: 0, bottomIn: 96 })],
       observedWater: { kind: 'NONE', depthIn: null },
       limitingLayer: { type: 'NONE', depthIn: null, other: '' },
-      shgw: { depthIn: 96, deeperThan: true, basis: 'NO REDOXIMORPHIC FEATURES TO PIT DEPTH' },
-      slope: { pct: 4, shape: 'PLANE', direction: 'NE', method: 'CLINOMETER' },
+      shgw: { depthIn: null, deeperThan: false, basis: 'NO REDOXIMORPHIC FEATURES TO PIT DEPTH' },
+      slope: { pct: 2, shape: '', direction: '', method: 'ESTIMATED' },
       notes: 'pit dug by excavator',
     });
-    expect(pitFootnotes(p)).toEqual([
-      '*NO EVIDENCE OF GROUNDWATER, BEDROCK OR LIMITING LAYER',
-      'TOTAL DEPTH 96". EST. SEASONAL HIGH GROUNDWATER >96" (NO REDOXIMORPHIC FEATURES TO PIT DEPTH). SLOPE 4%, PLANE, NE (CLINOMETER). PIT DUG BY EXCAVATOR',
-    ]);
-    expect(pitFootnotes(pit({ observedWater: { kind: 'NONE', depthIn: null } }))).toEqual(['*NO GROUNDWATER OBSERVED']);
-    expect(pitFootnotes(pit())).toEqual([]);
+    expect(pitSummary(p)).toBe(
+      'TOTAL DEPTH 96". NO GROUNDWATER OBSERVED. NO REDOXIMORPHIC FEATURES TO PIT DEPTH. LIMITING LAYER: NONE TO PIT DEPTH. SLOPE 2% (ESTIMATED). PIT DUG BY EXCAVATOR.',
+    );
+    const wet = { ...p, observedWater: { kind: 'SEEPAGE' as const, depthIn: 72 }, limitingLayer: { type: 'BEDROCK' as const, depthIn: 90, other: '' }, notes: '' };
+    expect(pitSummary(wet)).toBe('TOTAL DEPTH 96". GROUNDWATER SEEPS AT 72". NO REDOXIMORPHIC FEATURES TO PIT DEPTH. BEDROCK AT 90". SLOPE 2% (ESTIMATED).');
+    expect(pitSummary(pit())).toBe('');
   });
 });
 

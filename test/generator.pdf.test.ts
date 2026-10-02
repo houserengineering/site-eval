@@ -66,15 +66,14 @@ function siteEvaluation(): FieldRecord {
 const pdfPages = async (bytes: Uint8Array) => (await PDFDocument.load(bytes)).getPageCount();
 
 describe('PDF deliverables', () => {
-  it('writes a soil log PDF (one letter page per pit), a perc test PDF and the combined site evaluation PDF', async () => {
+  it('writes a soil log PDF (one letter page per pit) and a perc test PDF; no separate site evaluation packet', async () => {
     const files = await generate(siteEvaluation(), templates, { photo });
     const byKind = Object.fromEntries(files.map((f) => [f.kind, f]));
     expect(byKind['soil-log-pdf'].path).toBe('Soil Logs.pdf');
     expect(byKind['soil-log-pdf'].mimeType).toBe('application/pdf');
     expect(await pdfPages(byKind['soil-log-pdf'].bytes)).toBe(2);
     expect(await pdfPages(byKind['perc-test-pdf'].bytes)).toBe(1);
-    // Map page + 2 soil logs + 1 perc test + 1 page for pit 1's second and third photos.
-    expect(await pdfPages(byKind['site-evaluation-pdf'].bytes)).toBe(5);
+    expect(byKind['site-evaluation-pdf']).toBeUndefined();
     const doc = await PDFDocument.load(byKind['soil-log-pdf'].bytes);
     expect(doc.getPage(0).getSize()).toEqual({ width: 612, height: 792 });
     expect(doc.getTitle()).toBe('0999.001 Example Subdivision Soil Logs');
@@ -103,19 +102,12 @@ describe('PDF deliverables', () => {
     r.header.projectName = 'Łąka ≥ 2 lots 🏠';
     r.testPits[1].label = '2→3';
     const files = await generate(r, templates);
-    expect(files.map((f) => f.kind)).toContain('site-evaluation-pdf');
-    expect(await pdfPages(files.find((f) => f.kind === 'site-evaluation-pdf')!.bytes)).toBe(5);
+    expect(await pdfPages(files.find((f) => f.kind === 'soil-log-pdf')!.bytes)).toBe(2);
   });
 
   it('says so when a photo is recorded but not on this device', async () => {
     const pages = await printPages(siteEvaluation(), templates);
     expect(pageText(pages['soil-logs'][0])).toContain('Photo not on this device');
-  });
-
-  it('starts the combined PDF with a location map of every located pit', async () => {
-    const pages = await printPages(siteEvaluation(), templates, { photo });
-    const map = pageText(pages['site-evaluation'][0]);
-    for (const s of ['TEST PIT LOCATIONS', '0999.001', 'TP 1', 'TP 2', '45.678901', '-111.234567', '±11 ft', '±13 ft']) expect(map).toContain(s);
   });
 
   it('prints the readings on the perc test PDF as the workbook shows them', async () => {

@@ -1,6 +1,6 @@
 // PDF writer for the page model (pdf-lib, standard fonts: Times for the Times New Roman soil log,
 // Helvetica for the Calibri perc form).
-import { LineCapStyle, PDFDocument, rgb, StandardFonts, type PDFFont, type PDFImage } from 'pdf-lib';
+import { clip, endPath, LineCapStyle, PDFDocument, popGraphicsState, pushGraphicsState, rectangle, rgb, StandardFonts, type PDFFont, type PDFImage } from 'pdf-lib';
 import { printable, type FontKey, type Measure, type Page } from './page';
 
 const FONTS: Record<FontKey, StandardFonts> = {
@@ -82,7 +82,9 @@ export async function writePdf(pages: Page[], meta: { title: string; subject?: s
           img = op.mime === 'image/png' ? await doc.embedPng(op.bytes) : await doc.embedJpg(op.bytes);
           images.set(op.bytes, img);
         }
+        if (op.clip) page.pushOperators(pushGraphicsState(), rectangle(op.clip.x, Y(op.clip.y + op.clip.h), op.clip.w, op.clip.h), clip(), endPath());
         page.drawImage(img, { x: op.x, y: Y(op.y + op.h), width: op.w, height: op.h });
+        if (op.clip) page.pushOperators(popGraphicsState());
       }
     }
   }

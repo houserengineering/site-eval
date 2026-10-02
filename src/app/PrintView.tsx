@@ -12,7 +12,6 @@ import { UnconfirmedNotice } from './Unconfirmed';
 export const PRINT_KINDS: Record<PrintKind, { title: string; file: DeliverableKind }> = {
   'soil-logs': { title: 'Soil logs', file: 'soil-log-pdf' },
   'perc-tests': { title: 'Perc tests', file: 'perc-test-pdf' },
-  'site-evaluation': { title: 'Site evaluation', file: 'site-evaluation-pdf' },
   groundwater: { title: 'Groundwater observation results', file: 'groundwater-pdf' },
 };
 
@@ -143,6 +142,12 @@ function SheetSvg({ page, label }: { page: Page; label: string }) {
           return <rect key={i} x={o.x} y={o.y} width={o.w} height={o.h} fill={o.fill ?? 'none'} stroke={o.stroke ? (o.color ?? '#000000') : 'none'} stroke-width={o.stroke} />;
         if (o.k === 'circle')
           return <circle key={i} cx={o.x} cy={o.y} r={o.r} fill={o.fill ?? 'none'} stroke={o.stroke ? '#000000' : 'none'} stroke-width={o.stroke} stroke-dasharray={o.dash?.join(' ')} />;
+        if (o.clip)
+          return (
+            <svg key={i} x={o.clip.x} y={o.clip.y} width={o.clip.w} height={o.clip.h} viewBox={`${o.clip.x} ${o.clip.y} ${o.clip.w} ${o.clip.h}`} overflow="hidden">
+              <image href={urls.get(o.bytes)} x={o.x} y={o.y} width={o.w} height={o.h} preserveAspectRatio="none" />
+            </svg>
+          );
         return <image key={i} href={urls.get(o.bytes)} x={o.x} y={o.y} width={o.w} height={o.h} preserveAspectRatio="none" />;
       })}
     </svg>

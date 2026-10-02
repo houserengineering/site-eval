@@ -37,6 +37,8 @@ export interface SoilLogSnapshot {
     columns: Record<'designation' | 'depth' | 'color' | 'texture' | 'structure' | 'roots' | 'mottling' | 'notes', string>;
   };
   areas: Record<'photo' | 'location', { label: string; range: string }>;
+  /** Rows from the first pit wall's block to the second's (the B wall prints under A); 0 = one wall per form. */
+  wallOffset: number;
   images: { file: string; from: { col: number; colOff: number; row: number; rowOff: number }; extEmu: { cx: number; cy: number } }[];
   cells: Record<string, SnapshotCell>;
 }
