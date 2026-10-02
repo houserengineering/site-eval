@@ -52,22 +52,56 @@ export function drawSitePlan(box: Rect, pits: TestPit[], measure: Measure, opts:
   const X = (e: number) => inner.x + inner.w / 2 + (e - midE) * ptPerFt;
   const Y = (n: number) => inner.y + inner.h / 2 - (n - midN) * ptPerFt;
 
-  // Others first, the highlighted pit on top.
-  const order = [...pts].sort((a, b) => Number(a.pit.id === opts.highlightId) - Number(b.pit.id === opts.highlightId));
-  for (const { pit, e, n } of order) {
+  const placed = pts.map(({ pit, e, n }) => {
     const hi = pit.id === opts.highlightId;
-    const x = X(e);
-    const y = Y(n);
-    const acc = pit.location!.accuracyM * FT_PER_M * ptPerFt;
-    if (acc > 3) ops.push({ k: 'circle', x, y, r: acc, stroke: 0.4, dash: [1.5, 1.5] });
-    ops.push({ k: 'circle', x, y, r: hi ? size * 0.45 : size * 0.3, fill: hi ? HIGHLIGHT : '#000000' });
     const label = `TP ${pit.label}`;
     const font = hi ? 'sans-bold' : 'sans';
-    const w = measure(label, font, size);
-    // Label to the right unless it would leave the box.
-    const lx = x + size * 0.7 + w > box.x + box.w - 2 ? x - size * 0.7 - w : x + size * 0.7;
-    ops.push({ k: 'text', x: lx, y: y + size * 0.35, size, font, text: label, w, color: hi ? HIGHLIGHT : undefined });
+    return { pit, hi, x: X(e), y: Y(n), r: hi ? size * 0.45 : size * 0.3, label, font: font as 'sans' | 'sans-bold', w: measure(label, font, size), lx: 0, ly: 0 };
+  });
+  // Labels beside their points without covering another label or marker: the highlighted pit
+  // first, then the rest; each takes the first clear spot of several around its point.
+  type Box = { x0: number; x1: number; y0: number; y1: number };
+  const taken: Box[] = placed.map((p) => ({ x0: p.x - p.r, x1: p.x + p.r, y0: p.y - p.r, y1: p.y + p.r }));
+  const overlap = (a: Box, b: Box) => Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0)) * Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
+  const gap = size * 0.7;
+  for (const p of [...placed].sort((a, b) => Number(b.hi) - Number(a.hi))) {
+    const own = taken[placed.indexOf(p)];
+    let best: { box: Box; cost: number } | null = null;
+    for (const k of [1, 2, 3]) {
+      const d = gap * k;
+      const spots: [number, number][] = [
+        [p.x + d, p.y + size * 0.35], // right
+        [p.x - d - p.w, p.y + size * 0.35], // left
+        [p.x - p.w / 2, p.y - d + size * 0.1], // above
+        [p.x - p.w / 2, p.y + d + size * 0.6], // below
+        [p.x + d * 0.7, p.y - d * 0.7 + size * 0.2], // above right
+        [p.x + d * 0.7, p.y + d * 0.7 + size * 0.6], // below right
+        [p.x - d * 0.7 - p.w, p.y - d * 0.7 + size * 0.2], // above left
+        [p.x - d * 0.7 - p.w, p.y + d * 0.7 + size * 0.6], // below left
+      ];
+      for (const [lx, ly] of spots) {
+        const box_ = { x0: lx, x1: lx + p.w, y0: ly - size * 0.75, y1: ly + size * 0.2 };
+        const outside = box_.x0 < box.x + 2 || box_.x1 > box.x + box.w - 2 || box_.y0 < box.y + 2 || box_.y1 > box.y + box.h - 2;
+        const cost = (outside ? 1e6 : 0) + taken.reduce((c, t) => (t === own ? c : c + overlap(box_, t)), 0) + (k - 1) * 0.01;
+        if (!best || cost < best.cost) {
+          best = { box: box_, cost };
+          p.lx = lx;
+          p.ly = ly;
+        }
+      }
+      if (best && best.cost < 1) break;
+    }
+    taken.push(best!.box);
   }
+
+  // Others first, the highlighted pit on top.
+  for (const p of [...placed].sort((a, b) => Number(a.hi) - Number(b.hi))) {
+    const acc = p.pit.location!.accuracyM * FT_PER_M * ptPerFt;
+    if (acc > 3) ops.push({ k: 'circle', x: p.x, y: p.y, r: acc, stroke: 0.4, dash: [1.5, 1.5] });
+    ops.push({ k: 'circle', x: p.x, y: p.y, r: p.r, fill: p.hi ? HIGHLIGHT : '#000000' });
+  }
+  for (const p of [...placed].sort((a, b) => Number(a.hi) - Number(b.hi)))
+    ops.push({ k: 'text', x: p.lx, y: p.ly, size, font: p.font, text: p.label, w: p.w, color: p.hi ? HIGHLIGHT : undefined });
 
   // North arrow, top right.
   const ax = box.x + box.w - pad * 0.6;
