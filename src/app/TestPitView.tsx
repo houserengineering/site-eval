@@ -20,6 +20,8 @@ import type { RecordStore } from '../storage/db';
 import { MunsellPicker } from './MunsellPicker';
 import { PitMedia } from './PitMedia';
 import { TextureGuide } from './TextureGuide';
+import { pitWarnings } from '../domain/rules';
+import { RuleWarnings } from './RuleWarnings';
 
 export function TestPitView(props: { record: FieldRecord; pitId: string; save: (r: FieldRecord) => void; store: RecordStore }) {
   const r = props.record;
@@ -79,6 +81,8 @@ export function TestPitView(props: { record: FieldRecord; pitId: string; save: (
       </button>
 
       <PitSummary pit={pit} missing={missing.pit} save={savePit} />
+
+      <RuleWarnings warnings={pitWarnings(r, pit)} />
 
       <PitMedia record={r} pit={pit} save={props.save} store={props.store} />
 

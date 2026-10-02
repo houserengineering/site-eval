@@ -9,6 +9,8 @@ import {
   type PercReading,
   type PercTest,
 } from '../domain/fieldRecord';
+import { percWarnings } from '../domain/rules';
+import { RuleWarnings } from './RuleWarnings';
 import { clock, countdown, nextReadingDue, readingCalc, soakStatus, stopRule, tapeText } from '../domain/perc';
 import { go } from './App';
 import { Chips, NumberField, TapeField, TextField, TimeField, YesNoChips } from './fields';
@@ -88,6 +90,9 @@ export function PercTestView(props: { record: FieldRecord; testId: string; save:
         <NextAction record={r} test={t} now={now} save={props.save} />
         <StopRuleBox test={t} />
       </section>
+
+      {/* Stop-rule warnings already show in the readings box above. */}
+      <RuleWarnings warnings={percWarnings(r, t, now).filter((w) => w.rule.id !== 'perc-stop')} />
 
       <section aria-labelledby="pnotes">
         <h2 id="pnotes">Notes</h2>

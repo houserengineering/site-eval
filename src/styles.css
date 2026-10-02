@@ -362,3 +362,18 @@ button.row-link { width: 100%; text-align: left; font: inherit; color: inherit; 
 button.row-link:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .open-files { border: 2px solid var(--primary); border-radius: 8px; }
 .connect details { margin: 4px 0 12px; }
+
+/* Rule checks: advisory warnings with the rule text and its source on tap. */
+.rules { margin: 16px 0; }
+.rules h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 1.1rem; }
+.rule-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.rule { background: #fff3cd; color: #4a3200; border-radius: 6px; }
+.rule > summary { padding: 10px 12px; min-height: 48px; cursor: pointer; overflow-wrap: anywhere; font-size: 1rem; }
+.rule > summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.rule-body { padding: 0 12px 10px; font-size: 0.95rem; overflow-wrap: anywhere; }
+.rule-body p { margin: 6px 0; }
+.rule-title { font-weight: 700; }
+.rule-cite { font-style: italic; }
+@media (prefers-color-scheme: dark) {
+  .rule { background: #4a3a10; color: #ffe7a3; }
+}

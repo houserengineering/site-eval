@@ -15,6 +15,8 @@ import { UnconfirmedNotice } from './Unconfirmed';
 import { pitStatus } from '../domain/soilLogText';
 import { lastEdit, pitPath } from '../domain/merge';
 import { DropboxSection, SyncStatus } from './SyncPanel';
+import { allWarnings } from '../domain/rules';
+import { DesignSection, RuleWarnings } from './RuleWarnings';
 
 export function SiteEvaluationView(props: { record: FieldRecord; save: (r: FieldRecord) => void; store: RecordStore }) {
   const r = props.record;
@@ -95,6 +97,8 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
         <TextField label="Owner name" value={r.header.ownerName} onInput={h('ownerName')} autoCapitalize="words" hint="Printed on the perc test forms." />
       </section>
 
+      <DesignSection record={r} save={props.save} />
+
       <section aria-labelledby="pits">
         <h2 id="pits">Test pits</h2>
         {r.testPits.length === 0 && <p class="muted">No test pits yet.</p>}
@@ -157,6 +161,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
 
       <section aria-labelledby="out">
         <h2 id="out">Deliverables</h2>
+        <RuleWarnings warnings={allWarnings(r, now)} title="Rule checks before export" showSubject />
         <p class="hint">Print or save PDF (letter):</p>
         <ul class="list">
           {(Object.keys(PRINT_KINDS) as PrintKind[])

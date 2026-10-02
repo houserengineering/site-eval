@@ -3,7 +3,7 @@
 import type { Georef } from './georef';
 import type { Stamp } from './merge';
 
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 /** Header values are always text: `0999.001`, `SE 00001`, `3B` print exactly as entered. */
 export interface Header {
@@ -173,12 +173,33 @@ export interface SiteMap {
   georef: Georef;
 }
 
+/** Which review applies: DEQ subdivision (ARM 17.36 sub. 3), county permit (sub. 9 + GCCHD HC-3); '' = both. */
+export type Review = '' | 'SUB' | 'CTY';
+export type SystemUse = '' | 'INDIVIDUAL' | 'SHARED' | 'MULTIPLE' | 'PUBLIC';
+export type SystemType = '' | 'GRAVITY' | 'PRESSURE' | 'AT-GRADE' | 'MOUND' | 'ETA';
+
+/** Proposed system as known on site; drives the rule checks only (never printed). */
+export interface Design {
+  review: Review;
+  use: SystemUse;
+  system: SystemType;
+  /** Proposed infiltrative surface depth below ground, inches (null = standard trench 24"). */
+  infiltrativeDepthIn: number | null;
+  /** Drainfields served by this evaluation (each needs its own pit). */
+  drainfields: number | null;
+  /** Pressure-dosed zones (one pit per zone). */
+  pressureZones: number | null;
+}
+
+export const emptyDesign = (): Design => ({ review: '', use: '', system: '', infiltrativeDepthIn: null, drainfields: null, pressureZones: null });
+
 export interface FieldRecord {
   schemaVersion: typeof SCHEMA_VERSION;
   id: string;
   createdAt: string;
   updatedAt: string;
   header: Header;
+  design: Design;
   testPits: TestPit[];
   percTests: PercTest[];
   /** Certifications by perc test id. */
@@ -223,6 +244,7 @@ export function newSiteEvaluation(header: Partial<Header> = {}): FieldRecord {
     createdAt: t,
     updatedAt: t,
     header: { ...emptyHeader(), ...header },
+    design: emptyDesign(),
     testPits: [],
     percTests: [],
     certifications: {},
@@ -241,6 +263,10 @@ export function updateHeader(r: FieldRecord, patch: Partial<Header>): FieldRecor
   const unconfirmed = { ...r.unconfirmed };
   for (const k of Object.keys(patch) as (keyof Header)[]) if (patch[k] !== r.header[k]) delete unconfirmed[k];
   return touch({ ...r, header: { ...r.header, ...patch }, unconfirmed });
+}
+
+export function updateDesign(r: FieldRecord, patch: Partial<Design>): FieldRecord {
+  return touch({ ...r, design: { ...r.design, ...patch } });
 }
 
 export function confirmHeaderField(r: FieldRecord, key: keyof Header): FieldRecord {
@@ -464,6 +490,8 @@ const migrations: Record<number, (r: any) => any> = {
   }),
   // v5 → v6: field edit stamps for merging, files the app filed to Dropbox.
   5: (r) => ({ ...r, schemaVersion: 6, edits: {}, filed: {} }),
+  // v6 → v7: proposed system inputs for the rule checks.
+  6: (r) => ({ ...r, schemaVersion: 7, design: emptyDesign() }),
 };
 
 export function migrate(raw: unknown): FieldRecord {
