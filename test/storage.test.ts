@@ -36,4 +36,27 @@ describe('on-device storage', () => {
     expect(records.map((x) => x.id)).toEqual([ok.id]);
     expect(unreadable).toEqual([{ id: r.id, error: expect.stringMatching(/newer than this app/) }]);
   });
+
+  it('upgrades a v1 record (plain-text horizons) without losing what was typed', async () => {
+    const store = await openStore(`t-${crypto.randomUUID()}`);
+    const v1 = {
+      schemaVersion: 1, id: 'old', createdAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-01T00:00:00.000Z',
+      header: { projectNumber: '0999.001', projectName: '', location: '', evalBy: '', date: '', confirmationNumber: '' },
+      testPits: [{ id: 'p1', label: '3B', horizons: [{
+        id: 'h1', designation: 'O', topIn: 0, bottomIn: 12, color: '10YR 3/2, VERY DARK GRAYISH BROWN',
+        texture: 'SILT LOAM', structure: 'FINE GRANULAR', roots: 'yes', mottling: 'some at 10"', notes: 'NO ROCKS',
+      }] }],
+    };
+    await store.saveRaw(v1);
+    const r = (await store.get('old'))!;
+    expect(r.schemaVersion).toBe(SCHEMA_VERSION);
+    const h = r.testPits[0].horizons[0];
+    expect(h.color.other).toBe('10YR 3/2, VERY DARK GRAYISH BROWN');
+    expect(h.texture.cls).toBe('SILT LOAM');
+    expect(h.structure.other).toBe('FINE GRANULAR');
+    expect(h.roots).toBe('Y');
+    expect(h.mottling.present).toBe('');
+    expect(h.notes).toBe('MOTTLING: some at 10", NO ROCKS');
+    expect(r.testPits[0].observedWater.kind).toBe('');
+  });
 });

@@ -3,7 +3,7 @@
 import ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
 import { generate } from '../src/generator';
-import { addHorizon, addTestPit, newSiteEvaluation, type FieldRecord } from '../src/domain/fieldRecord';
+import { addHorizon, addTestPit, emptyHorizon, newSiteEvaluation, updateTestPit, type FieldRecord } from '../src/domain/fieldRecord';
 import { loadTemplatesFromDisk } from './templates';
 
 const templates = loadTemplatesFromDisk();
@@ -25,12 +25,12 @@ function sampleRecord(): FieldRecord {
     designation: 'O',
     topIn: 0,
     bottomIn: 12,
-    color: '10YR 3/2, VERY DARK GRAYISH BROWN, MOIST, RUBBED',
-    texture: 'SILT LOAM',
-    structure: 'FINE GRANULAR',
+    color: { hue: '10YR', value: '3', chroma: '2', moisture: 'MOIST', physicalState: 'RUBBED', other: '' },
+    texture: { cls: 'SILT LOAM', sandSize: '' },
+    rock: { pct: 0, kind: 'ROCKS' },
+    structure: { grade: '', size: 'FINE', size2: '', shape: 'GRANULAR', other: '' },
     roots: 'Y',
-    mottling: 'N',
-    notes: 'NO ROCKS',
+    mottling: { ...emptyHorizon().mottling, present: 'N' },
   });
   return r;
 }
@@ -148,6 +148,23 @@ describe('soil log xlsx', () => {
     expect(ws.getCell(moved).value).toBe('PHOTO OF TEST PIT');
     expect(ws.getCell(label).value ?? null).toBeNull();
     expect(ws.pageSetup.printArea).toBe('A1:H31');
+  });
+
+  it('prints pit-level DEQ-4 items as footnote rows under the horizon table', async () => {
+    let r = sampleRecord();
+    const pitId = r.testPits[0].id;
+    r = updateTestPit(r, pitId, {
+      observedWater: { kind: 'NONE', depthIn: null },
+      limitingLayer: { type: 'NONE', depthIn: null, other: '' },
+      shgw: { depthIn: 12, deeperThan: true, basis: 'NO REDOXIMORPHIC FEATURES TO PIT DEPTH' },
+    });
+    const { wb } = await soilLogWorkbook(r);
+    const ws = wb.worksheets[0];
+    const row = spec.horizonTable.firstRow + spec.horizonTable.rows;
+    expect(ws.getCell(`A${row}`).value).toBe('*NO EVIDENCE OF GROUNDWATER, BEDROCK OR LIMITING LAYER');
+    expect(ws.getCell(`A${row + 1}`).value).toBe('TOTAL DEPTH 12". EST. SEASONAL HIGH GROUNDWATER >12" (NO REDOXIMORPHIC FEATURES TO PIT DEPTH)');
+    expect(ws.getCell(`H${row}`).isMerged).toBe(true);
+    expect(ws.getCell(spec.areas.photo.label).value).toBe('PHOTO OF TEST PIT');
   });
 
   it('keeps sheet names within the 31-character limit for many duplicate labels', async () => {

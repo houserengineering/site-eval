@@ -1,6 +1,7 @@
 // Soil log workbook in the office Soil Log Template layout: one test pit per sheet.
 import ExcelJS from 'exceljs';
 import { dateText, depthText, type FieldRecord, type TestPit } from '../domain/fieldRecord';
+import { colorText, horizonNotes, pitFootnotes, structureText, textureText } from '../domain/soilLogText';
 import type { SoilLogSnapshot, TemplateSet } from '../templates/types';
 
 const EMU_PER_PX = 9525;
@@ -119,16 +120,37 @@ function fill(ws: ExcelJS.Worksheet, spec: SoilLogSnapshot, record: FieldRecord,
   put(spec.inputs.testPitLabel, pit.label);
 
   const t = spec.horizonTable;
+  const c = t.columns;
   pit.horizons.forEach((hz, i) => {
     const row = ws.getRow(t.firstRow + i);
-    const c = t.columns;
-    row.getCell(c.designation).value = hz.designation || null;
-    row.getCell(c.depth).value = depthText(hz) || null;
-    row.getCell(c.color).value = hz.color || null;
-    row.getCell(c.texture).value = hz.texture || null;
-    row.getCell(c.structure).value = hz.structure || null;
-    row.getCell(c.roots).value = hz.roots || null;
-    row.getCell(c.mottling).value = hz.mottling || null;
-    row.getCell(c.notes).value = hz.notes || null;
+    const cells: [string, string][] = [
+      [c.designation, hz.designation.trim()],
+      [c.depth, depthText(hz)],
+      [c.color, colorText(hz)],
+      [c.texture, textureText(hz)],
+      [c.structure, structureText(hz)],
+      [c.roots, hz.roots],
+      [c.mottling, hz.mottling.present],
+      [c.notes, horizonNotes(pit, i)],
+    ];
+    for (const [col, v] of cells) row.getCell(col).value = v || null;
+  });
+
+  // Pit-level DEQ-4 items print under the table the way the office writes footnote rows.
+  const firstFoot = t.firstRow + Math.max(t.rows, pit.horizons.length);
+  pitFootnotes(pit).forEach((text, i) => {
+    const r = firstFoot + i;
+    // Snapshot templates have no merged cells; a future template edit could add some here.
+    if (![...'ABCDEFGH'].some((col) => ws.getCell(`${col}${r}`).isMerged)) ws.mergeCells(`A${r}:H${r}`);
+    const cell = ws.getCell(`A${r}`);
+    cell.value = text;
+    cell.font = { name: FOOTNOTE_FONT.name, size: FOOTNOTE_FONT.size, bold: false };
+    cell.alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+    ws.getRow(r).height = Math.max(1, Math.ceil(text.length / FOOTNOTE_CHARS_PER_LINE)) * FOOTNOTE_LINE_PT;
   });
 }
+
+const FOOTNOTE_FONT = { name: 'Times New Roman', size: 10 };
+/** Times New Roman 10 pt across A:H of the template (~125 character widths). */
+const FOOTNOTE_CHARS_PER_LINE = 120;
+const FOOTNOTE_LINE_PT = 12.75;

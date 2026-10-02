@@ -26,20 +26,27 @@ test('create a site evaluation, log a test pit, export the soil log, work offlin
   await expect(page.getByRole('heading', { name: 'Test pit 3B' })).toBeVisible();
   await page.getByRole('button', { name: 'Add horizon' }).click();
   const hz = page.getByRole('region', { name: 'Horizon 1' });
-  await hz.getByLabel('Horizon', { exact: true }).fill('O');
+  const pick = (group: string, name: string) => hz.getByRole('radiogroup', { name: group, exact: true }).getByRole('radio', { name, exact: true }).click();
+  await pick('Horizon', 'O');
   await expect(hz.getByLabel('Top')).toHaveValue('0');
-  await hz.getByLabel('Bottom').fill('12');
-  await hz.getByLabel('Color').fill('10YR 3/2, VERY DARK GRAYISH BROWN, MOIST, RUBBED');
-  await hz.getByLabel('Texture').fill('SILT LOAM');
-  await hz.getByLabel('Structure').fill('FINE GRANULAR');
-  await hz.getByLabel('Roots').fill('Y');
-  await hz.getByLabel('Mottling').fill('N');
-  await hz.getByLabel('Notes').fill('NO ROCKS');
+  await hz.getByLabel('Bottom', { exact: true }).fill('12');
+  await pick('Hue', '10YR');
+  await pick('Value', '3');
+  await pick('Chroma', '2');
+  await pick('USDA class', 'SILT LOAM');
+  await hz.getByLabel('Rock fragments (by volume)').fill('0');
+  await pick('Shape', 'GRANULAR');
+  await pick('Size', 'FINE');
+  await pick('Consistence', 'FRIABLE');
+  await pick('Plasticity', 'NON-PLASTIC');
+  await pick('Roots', 'Yes');
+  await pick('Mottling', 'No');
+  await expect(hz.getByText('Complete')).toBeVisible();
   await shot(page, '03-test-pit');
 
   // Persisted on device: survives a reload.
   await page.reload();
-  await expect(page.getByRole('region', { name: 'Horizon 1' }).getByLabel('Notes')).toHaveValue('NO ROCKS');
+  await expect(page.getByRole('region', { name: 'Horizon 1' }).getByRole('radio', { name: 'SILT LOAM' })).toHaveAttribute('aria-checked', 'true');
   await page.getByRole('link', { name: 'Back to site evaluation' }).click();
   await expect(page.getByRole('link', { name: /Test pit 3B/ })).toBeVisible();
 
@@ -54,6 +61,9 @@ test('create a site evaluation, log a test pit, export the soil log, work offlin
   expect(ws.getCell('B4').value).toBe('0999.001');
   expect(ws.getCell('H10').value).toBe('SE 00001');
   expect(ws.getCell('B13').value).toBe('0"-12"');
+  expect(ws.getCell('C13').value).toBe('10YR 3/2, VERY DARK GRAYISH BROWN, MOIST, RUBBED');
+  expect(ws.getCell('E13').value).toBe('FINE GRANULAR');
+  expect(ws.getCell('H13').value).toBe('NO ROCKS, FRIABLE, NON-PLASTIC');
 
   // Offline after first load: the service worker serves the app shell and generator.
   await page.evaluate(() => navigator.serviceWorker.ready);
