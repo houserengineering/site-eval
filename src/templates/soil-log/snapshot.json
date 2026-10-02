@@ -1,0 +1,1676 @@
+{
+ "kind": "soil-log",
+ "source": {
+  "path": "Office\\Tools\\Wastewater Tools\\SEPTIC\\SITE EVALUATION\\Soil Log Template.xls",
+  "sha256": "43c10bbeba32a3942002ae5d3c51ac0a58464fc0ecef5f402969103be49eb5dd",
+  "modified": "2026-10-01T19:50:16+00:00",
+  "snapshotAt": "2026-10-02T02:38:36.359260+00:00"
+ },
+ "sheetName": "Soil Logs",
+ "columns": {
+  "A": 16.7109,
+  "B": 10.7109,
+  "C": 19.8555,
+  "D": 10.2852,
+  "E": 26.2852,
+  "F": 8.2852,
+  "G": 11.8555,
+  "H": 21.4258,
+  "I": 30.7109,
+  "J": 12.7109,
+  "K": 9.1406
+ },
+ "rows": {
+  "1": 18.0,
+  "2": 12.0,
+  "3": 12.0,
+  "4": 13.5,
+  "5": 13.5,
+  "6": 13.5,
+  "7": 13.5,
+  "8": 13.5,
+  "10": 13.5,
+  "11": 12.75,
+  "12": 13.5,
+  "13": 44.25,
+  "14": 45.0,
+  "15": 45.0,
+  "20": 12.75
+ },
+ "pageSetup": {
+  "paperSize": 1,
+  "orientation": "portrait",
+  "fitToPage": true,
+  "fitToWidth": 1,
+  "fitToHeight": 1,
+  "margins": {
+   "left": 0.7,
+   "right": 0.7,
+   "top": 0.75,
+   "bottom": 0.75,
+   "header": 0.3,
+   "footer": 0.3
+  }
+ },
+ "inputs": {
+  "projectNumber": "B4",
+  "projectName": "B5",
+  "location": "B6",
+  "evalBy": "B7",
+  "date": "B8",
+  "testPitLabel": "B10",
+  "confirmationNumber": "H10"
+ },
+ "horizonTable": {
+  "headerRow": 12,
+  "firstRow": 13,
+  "columns": {
+   "designation": "A",
+   "depth": "B",
+   "color": "C",
+   "texture": "D",
+   "structure": "E",
+   "roots": "F",
+   "mottling": "G",
+   "notes": "H"
+  },
+  "rows": 3,
+  "rowHeight": 45.0
+ },
+ "areas": {
+  "photo": {
+   "label": "A19",
+   "range": "A20:C29"
+  },
+  "location": {
+   "label": "E19",
+   "range": "E20:G29"
+  }
+ },
+ "images": [
+  {
+   "file": "logo.jpeg",
+   "from": {
+    "col": 4,
+    "colOff": 1276350,
+    "row": 0,
+    "rowOff": 85725
+   },
+   "extEmu": {
+    "cx": 3228975,
+    "cy": 771525
+   }
+  }
+ ],
+ "cells": {
+  "A1": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 14.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "left"
+   },
+   "value": "SOIL PROFILE LOG"
+  },
+  "A2": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 8.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "left"
+   },
+   "value": "See Circular DEQ-4, Appendix B for definitions"
+  },
+  "A4": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 9.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "right"
+   },
+   "value": "PROJECT #:"
+  },
+  "B4": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "0.000",
+   "alignment": {
+    "horizontal": "left"
+   },
+   "border": {
+    "bottom": "medium"
+   },
+   "fill": "FFFFFF00"
+  },
+  "C4": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "left"
+   },
+   "border": {
+    "bottom": "medium"
+   },
+   "fill": "FFFFFF00"
+  },
+  "A5": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "right"
+   },
+   "value": "PROJECT NAME:"
+  },
+  "B5": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "left"
+   },
+   "border": {
+    "top": "medium",
+    "bottom": "medium"
+   },
+   "fill": "FFFFFF00"
+  },
+  "C5": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "left"
+   },
+   "border": {
+    "top": "medium",
+    "bottom": "medium"
+   },
+   "fill": "FFFFFF00"
+  },
+  "A6": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "right"
+   },
+   "value": "LOCATION:"
+  },
+  "B6": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "left"
+   },
+   "border": {
+    "top": "medium",
+    "bottom": "medium"
+   },
+   "fill": "FFFFFF00"
+  },
+  "C6": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "left"
+   },
+   "border": {
+    "top": "medium",
+    "bottom": "medium"
+   },
+   "fill": "FFFFFF00"
+  },
+  "A7": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "right"
+   },
+   "value": "EVAL. BY:"
+  },
+  "B7": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "left"
+   },
+   "border": {
+    "top": "medium",
+    "bottom": "medium"
+   },
+   "fill": "FFFFFF00"
+  },
+  "C7": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "left"
+   },
+   "border": {
+    "top": "medium",
+    "bottom": "medium"
+   },
+   "fill": "FFFFFF00"
+  },
+  "A8": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "right"
+   },
+   "value": "DATE:"
+  },
+  "B8": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "mm-dd-yy",
+   "alignment": {
+    "horizontal": "left"
+   },
+   "border": {
+    "top": "medium",
+    "bottom": "medium"
+   },
+   "fill": "FFFFFF00"
+  },
+  "C8": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "left"
+   },
+   "border": {
+    "top": "medium",
+    "bottom": "medium"
+   },
+   "fill": "FFFFFF00"
+  },
+  "A10": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "right"
+   },
+   "value": "TEST PIT#:"
+  },
+  "B10": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "bottom": "medium"
+   },
+   "fill": "FFFFFF00"
+  },
+  "G10": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "right"
+   },
+   "value": "CONFIRMATION NUMBER"
+  },
+  "H10": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "bottom": "medium"
+   },
+   "fill": "FFFFFF00",
+   "comment": "You can get this from the GCCHD (in Gallatin County). For test pits in other counties, delete this cell"
+  },
+  "A12": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "double",
+    "bottom": "thin"
+   },
+   "value": "HORIZON"
+  },
+  "B12": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "double",
+    "bottom": "thin"
+   },
+   "value": "DEPTH",
+   "comment": "The depth for each of the layers found in the test pit"
+  },
+  "C12": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "double",
+    "bottom": "thin"
+   },
+   "value": "COLOR",
+   "comment": "You can get this from the Munsell Soil Color Charts"
+  },
+  "D12": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "double",
+    "bottom": "thin"
+   },
+   "value": "TEXTURE"
+  },
+  "E12": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "double",
+    "bottom": "thin"
+   },
+   "value": "STRUCTURE",
+   "comment": "See the Munsell soil color chart for determining soil structure"
+  },
+  "F12": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "double",
+    "bottom": "thin"
+   },
+   "value": "ROOTS",
+   "comment": "Are there notes within this layer of soils? Yes or No?"
+  },
+  "G12": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "double",
+    "bottom": "thin"
+   },
+   "value": "MOTTLING",
+   "comment": "Is there mottling in the soil layer? Yes or No?  See Munsell soil classification chart for size/percentage, and site evaluation folder for links to videos"
+  },
+  "H12": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "double",
+    "top": "double",
+    "bottom": "thin"
+   },
+   "value": "NOTES",
+   "comment": "Add notes that address the percentage of rock, groundwater elevations, and any other non-typical items within this layer of the test pit"
+  },
+  "A13": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "B13": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "C13": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "D13": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "E13": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "F13": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "G13": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "H13": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "double",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "A14": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "B14": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "C14": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "D14": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "E14": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "F14": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "G14": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "H14": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "double",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "A15": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "B15": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "C15": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "D15": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "E15": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "F15": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "G15": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "H15": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "double",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "fill": "FFFFFF00"
+  },
+  "A19": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "left"
+   },
+   "value": "PHOTO OF TEST PIT"
+  },
+  "E19": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "left"
+   },
+   "value": "LOCATION OF TEST PIT WITHIN PROPERTY"
+  },
+  "A20": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "B20": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "C20": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "E20": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "F20": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "G20": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "A21": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "fill": "FFFFFF00"
+  },
+  "B21": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "fill": "FFFFFF00"
+  },
+  "C21": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "fill": "FFFFFF00"
+  },
+  "E21": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "fill": "FFFFFF00"
+  },
+  "F21": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "fill": "FFFFFF00"
+  },
+  "G21": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "fill": "FFFFFF00"
+  },
+  "A22": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "fill": "FFFFFF00"
+  },
+  "B22": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "fill": "FFFFFF00"
+  },
+  "C22": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "fill": "FFFFFF00"
+  },
+  "E22": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "fill": "FFFFFF00"
+  },
+  "F22": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "fill": "FFFFFF00"
+  },
+  "G22": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "fill": "FFFFFF00"
+  },
+  "A23": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "fill": "FFFFFF00"
+  },
+  "B23": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "fill": "FFFFFF00"
+  },
+  "C23": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "fill": "FFFFFF00"
+  },
+  "E23": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "fill": "FFFFFF00"
+  },
+  "F23": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "fill": "FFFFFF00"
+  },
+  "G23": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "vertical": "center",
+    "wrapText": true
+   },
+   "fill": "FFFFFF00"
+  },
+  "A24": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "B24": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "C24": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "E24": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "F24": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "G24": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "A25": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "B25": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "C25": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "E25": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "F25": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "G25": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "A26": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "B26": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "C26": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "E26": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "F26": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "G26": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "A27": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "B27": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "C27": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "E27": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "F27": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "G27": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "A28": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "B28": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "C28": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "E28": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "F28": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "G28": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "A29": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "B29": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "C29": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "E29": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "F29": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  },
+  "G29": {
+   "font": {
+    "name": "Times New Roman",
+    "size": 10.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "fill": "FFFFFF00"
+  }
+ }
+}
