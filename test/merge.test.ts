@@ -59,7 +59,7 @@ describe('field-level last-writer-wins merge', () => {
     expect(mergeRecords(m, b)).toEqual(m);
     expect(mergeRecords(m, a).testPits.length).toBe(5);
     // The merged pit is a whole test pit, not a partial one.
-    expect(m.testPits.find((p) => p.label === '21')).toMatchObject({ horizons: [], observedWater: { kind: '', depthIn: null }, photos: [] });
+    expect(m.testPits.find((p) => p.label === '21')).toMatchObject({ horizons: [], observedWater: { kind: 'NONE', depthIn: null }, photos: [] });
   });
 
   it('a later delete removes the pit everywhere; an untouched record does not resurrect it', () => {

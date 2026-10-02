@@ -16,7 +16,7 @@ import { pitStatus } from '../domain/soilLogText';
 import { lastEdit, pitPath } from '../domain/merge';
 import { DropboxSection, SyncStatus } from './SyncPanel';
 import { allWarnings } from '../domain/rules';
-import { DesignSection, RuleWarnings } from './RuleWarnings';
+import { RuleWarnings } from './RuleWarnings';
 import { wellSummary } from './GroundwaterView';
 
 export function SiteEvaluationView(props: { record: FieldRecord; save: (r: FieldRecord) => void; store: RecordStore }) {
@@ -98,7 +98,6 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
         <TextField label="Owner name" value={r.header.ownerName} onInput={h('ownerName')} autoCapitalize="words" hint="Printed on the perc test forms." />
       </section>
 
-      <DesignSection record={r} save={props.save} />
 
       <section aria-labelledby="pits">
         <h2 id="pits">Test pits</h2>

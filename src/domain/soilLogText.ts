@@ -137,11 +137,9 @@ export function missingItems(pit: TestPit): { horizons: string[][]; pit: string[
   const p: string[] = [];
   if (!pit.observedWater.kind) p.push('observed water');
   else if (pit.observedWater.kind !== 'NONE' && pit.observedWater.depthIn == null) p.push('observed water depth');
-  if (pit.shgw.depthIn == null || !pit.shgw.basis) p.push('seasonal high groundwater estimate');
   if (!pit.limitingLayer.type) p.push('limiting layer');
   else if (pit.limitingLayer.type !== 'NONE' && pit.limitingLayer.depthIn == null) p.push('limiting layer depth');
-  const s = pit.slope;
-  if (s.pct == null || !s.shape || !s.direction || !s.method) p.push('slope');
+  if (pit.slope.pct == null) p.push('slope %');
   const depth = pitDepth(pit);
   const limited = pit.limitingLayer.type && pit.limitingLayer.type !== 'NONE';
   if (depth != null && depth < 96 && !limited) p.push('pit is shallower than 8 ft: record the limiting layer or reason');

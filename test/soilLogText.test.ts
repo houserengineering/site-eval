@@ -134,14 +134,49 @@ describe('NOTES composer (office wording, research/01 §1.9)', () => {
     );
     const wet = { ...p, observedWater: { kind: 'SEEPAGE' as const, depthIn: 72 }, limitingLayer: { type: 'BEDROCK' as const, depthIn: 90, other: '' }, notes: '' };
     expect(pitSummary(wet)).toBe('TOTAL DEPTH 96". GROUNDWATER SEEPS AT 72". NO REDOXIMORPHIC FEATURES TO PIT DEPTH. BEDROCK AT 90". SLOPE 2% (ESTIMATED).');
-    expect(pitSummary(pit())).toBe('');
+    const blank = { ...p, horizons: [], observedWater: { kind: '' as const, depthIn: null }, limitingLayer: { type: '' as const, depthIn: null, other: '' }, shgw: { depthIn: null, deeperThan: false, basis: '' }, slope: { pct: null, shape: '', direction: '', method: '' }, notes: '' };
+    expect(pitSummary(blank)).toBe('');
+  });
+
+  it('a new wall already reads as a normal pit (ticket 01 defaults)', () => {
+    expect(pitSummary(pit({ horizons: [hz({ topIn: 0, bottomIn: 96 })] }))).toBe(
+      'TOTAL DEPTH 96". NO GROUNDWATER OBSERVED. NO REDOXIMORPHIC FEATURES TO PIT DEPTH. LIMITING LAYER: NONE TO PIT DEPTH. SLOPE 2% (ESTIMATED).',
+    );
+  });
+
+  it('an old record with an SHGW estimate and slope shape/direction/method prints the same row', () => {
+    const old = pit({
+      horizons: [hz({ topIn: 0, bottomIn: 96 })],
+      shgw: { depthIn: 96, deeperThan: true, basis: 'NO REDOXIMORPHIC FEATURES TO PIT DEPTH' },
+      slope: { pct: 4, shape: 'PLANE', direction: 'NE', method: 'CLINOMETER' },
+    });
+    expect(pitSummary(old)).toBe(
+      'TOTAL DEPTH 96". NO GROUNDWATER OBSERVED. NO REDOXIMORPHIC FEATURES TO PIT DEPTH. LIMITING LAYER: NONE TO PIT DEPTH. SLOPE 4% (ESTIMATED).',
+    );
   });
 });
 
 describe('required-item hints (DEQ-4 §2.1.4.1, §2.1.8.1)', () => {
   it('lists what a horizon and the pit still need, without blocking', () => {
-    const m = missingItems(pit({ horizons: [hz({ designation: 'A', topIn: 0, bottomIn: 12, rock: { pct: 20, kind: 'ROCKS' } })] }));
+    const m = missingItems(
+      pit({
+        horizons: [hz({ designation: 'A', topIn: 0, bottomIn: 12, rock: { pct: 20, kind: 'ROCKS' } })],
+        observedWater: { kind: '', depthIn: null },
+        limitingLayer: { type: '', depthIn: null, other: '' },
+        slope: { pct: null, shape: '', direction: '', method: '' },
+      }),
+    );
     expect(m.horizons[0]).toEqual(['color', 'texture', 'structure', 'consistence', 'plasticity', 'roots', 'mottling', 'rock size (for the texture modifier)']);
-    expect(m.pit).toEqual(['observed water', 'seasonal high groundwater estimate', 'limiting layer', 'slope', 'pit is shallower than 8 ft: record the limiting layer or reason']);
+    expect(m.pit).toEqual(['observed water', 'limiting layer', 'slope %', 'pit is shallower than 8 ft: record the limiting layer or reason']);
+  });
+
+  it('a new wall needs nothing in its summary; no SHGW estimate, slope shape, direction or method', () => {
+    expect(missingItems(pit({ horizons: [hz({ topIn: 0, bottomIn: 96 })] })).pit).toEqual([]);
+    const p = pit();
+    expect([p.observedWater.kind, p.shgw.basis, p.limitingLayer.type, p.slope.pct]).toEqual(['NONE', 'NO REDOXIMORPHIC FEATURES TO PIT DEPTH', 'NONE', 2]);
+  });
+
+  it('still flags a shallow pit with no limiting layer', () => {
+    expect(missingItems(pit({ horizons: [hz({ topIn: 0, bottomIn: 60 })] })).pit).toEqual(['pit is shallower than 8 ft: record the limiting layer or reason']);
   });
 });

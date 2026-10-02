@@ -18,6 +18,12 @@ test('full test pit capture: picks, mottles, rock modifier, pit summary, copy pr
   await page.getByLabel('New test pit #').fill('1');
   await page.getByRole('button', { name: 'Add test pit' }).click();
 
+  // A new wall's summary is collapsed to the line that will print, with the normal-pit defaults.
+  const sum = page.getByRole('region', { name: 'Test pit summary' });
+  await expect(sum.locator('summary')).toContainText('NO GROUNDWATER OBSERVED. NO REDOXIMORPHIC FEATURES TO PIT DEPTH. LIMITING LAYER: NONE TO PIT DEPTH. SLOPE 2% (ESTIMATED).');
+  await expect(sum.getByLabel('Slope', { exact: true })).toBeHidden();
+  await shot(page, '09-new-wall-summary', sum);
+
   await page.getByRole('button', { name: 'Add horizon' }).click();
   const h1 = page.getByRole('region', { name: 'Horizon 1' });
   await pick(h1, 'Horizon', 'A');
@@ -66,19 +72,16 @@ test('full test pit capture: picks, mottles, rock modifier, pit summary, copy pr
   await pick(mc, 'Chroma', '6');
   await shot(page, '11-horizon-2', h2);
 
-  const sum = page.getByRole('region', { name: 'Test pit summary' });
+  // The pit was shallow while horizons went in, so the summary opened to ask for a reason.
+  await expect(sum.locator('details')).toHaveAttribute('open', '');
+  await expect(sum.getByText(/Seasonal high groundwater \(estimate\)/)).toHaveCount(0);
+  await expect(sum.getByRole('radiogroup', { name: /^(Shape|Direction \(downhill\)|Method)$/ })).toHaveCount(0);
   await pick(sum, 'Groundwater observed in pit', 'Seepage');
   await sum.getByLabel('Water depth').fill('90');
-  await sum.getByRole('button', { name: /Deeper than pit/ }).click();
   await pick(sum, 'Basis', 'REDOXIMORPHIC FEATURES');
-  await sum.getByLabel('Depth', { exact: true }).fill('60');
-  await pick(sum, 'Qualifier', 'Deeper than (>)'); // clear it: the estimate is 60", not deeper than 60"
-  await pick(sum, 'Type', 'Seasonal high groundwater');
+  await pick(sum, 'Limiting layer', 'Seasonal high groundwater');
   await sum.getByLabel('Depth to limiting layer').fill('60');
   await sum.getByLabel('Slope', { exact: true }).fill('4');
-  await pick(sum, 'Shape', 'PLANE');
-  await pick(sum, 'Direction (downhill)', 'NE');
-  await pick(sum, 'Method', 'CLINOMETER');
   await expect(sum.getByText('Still needed')).toHaveCount(0);
   await shot(page, '12-pit-summary', sum);
   await shot(page, '13-pit-full');

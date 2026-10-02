@@ -1,9 +1,9 @@
+import { useEffect, useState } from 'preact/hooks';
 import { lastEdit, pitPath } from '../domain/merge';
 import {
   addHorizon,
   copyHorizons,
   depthText,
-  pitDepth,
   removeHorizon,
   removeTestPit,
   updateHorizon,
@@ -201,66 +201,50 @@ function HorizonCard(props: {
   );
 }
 
+/** Collapsed to the row that will print; a normal pit needs nothing here (spec 2026-10-02). */
 function PitSummary(props: { pit: TestPit; missing: string[]; save: (patch: Partial<Omit<TestPit, 'id'>>) => void }) {
   const { pit, save } = props;
   const w = pit.observedWater;
   const l = pit.limitingLayer;
   const g = pit.shgw;
-  const s = pit.slope;
   const autoDepth = pit.horizons.at(-1)?.bottomIn;
   const summary = pitSummary(pit);
-  const foot = summary ? [summary] : [];
+  // Opens when something becomes missing; never closes by itself (no snapping shut mid-edit).
+  const incomplete = props.missing.length > 0;
+  const [open, setOpen] = useState(incomplete);
+  useEffect(() => {
+    if (incomplete) setOpen(true);
+  }, [incomplete]);
   return (
     <section class="card" aria-label="Test pit summary">
-      <h2>Test pit summary</h2>
-      <NumberField
-        label="Total depth"
-        value={pit.totalDepthIn}
-        onInput={(v) => save({ totalDepthIn: v })}
-        placeholder={autoDepth != null ? String(autoDepth) : ''}
-        hint={pit.totalDepthIn == null && autoDepth != null ? `Blank uses the last horizon bottom (${autoDepth}").` : undefined}
-      />
+      <details open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
+        <summary class="pit-summary">
+          <span class="summary-title">Test pit summary</span>
+          <span class={props.missing.length ? 'badge warn' : 'badge ok'}>{props.missing.length ? `${props.missing.length} to fill` : 'Complete'}</span>
+          <span class="summary-line">{summary || 'Nothing to print yet.'}</span>
+        </summary>
 
-      <Chips label="Groundwater observed in pit" options={V.OBSERVED_WATER} value={w.kind} onChange={(v) => save({ observedWater: { ...w, kind: v as TestPit['observedWater']['kind'] } })} />
-      {(w.kind === 'SEEPAGE' || w.kind === 'STANDING') && <NumberField label="Water depth" value={w.depthIn} onInput={(v) => save({ observedWater: { ...w, depthIn: v } })} />}
+        <NumberField
+          label="Total depth"
+          value={pit.totalDepthIn}
+          onInput={(v) => save({ totalDepthIn: v })}
+          placeholder={autoDepth != null ? String(autoDepth) : ''}
+          hint={pit.totalDepthIn == null && autoDepth != null ? `Blank uses the deepest horizon (${autoDepth}").` : undefined}
+        />
 
-      <fieldset class="group">
-        <legend>Seasonal high groundwater (estimate)</legend>
-        <div class="pair">
-          <NumberField label="Depth" value={g.depthIn} onInput={(v) => save({ shgw: { ...g, depthIn: v } })} />
-          <Chips label="Qualifier" options={[{ value: 'Y', label: 'Deeper than (>)' }]} value={g.deeperThan ? 'Y' : ''} onChange={(v) => save({ shgw: { ...g, deeperThan: v === 'Y' } })} />
-        </div>
-        {g.depthIn == null && pitDepth(pit) != null && (
-          <button type="button" class="link-btn" onClick={() => save({ shgw: { depthIn: pitDepth(pit), deeperThan: true, basis: g.basis || 'NO REDOXIMORPHIC FEATURES TO PIT DEPTH' } })}>
-            Deeper than pit ({pitDepth(pit)}"), no redox features
-          </button>
-        )}
+        <Chips label="Groundwater observed in pit" options={V.OBSERVED_WATER} value={w.kind} onChange={(v) => save({ observedWater: { ...w, kind: v as TestPit['observedWater']['kind'] } })} />
+        {(w.kind === 'SEEPAGE' || w.kind === 'STANDING') && <NumberField label="Water depth" value={w.depthIn} onInput={(v) => save({ observedWater: { ...w, depthIn: v } })} />}
         <Chips label="Basis" options={V.SHGW_BASIS} value={g.basis} onChange={(v) => save({ shgw: { ...g, basis: v } })} other />
-      </fieldset>
 
-      <fieldset class="group">
-        <legend>Limiting layer</legend>
-        <Chips label="Type" options={V.LIMITING_LAYERS} value={l.type} onChange={(v) => save({ limitingLayer: { ...l, type: v as TestPit['limitingLayer']['type'] } })} />
+        <Chips label="Limiting layer" options={V.LIMITING_LAYERS} value={l.type} onChange={(v) => save({ limitingLayer: { ...l, type: v as TestPit['limitingLayer']['type'] } })} />
         {l.type && l.type !== 'NONE' && <NumberField label="Depth to limiting layer" value={l.depthIn} onInput={(v) => save({ limitingLayer: { ...l, depthIn: v } })} />}
         {l.type === 'OTHER' && <TextField label="Limiting layer description" value={l.other} onInput={(v) => save({ limitingLayer: { ...l, other: v } })} autoCapitalize="characters" />}
-      </fieldset>
 
-      <fieldset class="group">
-        <legend>Slope</legend>
-        <NumberField label="Slope" unit="%" value={s.pct} onInput={(v) => save({ slope: { ...s, pct: v } })} />
-        <Chips label="Shape" options={V.SLOPE_SHAPES} value={s.shape} onChange={(v) => save({ slope: { ...s, shape: v } })} />
-        <Chips label="Direction (downhill)" options={V.DIRECTIONS} value={s.direction} onChange={(v) => save({ slope: { ...s, direction: v } })} />
-        <Chips label="Method" options={V.SLOPE_METHODS} value={s.method} onChange={(v) => save({ slope: { ...s, method: v } })} other />
-      </fieldset>
+        <NumberField label="Slope" unit="%" value={pit.slope.pct} onInput={(v) => save({ slope: { ...pit.slope, pct: v } })} hint="Estimated." />
 
-      <TextField label="Test pit notes" value={pit.notes} onInput={(v) => save({ notes: v })} autoCapitalize="characters" />
-
-      {foot.length > 0 && (
-        <div class="preview" aria-label="Footnote preview">
-          {foot.map((f) => <p>{f}</p>)}
-        </div>
-      )}
-      {props.missing.length > 0 && <p class="hint-warn">Still needed: {props.missing.join(', ')}</p>}
+        <TextField label="Test pit notes" value={pit.notes} onInput={(v) => save({ notes: v })} autoCapitalize="characters" />
+        {props.missing.length > 0 && <p class="hint-warn">Still needed: {props.missing.join(', ')}</p>}
+      </details>
     </section>
   );
 }

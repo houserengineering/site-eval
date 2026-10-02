@@ -36,16 +36,11 @@ const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const pitLink = (page: Page, label: string) => page.getByRole('link', { name: new RegExp(`^Test pit ${esc(label)} `) });
 const back = (page: Page) => page.getByRole('link', { name: 'Back to site evaluation' }).click();
 
-/** The pit summary every pit needs: no water, SHGW deeper than the pit, no limiting layer, slope. */
+/** The pit summary: the new-wall defaults are right for a normal pit; only the slope varies. */
 async function summary(page: Page, i: number) {
   const sum = page.getByRole('region', { name: 'Test pit summary' });
-  await pick(sum, 'Groundwater observed in pit', 'None');
-  await sum.getByRole('button', { name: /Deeper than pit/ }).click();
-  await pick(sum, 'Type', 'None to pit depth');
+  if (!(await sum.locator('details').evaluate((d) => (d as HTMLDetailsElement).open))) await sum.locator('summary').click();
   await sum.getByLabel('Slope', { exact: true }).fill(String(2 + (i % 5)));
-  await pick(sum, 'Shape', 'PLANE');
-  await pick(sum, 'Direction (downhill)', 'N');
-  await pick(sum, 'Method', 'CLINOMETER');
   await expect(sum.getByText('Still needed')).toHaveCount(0);
 }
 

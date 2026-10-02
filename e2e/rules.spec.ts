@@ -13,9 +13,8 @@ test('rule checks warn in pit and perc views, cite the rule, and are summarized 
   await page.goto('./');
   await page.getByRole('button', { name: 'New site evaluation' }).click();
   await page.getByLabel('Project #').fill('0999.008');
-  await pick(page, 'Review', 'County permit');
-  await pick(page, 'Use', 'Individual');
-  await pick(page, 'System', 'Gravity trench');
+  // No proposed-system inputs (removed 2026-10-02): the checks use a 24" gravity trench, both reviews.
+  await expect(page.getByRole('heading', { name: 'Proposed system' })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Add test pit' }).click();
   await page.getByRole('button', { name: 'Add horizon' }).click();
@@ -27,6 +26,7 @@ test('rule checks warn in pit and perc views, cite the rule, and are summarized 
   await h2.getByLabel('Bottom', { exact: true }).fill('84');
   await pick(h2, 'USDA class', 'SANDY LOAM');
   const summary = page.getByRole('region', { name: 'Test pit summary' });
+  await expect(summary.locator('details')).toHaveAttribute('open', ''); // an 84" pit with no limiting layer still needs a reason
   await pick(summary, 'Groundwater observed in pit', 'Seepage');
   await summary.getByLabel('Water depth', { exact: true }).fill('60');
   await summary.getByLabel('Slope', { exact: true }).fill('18');
@@ -37,8 +37,6 @@ test('rule checks warn in pit and perc views, cite the rule, and are summarized 
   await expect(checks.getByText('Separation 36" from the 24" infiltrative surface')).toBeVisible();
   await expect(checks.getByText(/a 2-ft contour map may be required/)).toBeVisible();
   await expect(checks.getByText(/the system must be pressure distributed/)).toBeVisible();
-  // County review: the subdivision-only rules stay quiet.
-  await expect(checks.getByText(/additional test pits may be required|gravity systems are not allowed/)).toHaveCount(0);
 
   const sep = checks.locator('details', { hasText: 'Separation 36"' });
   await sep.locator('summary').click();
@@ -47,7 +45,7 @@ test('rule checks warn in pit and perc views, cite the rule, and are summarized 
   await shot(page, '80-pit-rule-checks', checks);
 
   // Recording the limiting layer clears the depth warning (warn, never block).
-  await pick(summary, 'Type', 'Seasonal high groundwater');
+  await pick(summary, 'Limiting layer', 'Seasonal high groundwater');
   await summary.getByLabel('Depth to limiting layer').fill('60');
   await expect(checks.getByText('Pit is 84" deep')).toHaveCount(0);
 

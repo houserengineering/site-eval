@@ -65,11 +65,11 @@ export interface TestPit {
   totalDepthIn: number | null;
   /** Water seen in the open pit (DEQ-4 §2.1.4.1.D). kind NONE = no groundwater encountered. */
   observedWater: { kind: ObservedWaterKind; depthIn: number | null };
-  /** Estimated seasonally high groundwater and its basis (§2.1.4.1.E). */
+  /** Basis for the groundwater call, printed in the summary. The SHGW depth estimate is no longer entered (2026-10-02); old records keep theirs. */
   shgw: { depthIn: number | null; deeperThan: boolean; basis: string };
   /** Limiting layer type and depth (§2.1.4.1.F). */
   limitingLayer: { type: LimitingLayerType; depthIn: number | null; other: string };
-  /** Land slope (§2.1.8.1): percent, type, direction, method. */
+  /** Land slope (§2.1.8.1), always estimated. Shape, direction and method are no longer entered (2026-10-02); old records keep theirs. */
   slope: { pct: number | null; shape: string; direction: string; method: string };
   notes: string;
   /** Photos of the open pit; bytes live in the on-device photo store (and Dropbox), not in the record. First = soil log photo. */
@@ -278,7 +278,8 @@ export function confirmHeaderField(r: FieldRecord, key: keyof Header): FieldReco
   return touch({ ...r, unconfirmed });
 }
 
-export const emptyTestPit = (): Omit<TestPit, 'id' | 'label'> => ({
+/** A test pit with nothing recorded. Migrations use this, so old records never gain the new defaults. */
+const blankTestPit = (): Omit<TestPit, 'id' | 'label'> => ({
   horizons: [],
   totalDepthIn: null,
   observedWater: { kind: '', depthIn: null },
@@ -289,6 +290,15 @@ export const emptyTestPit = (): Omit<TestPit, 'id' | 'label'> => ({
   photos: [],
   location: null,
   planned: null,
+});
+
+/** A new pit reads as a normal one (spec 2026-10-02): no groundwater, no redox features, no limiting layer, 2% slope (estimated). */
+export const emptyTestPit = (): Omit<TestPit, 'id' | 'label'> => ({
+  ...blankTestPit(),
+  observedWater: { kind: 'NONE', depthIn: null },
+  shgw: { depthIn: null, deeperThan: false, basis: 'NO REDOXIMORPHIC FEATURES TO PIT DEPTH' },
+  limitingLayer: { type: 'NONE', depthIn: null, other: '' },
+  slope: { pct: 2, shape: '', direction: '', method: '' },
 });
 
 export function addTestPit(r: FieldRecord, label: string, p: Partial<Omit<TestPit, 'id' | 'label'>> = {}): FieldRecord {
@@ -448,7 +458,7 @@ const migrations: Record<number, (r: any) => any> = {
     ...r,
     schemaVersion: 2,
     testPits: (r.testPits ?? []).map((p: any) => ({
-      ...emptyTestPit(),
+      ...blankTestPit(),
       id: p.id,
       label: p.label ?? '',
       horizons: (p.horizons ?? []).map((h: any) => {
