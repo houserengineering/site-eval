@@ -1,7 +1,9 @@
 // Perc test workbook in the office Perc Test.xlsx layout: one perc test per sheet, live formulas.
 import ExcelJS from 'exceljs';
-import { dateText, type FieldRecord, type LocalDateTime, type PercTest } from '../domain/fieldRecord';
+import { dateText, localNow, type FieldRecord, type LocalDateTime, type PercTest } from '../domain/fieldRecord';
+import { certificationState } from '../domain/certify';
 import { readingCalc, soakStatus, stopRule, tapeText } from '../domain/perc';
+import { dataUrlBytes, imageSize } from './page';
 import type { PercTestSnapshot, TemplateSet } from '../templates/types';
 import { splitAddr, styleCell } from './xlsx';
 
@@ -13,6 +15,11 @@ const CERTIFICATION =
   'I certify that this percolation test was done by a qualified site evaluator in accordance with DEQ-4 Section 1.2.68 and Appendix A.';
 
 export async function percTestXlsx(record: FieldRecord, templates: TemplateSet): Promise<Uint8Array> {
+  return new Uint8Array(await percTestWorkbook(record, templates).xlsx.writeBuffer());
+}
+
+/** One sheet per perc test, in `record.percTests` order. */
+export function percTestWorkbook(record: FieldRecord, templates: TemplateSet): ExcelJS.Workbook {
   const { spec } = templates.percTest;
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Houser Engineering site evaluation app';
@@ -24,7 +31,7 @@ export async function percTestXlsx(record: FieldRecord, templates: TemplateSet):
     const layout = drawTemplate(ws, spec, Math.max(0, test.readings.length - spec.table.rows), notes);
     fill(ws, spec, record, test, layout, notes);
   }
-  return new Uint8Array(await wb.xlsx.writeBuffer());
+  return wb;
 }
 
 function sheetName(t: PercTest, used: Set<string>): string {
@@ -54,6 +61,7 @@ function drawTemplate(ws: ExcelJS.Worksheet, spec: PercTestSnapshot, extraRows: 
     return `${col}${shift(row)}`;
   };
 
+  ws.properties.defaultColWidth = spec.defaultColumnWidth;
   for (const [col, width] of Object.entries(spec.columns)) ws.getColumn(col).width = width;
   for (const [row, height] of Object.entries(spec.rows)) ws.getRow(shift(Number(row))).height = height;
   // The template's two-row table header clips "Initial Distance Below / Reference Point" (3 lines in E:F).
@@ -158,10 +166,49 @@ function fill(ws: ExcelJS.Worksheet, spec: PercTestSnapshot, record: FieldRecord
     const { col, row } = splitAddr(addr);
     return `${col}${layout.shift(row)}`;
   };
-  put(s(sig.testerName), test.tester.trim() || h.evalBy);
-  put(s(sig.certDate), excelDate(testDay));
-  // sig.signature stays blank: only the certifier's Certify action applies a signature (ticket 05).
+  // The signature is applied only by the certifier's Certify tap, and only while the certified
+  // content is unchanged; then the printed name, company and date are the certifier's.
+  const cert = certificationState(record, test);
+  if (cert.state === 'certified') {
+    put(s(sig.testerName), cert.cert.name);
+    put(s(sig.company), cert.cert.company);
+    put(s(sig.certDate), excelDate(localNow(new Date(cert.cert.at)).slice(0, 10)));
+    placeSignature(ws, s(sig.signature), dataUrlBytes(cert.cert.signaturePng));
+  } else {
+    put(s(sig.testerName), test.tester.trim() || h.evalBy);
+    put(s(sig.certDate), excelDate(testDay));
+  }
 }
+
+/** Signature image standing on the signature line: bottom at the line, up to 36 pt tall, within the merged width. */
+function placeSignature(ws: ExcelJS.Worksheet, addr: string, png: Uint8Array) {
+  const size = imageSize(png);
+  if (!size) return;
+  const { col, row } = splitAddr(addr);
+  const merge = Object.values((ws as any)._merges as Record<string, { model: { top: number; left: number; right: number } }>).find(
+    (m) => m.model.top === row && m.model.left === ws.getColumn(col).number,
+  );
+  const colPt = (c: number) => Math.trunc(((256 * (ws.getColumn(c).width ?? ws.properties.defaultColWidth ?? 8.43) + 18) / 256) * 7) * 0.75;
+  const left = ws.getColumn(col).number;
+  let maxW = 0;
+  for (let c = left; c <= (merge?.model.right ?? left); c++) maxW += colPt(c);
+  const rowPt = (r: number) => ws.getRow(r).height ?? ws.properties.defaultRowHeight ?? 15;
+  const k = Math.min(SIGNATURE_PT / size.height, (maxW - 4) / size.width);
+  const w = size.width * k;
+  const hgt = size.height * k;
+  // Walk up from the line until the rows above hold the image.
+  let top = row;
+  let above = rowPt(row);
+  while (above < hgt + 2 && top > 1) above += rowPt(--top);
+  const id = ws.workbook.addImage({ buffer: png as any, extension: 'png' });
+  ws.addImage(id, {
+    tl: { nativeCol: left - 1, nativeColOff: Math.round(((maxW - w) / 2) * 12700), nativeRow: top - 1, nativeRowOff: Math.round((above - hgt - 2) * 12700) } as any,
+    ext: { width: w / 0.75, height: hgt / 0.75 },
+    editAs: 'oneCell',
+  });
+}
+
+const SIGNATURE_PT = 36;
 
 /** Calibri 10 across B:K of the template (~95 character widths). */
 const NOTE_CHARS_PER_LINE = 95;

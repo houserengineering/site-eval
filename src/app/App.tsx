@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'preact/hooks';
 import { newSiteEvaluation, type FieldRecord } from '../domain/fieldRecord';
 import { openStore, type RecordStore } from '../storage/db';
+import type { PrintKind } from '../generator';
+import { CertifierSetup } from './Certify';
 import { PercTestView } from './PercTestView';
+import { PRINT_KINDS, PrintView } from './PrintView';
 import { PercTimers } from './PercTimers';
 import { SiteEvaluationView } from './SiteEvaluationView';
 import { TestPitView } from './TestPitView';
@@ -10,13 +13,17 @@ type Route =
   | { name: 'home' }
   | { name: 'site'; id: string }
   | { name: 'pit'; id: string; pitId: string }
-  | { name: 'perc'; id: string; testId: string };
+  | { name: 'perc'; id: string; testId: string }
+  | { name: 'print'; id: string; kind: PrintKind }
+  | { name: 'certifier' };
 
 function parseRoute(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   if (parts[0] === 'se' && parts[1] && parts[2] === 'pit' && parts[3]) return { name: 'pit', id: parts[1], pitId: parts[3] };
   if (parts[0] === 'se' && parts[1] && parts[2] === 'perc' && parts[3]) return { name: 'perc', id: parts[1], testId: parts[3] };
+  if (parts[0] === 'se' && parts[1] && parts[2] === 'print' && parts[3] && parts[3] in PRINT_KINDS) return { name: 'print', id: parts[1], kind: parts[3] as PrintKind };
   if (parts[0] === 'se' && parts[1]) return { name: 'site', id: parts[1] };
+  if (parts[0] === 'certifier') return { name: 'certifier' };
   return { name: 'home' };
 }
 
@@ -38,8 +45,10 @@ export function App() {
 
   if (error) return <main class="page"><p class="alert" role="alert">{error}</p></main>;
   if (!store) return <main class="page" aria-busy="true" />;
-  if (route.name === 'pit') return <RecordLoader store={store} id={route.id} render={(r, save) => <TestPitView record={r} pitId={route.pitId} save={save} />} />;
+  if (route.name === 'pit') return <RecordLoader store={store} id={route.id} render={(r, save) => <TestPitView record={r} pitId={route.pitId} save={save} store={store} />} />;
   if (route.name === 'perc') return <RecordLoader store={store} id={route.id} render={(r, save) => <PercTestView record={r} testId={route.testId} save={save} />} />;
+  if (route.name === 'print') return <RecordLoader store={store} id={route.id} render={(r) => <PrintView record={r} kind={route.kind} store={store} />} />;
+  if (route.name === 'certifier') return <CertifierSetup store={store} />;
   if (route.name === 'site') return <RecordLoader store={store} id={route.id} render={(r, save) => <SiteEvaluationView record={r} save={save} store={store} />} />;
   return <Home store={store} />;
 }

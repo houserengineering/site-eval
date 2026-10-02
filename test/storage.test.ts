@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
 import { addTestPit, newSiteEvaluation, SCHEMA_VERSION } from '../src/domain/fieldRecord';
+import { openDB } from 'idb';
 import { openStore } from '../src/storage/db';
 
 describe('on-device storage', () => {
@@ -58,5 +59,37 @@ describe('on-device storage', () => {
     expect(h.mottling.present).toBe('');
     expect(h.notes).toBe('MOTTLING: some at 10", NO ROCKS');
     expect(r.testPits[0].observedWater.kind).toBe('');
+  });
+
+  it('keeps pit photos on the device and deletes them with their site evaluation', async () => {
+    const store = await openStore(`t-${crypto.randomUUID()}`);
+    const r = newSiteEvaluation();
+    await store.save(r);
+    await store.putPhoto('p1', r.id, new Blob([new Uint8Array([1, 2, 3])], { type: 'image/jpeg' }));
+    const back = await store.getPhoto('p1');
+    expect(back!.type).toBe('image/jpeg');
+    expect([...new Uint8Array(await back!.arrayBuffer())]).toEqual([1, 2, 3]);
+    await store.remove(r.id);
+    expect(await store.getPhoto('p1')).toBeUndefined();
+  });
+
+  it("keeps the certifier's signature on this device only, outside every field record", async () => {
+    const store = await openStore(`t-${crypto.randomUUID()}`);
+    expect(await store.getCertifier()).toBeUndefined();
+    const p = { name: 'Justin Houser, PE', company: 'Houser Engineering', signaturePng: 'data:image/png;base64,AA==' };
+    await store.setCertifier(p);
+    expect(await store.getCertifier()).toEqual(p);
+    await store.setCertifier(undefined);
+    expect(await store.getCertifier()).toBeUndefined();
+  });
+
+  it('upgrades a database made by the first app version without losing records', async () => {
+    const name = `t-${crypto.randomUUID()}`;
+    const old = await openDB(name, 1, { upgrade: (db) => void db.createObjectStore('fieldRecords', { keyPath: 'id' }) });
+    const r = newSiteEvaluation({ projectNumber: '0999.001' });
+    await old.put('fieldRecords', r);
+    old.close();
+    const store = await openStore(name);
+    expect((await store.get(r.id))!.header.projectNumber).toBe('0999.001');
   });
 });

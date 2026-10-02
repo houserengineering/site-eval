@@ -5,6 +5,10 @@ import type { RecordStore } from '../storage/db';
 import { go } from './App';
 import { TextField } from './fields';
 import { useNow } from './PercTimers';
+import type { PrintKind } from '../generator';
+import { CertifyPanel } from './Certify';
+import { download, photoSource } from './deliverables';
+import { PRINT_KINDS } from './PrintView';
 import { loadTemplates } from './templates';
 
 export function SiteEvaluationView(props: { record: FieldRecord; save: (r: FieldRecord) => void; store: RecordStore }) {
@@ -37,7 +41,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
     setStatus(`Generating ${what}…`);
     try {
       const { generate } = await import('../generator');
-      const files = await generate(r, await loadTemplates());
+      const files = await generate(r, await loadTemplates(), { photo: photoSource(props.store) });
       const f = files.find((x) => x.kind === kind)!;
       const name = [r.header.projectNumber, f.path].filter(Boolean).join(' ');
       download(new Blob([f.bytes as BlobPart], { type: f.mimeType }), name);
@@ -128,10 +132,24 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
             Add perc test
           </button>
         </form>
+        <CertifyPanel record={r} save={props.save} store={props.store} />
       </section>
 
       <section aria-labelledby="out">
         <h2 id="out">Deliverables</h2>
+        <p class="hint">Print or save PDF (letter):</p>
+        <ul class="list">
+          {(Object.keys(PRINT_KINDS) as PrintKind[])
+            .filter((k) => k !== 'perc-tests' || r.percTests.length > 0)
+            .map((k) => (
+              <li key={k}>
+                <a class="row-link" href={`#/se/${r.id}/print/${k}`}>
+                  <span class="row-title">{PRINT_KINDS[k].title}</span>
+                  <span class="row-sub">{PRINT_SUB[k]}</span>
+                </a>
+              </li>
+            ))}
+        </ul>
         <button class="btn primary block" onClick={exportXlsx('soil-log-xlsx', 'soil logs')}>
           Export soil logs (Excel)
         </button>
@@ -156,12 +174,8 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
   );
 }
 
-function download(blob: Blob, name: string) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
-}
+const PRINT_SUB: Record<PrintKind, string> = {
+  'soil-logs': 'One page per test pit, with photo and location',
+  'perc-tests': 'One page per perc test',
+  'site-evaluation': 'Location map, all soil logs and perc tests, further photos',
+};

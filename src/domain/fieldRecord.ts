@@ -1,7 +1,7 @@
 // Field record: everything captured on a site evaluation. Persisted as JSON on device
 // and (later) in Dropbox, so the shape is versioned and migrated on load.
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /** Header values are always text: `0999.001`, `SE 00001`, `3B` print exactly as entered. */
 export interface Header {
@@ -69,6 +69,38 @@ export interface TestPit {
   /** Land slope (§2.1.8.1): percent, type, direction, method. */
   slope: { pct: number | null; shape: string; direction: string; method: string };
   notes: string;
+  /** Photos of the open pit; bytes live in the on-device photo store (and Dropbox), not in the record. First = soil log photo. */
+  photos: PhotoRef[];
+  /** GPS fix of the pit (county requires location within 10 ft). */
+  location: GpsFix | null;
+}
+
+export interface PhotoRef {
+  id: string;
+  takenAt: string;
+  width: number;
+  height: number;
+}
+
+/** WGS84 position from the device; accuracy is the 68% radius the device reports. */
+export interface GpsFix {
+  lat: number;
+  lon: number;
+  accuracyM: number;
+  at: string;
+}
+
+/**
+ * A certifier's signature applied by an explicit Certify tap on the certifier's own device.
+ * `hash` is the certified content; any later change voids the signature on deliverables.
+ */
+export interface Certification {
+  name: string;
+  company: string;
+  at: string;
+  hash: string;
+  /** PNG of the drawn signature, as applied. */
+  signaturePng: string;
 }
 
 /**
@@ -127,6 +159,8 @@ export interface FieldRecord {
   header: Header;
   testPits: TestPit[];
   percTests: PercTest[];
+  /** Certifications by perc test id. */
+  certifications: Record<string, Certification>;
 }
 
 export const emptyHeader = (): Header => ({
@@ -152,6 +186,7 @@ export function newSiteEvaluation(header: Partial<Header> = {}): FieldRecord {
     header: { ...emptyHeader(), ...header },
     testPits: [],
     percTests: [],
+    certifications: {},
   };
 }
 
@@ -169,6 +204,8 @@ export const emptyTestPit = (): Omit<TestPit, 'id' | 'label'> => ({
   limitingLayer: { type: '', depthIn: null, other: '' },
   slope: { pct: null, shape: '', direction: '', method: '' },
   notes: '',
+  photos: [],
+  location: null,
 });
 
 export function addTestPit(r: FieldRecord, label: string): FieldRecord {
@@ -356,6 +393,13 @@ const migrations: Record<number, (r: any) => any> = {
   }),
   // v2 → v3: perc tests and the owner name.
   2: (r) => ({ ...r, schemaVersion: 3, header: { ...emptyHeader(), ...r.header }, percTests: [] }),
+  // v3 → v4: test pit photos and GPS fix, perc test certifications.
+  3: (r) => ({
+    ...r,
+    schemaVersion: 4,
+    testPits: (r.testPits ?? []).map((p: any) => ({ photos: [], location: null, ...p })),
+    certifications: {},
+  }),
 };
 
 export function migrate(raw: unknown): FieldRecord {

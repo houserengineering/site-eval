@@ -15,10 +15,12 @@ import { colorText, horizonNotes, missingItems, pitFootnotes, structureText, tex
 import * as V from '../domain/vocabulary';
 import { go } from './App';
 import { Chips, NumberField, TextField, YesNoChips } from './fields';
+import type { RecordStore } from '../storage/db';
 import { MunsellPicker } from './MunsellPicker';
+import { PitMedia } from './PitMedia';
 import { TextureGuide } from './TextureGuide';
 
-export function TestPitView(props: { record: FieldRecord; pitId: string; save: (r: FieldRecord) => void }) {
+export function TestPitView(props: { record: FieldRecord; pitId: string; save: (r: FieldRecord) => void; store: RecordStore }) {
   const r = props.record;
   const pitIndex = r.testPits.findIndex((p) => p.id === props.pitId);
   const pit = r.testPits[pitIndex];
@@ -75,6 +77,8 @@ export function TestPitView(props: { record: FieldRecord; pitId: string; save: (
       </button>
 
       <PitSummary pit={pit} missing={missing.pit} save={savePit} />
+
+      <PitMedia record={r} pit={pit} save={props.save} store={props.store} />
 
       <section class="danger-zone">
         <button class="btn danger" onClick={remove}>

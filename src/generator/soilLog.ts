@@ -8,6 +8,11 @@ import { splitAddr, styleCell } from './xlsx';
 const EMU_PER_PX = 9525;
 
 export async function soilLogXlsx(record: FieldRecord, templates: TemplateSet): Promise<Uint8Array> {
+  return new Uint8Array(await soilLogWorkbook(record, templates).xlsx.writeBuffer());
+}
+
+/** One sheet per test pit (the same order as `record.testPits`; one blank form when there are none). */
+export function soilLogWorkbook(record: FieldRecord, templates: TemplateSet): ExcelJS.Workbook {
   const { spec, logo } = templates.soilLog;
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Houser Engineering site evaluation app';
@@ -23,7 +28,7 @@ export async function soilLogXlsx(record: FieldRecord, templates: TemplateSet): 
     drawTemplate(ws, spec, logoId, extraRows);
     fill(ws, spec, record, pit);
   }
-  return new Uint8Array(await wb.xlsx.writeBuffer());
+  return wb;
 }
 
 function sheetName(pit: TestPit | null, used: Set<string>): string {
@@ -50,6 +55,8 @@ function drawTemplate(ws: ExcelJS.Worksheet, spec: SoilLogSnapshot, logoId: numb
   const shift = (row: number) => (row > lastHorizonRow ? row + extraRows : row);
   const at = splitAddr;
 
+  // The office template is an Arial 10 workbook (12.75 pt default rows).
+  ws.properties.defaultRowHeight = DEFAULT_ROW_PT;
   for (const [col, width] of Object.entries(spec.columns)) ws.getColumn(col).width = width;
   for (const [row, height] of Object.entries(spec.rows)) ws.getRow(shift(Number(row))).height = height;
   for (let i = 1; i <= extraRows; i++) ws.getRow(lastHorizonRow + i).height = t.rowHeight;
@@ -133,6 +140,7 @@ function fill(ws: ExcelJS.Worksheet, spec: SoilLogSnapshot, record: FieldRecord,
   });
 }
 
+const DEFAULT_ROW_PT = 12.75;
 const FOOTNOTE_FONT = { name: 'Times New Roman', size: 10 };
 /** Times New Roman 10 pt across A:H of the template (~125 character widths). */
 const FOOTNOTE_CHARS_PER_LINE = 120;
