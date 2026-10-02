@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { addHorizon, addPitWalls, addTestPit, copyHorizons, emptyHorizon, newSiteEvaluation, type TestPit } from '../src/domain/fieldRecord';
 import { fillGaps } from '../src/domain/fillGaps';
-import { groupStatus, nextPitNumber, pitGroups, pitPages, wallLocation, wallOf, wallSide } from '../src/domain/pitWalls';
+import { groupStatus, needsAutoFix, nextPitNumber, pitGroups, pitPages, wallLocation, wallOf, wallSide } from '../src/domain/pitWalls';
 
 function walls(labels: string[]): TestPit[] {
   let r = newSiteEvaluation();
@@ -71,6 +71,15 @@ describe('adding a test pit (ticket 04)', () => {
     r = copyHorizons(r, a.id, b.id);
     const copied = r.testPits[1].horizons[0];
     expect([copied.designation, copied.texture.cls, copied.bottomIn, copied.notes]).toEqual(['A', 'LOAM', 12, '']);
+  });
+});
+
+describe('GPS on a new wall (ticket 05)', () => {
+  it('starts a fix only on a new wall without one', () => {
+    const [a] = walls(['7A']);
+    expect(needsAutoFix(a)).toBe(true);
+    expect(needsAutoFix({ ...a, location: { lat: 45.6, lon: -111, accuracyM: 3, at: '' } })).toBe(false);
+    expect(needsAutoFix({ ...a, notes: 'BEGUN' })).toBe(false); // an existing wall: the evaluator taps Capture
   });
 });
 

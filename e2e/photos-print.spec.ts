@@ -26,9 +26,8 @@ test('photo, GPS, certify on the certifier device, print preview and PDFs', asyn
   await expect(page.getByRole('img', { name: 'Test pit 1A photo 1' })).toBeVisible();
   await expect(page.getByText(/On the soil log/)).toBeVisible();
 
-  // GPS: a ±8 ft fix is inside the county's 10 ft, so it is kept without another tap.
-  await page.getByRole('button', { name: 'Capture GPS' }).click();
-  await expect(page.getByText('45.678901° N, 111.234567° W ±8 ft')).toBeVisible();
+  // GPS: the new wall started its fix on opening; ±8 ft is inside the county's 10 ft, so it is kept.
+  await expect(page.getByText('45.678901° N, 111.234567° W ±8 ft').first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Retake GPS' })).toBeVisible();
   await page.getByRole('region', { name: 'Photos' }).scrollIntoViewIfNeeded();
   await shot(page, '40-pit-photo-gps');
@@ -42,7 +41,7 @@ test('photo, GPS, certify on the certifier device, print preview and PDFs', asyn
   await expect(page.getByText(/over the county's 10 ft/)).toBeVisible();
   await context.setGeolocation({ latitude: 45.678901, longitude: -111.234567, accuracy: 2.5 });
   await page.getByRole('button', { name: 'Retake GPS' }).click();
-  await expect(page.getByText('±8 ft', { exact: false })).toBeVisible();
+  await expect(page.getByText('±8 ft', { exact: false }).first()).toBeVisible();
 
   await page.getByRole('link', { name: 'Back to site evaluation' }).click();
   await page.getByRole('button', { name: 'Add perc test' }).click();

@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { updateTestPit, type FieldRecord, type GpsFix, type PhotoRef, type TestPit } from '../domain/fieldRecord';
 import { accuracyFt, fixText, stampText } from '../generator/sitePlan';
 import type { RecordStore } from '../storage/db';
+import { needsAutoFix, wallLocation } from '../domain/pitWalls';
+import { locationCaption } from '../generator/locationPanel';
 
 /** County site evaluations locate each test pit within 10 ft. */
 const COUNTY_FT = 10;
@@ -141,18 +143,26 @@ function PitPhotos({ record, pit, store, patchPit }: Props) {
   );
 }
 
-function PitLocation({ pit, patchPit }: Props) {
+/** A fix still short of the county's accuracy is kept after this long rather than waiting on. */
+const FIX_TIMEOUT_MS = 90_000;
+
+function PitLocation({ record, pit, patchPit }: Props) {
   const [best, setBest] = useState<GpsFix | null>(null);
   const [error, setError] = useState<string>();
   const [watching, setWatching] = useState(false);
   const watch = useRef<number | undefined>(undefined);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const stop = () => {
     if (watch.current !== undefined) navigator.geolocation.clearWatch(watch.current);
+    clearTimeout(timer.current);
     watch.current = undefined;
     setWatching(false);
   };
-  useEffect(() => stop, []);
+  useEffect(() => {
+    if (needsAutoFix(pit)) start();
+    return stop;
+  }, [pit.id]);
 
   const accept = (fix: GpsFix) => {
     stop();
@@ -166,6 +176,13 @@ function PitLocation({ pit, patchPit }: Props) {
     setBest(null);
     setWatching(true);
     let top: GpsFix | null = null;
+    timer.current = setTimeout(() => {
+      if (top) accept(top);
+      else {
+        stop();
+        setError('No GPS fix yet. Try again in open sky.');
+      }
+    }, FIX_TIMEOUT_MS);
     watch.current = navigator.geolocation.watchPosition(
       (pos) => {
         const fix = { lat: pos.coords.latitude, lon: pos.coords.longitude, accuracyM: pos.coords.accuracy, at: new Date(pos.timestamp).toISOString() };
@@ -184,6 +201,7 @@ function PitLocation({ pit, patchPit }: Props) {
 
   const fix = pit.location;
   const over = fix && accuracyFt(fix) > COUNTY_FT;
+  const onLog = wallLocation(pit, record.testPits);
   return (
     <section class="card" aria-labelledby={`gps-${pit.id}`}>
       <h2 id={`gps-${pit.id}`}>GPS location</h2>
@@ -195,6 +213,7 @@ function PitLocation({ pit, patchPit }: Props) {
       ) : (
         !watching && <p class="muted">Not recorded. Stand at the pit and capture.</p>
       )}
+      {onLog && <p class="hint">Location on the log: {locationCaption(onLog)}</p>}
       {over && !watching && <p class="hint-warn">Accuracy is over the county's {COUNTY_FT} ft. Retake in open sky if you can.</p>}
       {watching && (
         <div role="status" class="gps-live">

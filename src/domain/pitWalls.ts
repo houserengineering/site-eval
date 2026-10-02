@@ -37,6 +37,9 @@ export function groupStatus(walls: TestPit[]): PitStatus {
   return s.every((x) => x === 'complete') ? 'complete' : s.every((x) => x === 'not-started') ? 'not-started' : 'in-progress';
 }
 
+/** A new wall with no fix starts one when opened (Nate on 0271); a wall already begun waits for a tap. */
+export const needsAutoFix = (wall: TestPit) => !wall.location && pitStatus(wall) === 'not-started';
+
 export interface PitPage {
   pit: string;
   /** One or two walls, A before B. */

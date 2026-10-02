@@ -101,7 +101,6 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
   await pick(h2, 'Mottling', 'No');
   await summary(page, 0);
   await page.getByLabel('Take photo').setInputFiles({ name: 'pit.jpg', mimeType: 'image/jpeg', buffer: readFileSync('test/fixtures/pit-photo.jpg') });
-  await page.getByRole('button', { name: 'Capture GPS' }).click();
   await expect(page.getByRole('button', { name: 'Retake GPS' })).toBeVisible();
   await shot(page, 'r02-pit-1');
   await back(page);
@@ -111,6 +110,7 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
   for (let i = 0; i < PITS; i++) {
     const label = labels[i];
     if (i > 0) {
+      await context.setGeolocation(where(i)); // each wall starts its own fix when first opened
       if (i < planned.length) await wallLink(page, `${label}A`).click();
       else {
         await page.getByLabel('New test pit #').fill(label);
@@ -120,8 +120,6 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
       await page.getByRole('button', { name: /^Copy horizons from test pit / }).click();
       await expect(page.getByRole('region', { name: 'Horizon 2' })).toBeVisible();
       await summary(page, i);
-      await context.setGeolocation(where(i));
-      await page.getByRole('button', { name: 'Capture GPS' }).click();
       await expect(page.getByRole('button', { name: 'Retake GPS' })).toBeVisible();
       await back(page);
     }
@@ -129,7 +127,6 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
     await page.getByRole('button', { name: `Start from wall ${label}A (same hole: change the depths)` }).click();
     await expect(page.getByRole('region', { name: 'Horizon 2' })).toBeVisible();
     await summary(page, i);
-    await page.getByRole('button', { name: 'Capture GPS' }).click();
     await expect(page.getByRole('button', { name: 'Retake GPS' })).toBeVisible();
     await back(page);
   }

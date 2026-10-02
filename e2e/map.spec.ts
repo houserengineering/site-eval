@@ -64,6 +64,7 @@ test('job file: pre-filled header, confirm-on-site flag, offline map with live d
   // Confirming clears the flag.
   await page.getByRole('button', { name: 'Confirm SE 00001' }).click();
   await expect(page.getByRole('region', { name: 'Confirm on site' })).toHaveCount(0);
-  await expect(page.getByText('0 complete · 1 in progress · 4 not started')).toBeVisible();
+  // Opening pit 1 started its GPS fix (ticket 05), so it is under way too.
+  await expect(page.getByText('0 complete · 2 in progress · 3 not started')).toBeVisible();
   await shot(page, '54-confirmed');
 });
