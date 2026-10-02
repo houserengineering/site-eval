@@ -389,3 +389,8 @@ button.row-link:focus-visible { outline: 3px solid var(--focus); outline-offset:
 /* The soil log prints in ALL CAPS: picks on the test pit screen show as they will print. */
 .pit-page .chip { text-transform: uppercase; }
 .pit-page .chip small, .pit-page .as-typed .chip { text-transform: none; }
+
+/* Test pits: walls grouped under their pit. */
+.pit-groups > li { margin-bottom: 12px; }
+.group-title { margin: 8px 0 4px; font-weight: 700; font-size: 1.05rem; }
+.walls { list-style: none; margin: 0; padding: 0 0 0 12px; border-left: 3px solid var(--line); }

@@ -1,11 +1,40 @@
 // Test pits and their walls: a soil log is one wall (`7A` north, `7B` south) of a numbered test
 // pit, and both walls of a pit print on one page. See CONTEXT.md.
 import type { LatLon, TestPit } from './fieldRecord';
+import { pitStatus, type PitStatus } from './soilLogText';
 
 /** `7A` → { pit: '7', wall: 'A' }; a label without a wall letter is its own pit. */
 export function wallOf(label: string): { pit: string; wall: string } {
   const m = /^\s*(.*?\d)\s*([A-Z])\s*$/i.exec(label);
   return m ? { pit: m[1].toUpperCase(), wall: m[2].toUpperCase() } : { pit: label.trim().toUpperCase(), wall: '' };
+}
+
+/** Which side a wall is logged on (CONTEXT.md: A north, B south where the pit allows). */
+export function wallSide(label: string): 'north' | 'south' | '' {
+  const { wall } = wallOf(label);
+  return wall === 'A' ? 'north' : wall === 'B' ? 'south' : '';
+}
+
+/** The number for the next test pit: one past the highest pit number so far. */
+export function nextPitNumber(pits: TestPit[]): string {
+  const nums = pits.map((p) => Number(wallOf(p.label).pit)).filter(Number.isFinite);
+  return String((nums.length ? Math.max(...nums) : 0) + 1);
+}
+
+/** Walls grouped under their pit, pits in the order they were added, walls A before B. */
+export function pitGroups(pits: TestPit[]): { pit: string; walls: TestPit[] }[] {
+  const groups = new Map<string, TestPit[]>();
+  for (const p of pits) {
+    const key = wallOf(p.label).pit;
+    groups.set(key, [...(groups.get(key) ?? []), p]);
+  }
+  return [...groups].map(([pit, walls]) => ({ pit, walls: [...walls].sort((a, b) => wallOf(a.label).wall.localeCompare(wallOf(b.label).wall)) }));
+}
+
+/** One status for a pit: complete when every wall is, not started when no wall is. */
+export function groupStatus(walls: TestPit[]): PitStatus {
+  const s = walls.map(pitStatus);
+  return s.every((x) => x === 'complete') ? 'complete' : s.every((x) => x === 'not-started') ? 'not-started' : 'in-progress';
 }
 
 export interface PitPage {

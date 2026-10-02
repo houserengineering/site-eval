@@ -2,16 +2,21 @@
 // device and GPS needs no signal), pits coloured by status, a live "you are here" dot with the
 // distance to the nearest unfinished pit, and an online satellite view of the same pins.
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { addTestPit, type FieldRecord, type GpsFix, type LatLon, type TestPit } from '../domain/fieldRecord';
+import { addPitWalls, type FieldRecord, type GpsFix, type LatLon, type TestPit } from '../domain/fieldRecord';
 import { bearingText, distanceFt, lonLatToPx, metresPerPx, pxToLonLat } from '../domain/georef';
 import { pitStatus, type PitStatus } from '../domain/soilLogText';
+import { groupStatus, nextPitNumber, pitGroups } from '../domain/pitWalls';
 import type { RecordStore } from '../storage/db';
 
 export const STATUS_TEXT: Record<PitStatus, string> = { 'not-started': 'Not started', 'in-progress': 'In progress', complete: 'Complete' };
 const FT_PER_M = 3.28084;
 
-/** Where a pit is shown: its planned spot, else its GPS fix. */
-const pitPoint = (p: TestPit): LatLon | null => p.planned ?? (p.location && { lat: p.location.lat, lon: p.location.lon });
+/** Where a pit is shown: its planned spot, else a wall's GPS fix. Both walls are the same hole: one pin. */
+const pitPoint = (walls: TestPit[]): LatLon | null => {
+  const planned = walls.find((w) => w.planned)?.planned;
+  const fixed = walls.find((w) => w.location)?.location;
+  return planned ?? (fixed ? { lat: fixed.lat, lon: fixed.lon } : null);
+};
 
 type Projection = { size: { w: number; h: number }; toPx: (p: LatLon) => [number, number]; toLatLon: (x: number, y: number) => LatLon; mPerPx: number };
 
@@ -47,24 +52,20 @@ export function SiteMapView(props: { record: FieldRecord; save: (r: FieldRecord)
     };
   }, []);
 
-  const nextLabel = () => {
-    const nums = r.testPits.map((p) => Number(p.label)).filter(Number.isFinite);
-    return String((nums.length ? Math.max(...nums) : 0) + 1);
-  };
   const addPit = (planned: LatLon, location: GpsFix | null) => {
-    const label = nextLabel();
-    props.save(addTestPit(latest.current, label, { planned, location }));
+    const label = nextPitNumber(latest.current.testPits);
+    props.save(addPitWalls(latest.current, label, { planned, location }));
     setPlacing(false);
     setNotice(`Added test pit ${label}.`);
   };
 
   const nearest = useMemo(() => {
     if (!fix) return null;
-    const open = r.testPits.filter((p) => pitStatus(p) !== 'complete' && pitPoint(p));
+    const open = pitGroups(r.testPits).filter((g) => groupStatus(g.walls) !== 'complete' && pitPoint(g.walls));
     const best = open
-      .map((p) => ({ p, ft: distanceFt(fix, pitPoint(p)!) }))
+      .map((g) => ({ g, ft: distanceFt(fix, pitPoint(g.walls)!) }))
       .sort((a, b) => a.ft - b.ft)[0];
-    return best && { label: best.p.label, ft: best.ft, dir: bearingText(fix, pitPoint(best.p)!) };
+    return best && { label: best.g.pit, ft: best.ft, dir: bearingText(fix, pitPoint(best.g.walls)!) };
   }, [fix, r.testPits]);
 
   return (
@@ -203,7 +204,7 @@ function SatelliteMap(props: { record: FieldRecord; fix: GpsFix | null; placing:
         const [lon, lat] = pxToLonLat(r.siteMap!.georef, x, y);
         return { lat, lon };
       })
-    : (r.testPits.map(pitPoint).filter(Boolean) as LatLon[]);
+    : (pitGroups(r.testPits).map((g) => pitPoint(g.walls)).filter(Boolean) as LatLon[]);
   if (!pts.length && props.fix) pts.push(props.fix);
   if (!pts.length) return <p class="muted">No pits with a location yet, and no GPS fix.</p>;
   const xy = pts.map(merc);
@@ -366,20 +367,22 @@ function PanZoom(props: {
           );
         })()}
         {t &&
-          r.testPits.map((p) => {
-            const at = pitPoint(p);
+          pitGroups(r.testPits).map((g) => {
+            const at = pitPoint(g.walls);
             if (!at) return null;
             const [x, y] = screen(at);
-            const s = pitStatus(p);
+            const s = groupStatus(g.walls);
+            // Opens the first wall still to log (wall A on a new pit).
+            const wall = g.walls.find((w) => pitStatus(w) !== 'complete') ?? g.walls[0];
             return (
               <a
-                key={p.id}
+                key={g.pit}
                 class={`pin ${s}${compact ? ' compact' : ''}`}
                 style={{ left: `${x}px`, top: `${y}px` }}
-                href={`#/se/${r.id}/pit/${p.id}`}
-                aria-label={`Test pit ${p.label}, ${STATUS_TEXT[s].toLowerCase()}`}
+                href={`#/se/${r.id}/pit/${wall.id}`}
+                aria-label={`Test pit ${g.pit}, ${STATUS_TEXT[s].toLowerCase()}`}
               >
-                <span class="pin-dot">{p.label}</span>
+                <span class="pin-dot">{g.pit}</span>
                 {s === 'complete' && <span class="pin-badge">✓</span>}
               </a>
             );

@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
-import { addPercTest, addTestPit, updateHeader, type FieldRecord, type Header } from '../domain/fieldRecord';
+import { addPercTest, addPitWalls, updateHeader, type FieldRecord, type Header } from '../domain/fieldRecord';
+import { groupStatus, nextPitNumber, pitGroups, wallSide } from '../domain/pitWalls';
 import { percSummary } from '../domain/perc';
 import type { RecordStore } from '../storage/db';
 import { go } from './App';
@@ -29,11 +30,11 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
 
   const addPit = (e: Event) => {
     e.preventDefault();
-    const label = pitLabel.trim() || String(r.testPits.length + 1);
-    const next = addTestPit(r, label);
+    const label = pitLabel.trim() || nextPitNumber(r.testPits);
+    const next = addPitWalls(r, label);
     props.save(next);
     setPitLabel('');
-    go(`#/se/${r.id}/pit/${next.testPits.at(-1)!.id}`);
+    go(`#/se/${r.id}/pit/${next.testPits[r.testPits.length].id}`); // wall A
   };
 
   const addPerc = (e: Event) => {
@@ -103,20 +104,30 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
         <h2 id="pits">Test pits</h2>
         {r.testPits.length === 0 && <p class="muted">No test pits yet.</p>}
         {r.testPits.length > 0 && <p class="muted">{pitCounts(r)}</p>}
-        <ul class="list">
-          {r.testPits.map((p) => (
-            <li key={p.id}>
-              <a class="row-link" href={`#/se/${r.id}/pit/${p.id}`}>
-                <span class="row-title">
-                  Test pit {p.label} <span class={`badge st-${pitStatus(p)}`}>{STATUS_TEXT[pitStatus(p)]}</span>
-                </span>
-                <span class="row-sub">
-                  {p.horizons.length} horizon{p.horizons.length === 1 ? '' : 's'}
-                  {p.location ? ' · GPS' : ''}
-                  {p.photos.length ? ` · ${p.photos.length} photo${p.photos.length === 1 ? '' : 's'}` : ''}
-                  {editedBy(r, p.id)}
-                </span>
-              </a>
+        <ul class="list pit-groups">
+          {pitGroups(r.testPits).map((g) => (
+            <li key={g.pit}>
+              <p class="group-title">
+                Test pit {g.pit} <span class={`badge st-${groupStatus(g.walls)}`}>{STATUS_TEXT[groupStatus(g.walls)]}</span>
+              </p>
+              <ul class="walls" aria-label={`Test pit ${g.pit} walls`}>
+                {g.walls.map((p) => (
+                  <li key={p.id}>
+                    <a class="row-link" href={`#/se/${r.id}/pit/${p.id}`}>
+                      <span class="row-title">
+                        Wall {p.label}
+                        {wallSide(p.label) && `, ${wallSide(p.label)}`} <span class={`badge st-${pitStatus(p)}`}>{STATUS_TEXT[pitStatus(p)]}</span>
+                      </span>
+                      <span class="row-sub">
+                        {p.horizons.length} horizon{p.horizons.length === 1 ? '' : 's'}
+                        {p.location ? ' · GPS' : ''}
+                        {p.photos.length ? ` · ${p.photos.length} photo${p.photos.length === 1 ? '' : 's'}` : ''}
+                        {editedBy(r, p.id)}
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
             </li>
           ))}
         </ul>
@@ -126,7 +137,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
             value={pitLabel}
             onInput={setPitLabel}
             autoCapitalize="characters"
-            hint={`Blank uses ${r.testPits.length + 1}.`}
+            hint={`Blank uses ${nextPitNumber(r.testPits)}. Adds walls A (north) and B (south).`}
           />
           <button class="btn primary" type="submit">
             Add test pit
@@ -219,7 +230,7 @@ function editedBy(r: FieldRecord, pitId: string): string {
 
 function pitCounts(r: FieldRecord): string {
   const n = { 'not-started': 0, 'in-progress': 0, complete: 0 };
-  for (const p of r.testPits) n[pitStatus(p)]++;
+  for (const g of pitGroups(r.testPits)) n[groupStatus(g.walls)]++;
   return `${n.complete} complete · ${n['in-progress']} in progress · ${n['not-started']} not started`;
 }
 

@@ -23,7 +23,7 @@ test('photo, GPS, certify on the certifier device, print preview and PDFs', asyn
 
   // Photo from the camera input, saved on device and listed as the soil log photo.
   await page.getByLabel('Take photo').setInputFiles({ name: 'pit.jpg', mimeType: 'image/jpeg', buffer: readFileSync('test/fixtures/pit-photo.jpg') });
-  await expect(page.getByRole('img', { name: 'Test pit 1 photo 1' })).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Test pit 1A photo 1' })).toBeVisible();
   await expect(page.getByText(/On the soil log/)).toBeVisible();
 
   // GPS: a ±8 ft fix is inside the county's 10 ft, so it is kept without another tap.

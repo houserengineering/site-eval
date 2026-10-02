@@ -59,7 +59,7 @@ test('rule checks warn in pit and perc views, cite the rule, and are summarized 
 
   await page.getByRole('link', { name: 'Back to site evaluation' }).click();
   const before = page.getByRole('region', { name: 'Rule checks before export' });
-  await expect(before.getByText('Test pit 1:', { exact: false }).first()).toBeVisible();
+  await expect(before.getByText('Test pit 1A:', { exact: false }).first()).toBeVisible();
   await expect(before.getByText('Perc test 1:', { exact: false }).first()).toBeVisible();
   await expect(before.getByText(/No Site Evaluation #/)).toBeVisible();
   // Export stays available with warnings outstanding.

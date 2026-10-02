@@ -1,7 +1,7 @@
 // Job files: a site evaluation pre-filled at the office (header, planned test pits, the test pit
 // map and its georeference), loaded on the device from a file or Dropbox. Job files hold client
 // data, so they live with the project, never in this repository.
-import { addTestPit, newSiteEvaluation, type FieldRecord, type Header, type LatLon, type SiteMap } from './fieldRecord';
+import { addPitWalls, newSiteEvaluation, type FieldRecord, type Header, type LatLon, type SiteMap } from './fieldRecord';
 import type { Georef } from './georef';
 
 export const JOB_VERSION = 1;
@@ -43,7 +43,8 @@ export function readJob(text: string): { record: FieldRecord; mapImage: { id: st
   const text_ = (v: unknown) => (v == null ? '' : String(v));
   const header = Object.fromEntries(Object.entries(job.header ?? {}).map(([k, v]) => [k, text_(v)])) as Partial<Header>;
   let r = newSiteEvaluation(header);
-  for (const p of job.testPits) r = addTestPit(r, text_(p.label), { planned: p.planned ?? null });
+  // Job pits are pit numbers (CAD/onX); each becomes walls A and B sharing the planned location.
+  for (const p of job.testPits) r = addPitWalls(r, text_(p.label), { planned: p.planned ?? null });
   r = { ...r, unconfirmed: { ...(job.unconfirmed ?? {}) }, deliverableFolder: text_(job.deliverableFolder) };
 
   let mapImage = null;

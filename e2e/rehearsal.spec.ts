@@ -33,7 +33,7 @@ const where = (i: number) => {
 };
 
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const pitLink = (page: Page, label: string) => page.getByRole('link', { name: new RegExp(`^Test pit ${esc(label)} `) });
+const wallLink = (page: Page, label: string) => page.getByRole('link', { name: new RegExp(`^Wall ${esc(label)},`) });
 const back = (page: Page) => page.getByRole('link', { name: 'Back to site evaluation' }).click();
 
 /** The pit summary: the new-wall defaults are right for a normal pit; only the slope varies. */
@@ -66,8 +66,8 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
   await expect(confirmBox).toHaveCount(0);
   await expect(page.getByText(`0 complete · 0 in progress · ${planned.length} not started`)).toBeVisible();
 
-  // Test pit 1 in full.
-  await pitLink(page, labels[0]).click();
+  // Pit 1, wall A in full.
+  await wallLink(page, `${labels[0]}A`).click();
   await page.getByRole('button', { name: 'Add horizon' }).click();
   const h1 = page.getByRole('region', { name: 'Horizon 1' });
   await pick(h1, 'Horizon', 'A');
@@ -106,19 +106,29 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
   await shot(page, 'r02-pit-1');
   await back(page);
 
-  // Pits 2..20: start from the previous pit's horizons, then the pit's own summary and GPS fix.
-  for (let i = 1; i < PITS; i++) {
+  // Every pit: wall A starts from the previous pit (pit 1 was logged above), wall B from wall A of
+  // the same hole; each wall gets its summary and GPS fix.
+  for (let i = 0; i < PITS; i++) {
     const label = labels[i];
-    if (i < planned.length) await pitLink(page, label).click();
-    else {
-      await page.getByLabel('New test pit #').fill(label);
-      await page.getByRole('button', { name: 'Add test pit' }).click();
+    if (i > 0) {
+      if (i < planned.length) await wallLink(page, `${label}A`).click();
+      else {
+        await page.getByLabel('New test pit #').fill(label);
+        await page.getByRole('button', { name: 'Add test pit' }).click();
+      }
+      await expect(page.getByRole('heading', { name: `Test pit ${label}A` })).toBeVisible();
+      await page.getByRole('button', { name: /^Copy horizons from test pit / }).click();
+      await expect(page.getByRole('region', { name: 'Horizon 2' })).toBeVisible();
+      await summary(page, i);
+      await context.setGeolocation(where(i));
+      await page.getByRole('button', { name: 'Capture GPS' }).click();
+      await expect(page.getByRole('button', { name: 'Retake GPS' })).toBeVisible();
+      await back(page);
     }
-    await expect(page.getByRole('heading', { name: new RegExp(`Test pit ${esc(label)}(?!\\w)`) })).toBeVisible();
-    await page.getByRole('button', { name: /^Copy horizons from test pit / }).click();
+    await wallLink(page, `${label}B`).click();
+    await page.getByRole('button', { name: `Start from wall ${label}A (same hole: change the depths)` }).click();
     await expect(page.getByRole('region', { name: 'Horizon 2' })).toBeVisible();
     await summary(page, i);
-    await context.setGeolocation(where(i));
     await page.getByRole('button', { name: 'Capture GPS' }).click();
     await expect(page.getByRole('button', { name: 'Retake GPS' })).toBeVisible();
     await back(page);
@@ -129,7 +139,7 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
   // Perc tests: a sandy-soil test at pit 1 and a standard test at pit 2 running side by side.
   await page.getByLabel('New perc test #').fill('1');
   await page.getByRole('button', { name: 'Add perc test' }).click();
-  await pick(page, 'At test pit', labels[0]);
+  await pick(page, 'At test pit', `${labels[0]}A`);
   await page.getByLabel('Hole depth').fill('24');
   await page.getByLabel('Reference point above hole bottom').fill('22');
   let soak = page.getByRole('region', { name: 'Soak' });
@@ -141,7 +151,7 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
 
   await page.getByLabel('New perc test #').fill('2');
   await page.getByRole('button', { name: 'Add perc test' }).click();
-  await pick(page, 'At test pit', labels[1]);
+  await pick(page, 'At test pit', `${labels[1]}A`);
   await page.getByLabel('Hole depth').fill('24');
   await page.getByLabel('Reference point above hole bottom').fill('22');
   await pick(page, 'Soil at test depth is sandy clay loam or finer', 'Yes');
@@ -223,10 +233,10 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
   await perc.xlsx.load((await read(`${folder}/Percolation Tests.xlsx`)) as any);
   expect(perc.worksheets.map((w) => w.name)).toEqual(['Perc Test 1', 'Perc Test 2']);
   const soilPdf = await PDFDocument.load(await read(`${folder}/Soil Logs.pdf`));
-  expect(soilPdf.getPageCount()).toBe(PITS); // one page per pit (labels here have no A/B walls)
+  expect(soilPdf.getPageCount()).toBe(PITS); // one page per pit, walls A and B
   expect(paths).not.toContain(`${folder}/Site Evaluation.pdf`);
   const record = JSON.parse(new TextDecoder().decode(await read(paths.find((p) => /Field Record/.test(p))!)));
-  expect(record.testPits).toHaveLength(PITS);
+  expect(record.testPits).toHaveLength(2 * PITS);
   expect(record.unconfirmed ?? {}).toEqual({});
   await shot(page, 'r07-filed');
 

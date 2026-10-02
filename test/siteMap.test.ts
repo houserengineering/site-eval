@@ -65,9 +65,12 @@ describe('job file', () => {
     expect(record.header.projectNumber).toBe('0999.001');
     expect(record.header.confirmationNumber).toBe('SE 00001');
     expect(record.unconfirmed).toEqual({ confirmationNumber: 'Not found in any county document.' });
+    // Job pits are pit numbers; each becomes walls A and B with the planned location (ticket 04).
     expect(record.testPits.map((p) => [p.label, p.planned])).toEqual([
-      ['1', { lat: 45.619, lon: -111.099 }],
-      ['2', { lat: 45.6185, lon: -111.0985 }],
+      ['1A', { lat: 45.619, lon: -111.099 }],
+      ['1B', { lat: 45.619, lon: -111.099 }],
+      ['2A', { lat: 45.6185, lon: -111.0985 }],
+      ['2B', { lat: 45.6185, lon: -111.0985 }],
     ]);
     expect(record.testPits.every((p) => p.horizons.length === 0 && p.location === null)).toBe(true);
     expect(record.siteMap).toMatchObject({ title: 'Test Pit Map', width: 1000, height: 800, imageId: mapImage!.id, georef });

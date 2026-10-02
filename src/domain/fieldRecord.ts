@@ -1,5 +1,6 @@
 // Field record: everything captured on a site evaluation. Persisted as JSON on device
 // and (later) in Dropbox, so the shape is versioned and migrated on load.
+import { wallOf } from './pitWalls';
 import type { Georef } from './georef';
 import type { Stamp } from './merge';
 import type { ObservationWell } from '../groundwater/wells';
@@ -307,6 +308,17 @@ export function addTestPit(r: FieldRecord, label: string, p: Partial<Omit<TestPi
   return touch({ ...r, testPits: [...r.testPits, { id: newId(), label, ...emptyTestPit(), ...p }] });
 }
 
+/**
+ * Adds test pit `label` as its two walls, `7A` (north) and `7B` (south); a label that already
+ * names a wall (`3B`) adds just that wall. Both walls share the planned location (same hole); a
+ * GPS fix taken while adding belongs to wall A.
+ */
+export function addPitWalls(r: FieldRecord, label: string, p: Partial<Omit<TestPit, 'id' | 'label'>> = {}): FieldRecord {
+  const l = label.trim();
+  if (wallOf(l).wall) return addTestPit(r, l.toUpperCase(), p);
+  return addTestPit(addTestPit(r, `${l}A`, p), `${l}B`, { ...p, location: null });
+}
+
 export function updateTestPit(r: FieldRecord, pitId: string, patch: Partial<Omit<TestPit, 'id'>>): FieldRecord {
   return touch({ ...r, testPits: r.testPits.map((p) => (p.id === pitId ? { ...p, ...patch } : p)) });
 }
@@ -425,7 +437,8 @@ export function removeHorizon(r: FieldRecord, pitId: string, horizonId: string):
 export function copyHorizons(r: FieldRecord, fromPitId: string, toPitId: string): FieldRecord {
   const from = r.testPits.find((p) => p.id === fromPitId);
   if (!from) return r;
-  return updateTestPit(r, toPitId, { horizons: chainDepths(structuredClone(from.horizons).map((h) => ({ ...h, id: newId() }))) });
+  // Horizon notes describe that wall only (0271: a driveway note from 7A was copied onto 29 walls).
+  return updateTestPit(r, toPitId, { horizons: chainDepths(structuredClone(from.horizons).map((h) => ({ ...h, id: newId(), notes: '' }))) });
 }
 
 /** Pit depth: the recorded total depth, else the bottom of the last horizon. */

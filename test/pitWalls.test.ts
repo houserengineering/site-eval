@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { addHorizon, addTestPit, emptyHorizon, newSiteEvaluation, type TestPit } from '../src/domain/fieldRecord';
+import { addHorizon, addPitWalls, addTestPit, copyHorizons, emptyHorizon, newSiteEvaluation, type TestPit } from '../src/domain/fieldRecord';
 import { fillGaps } from '../src/domain/fillGaps';
-import { pitPages, wallLocation, wallOf } from '../src/domain/pitWalls';
+import { groupStatus, nextPitNumber, pitGroups, pitPages, wallLocation, wallOf, wallSide } from '../src/domain/pitWalls';
 
 function walls(labels: string[]): TestPit[] {
   let r = newSiteEvaluation();
@@ -34,6 +34,43 @@ describe('pit walls', () => {
     expect(wallLocation(all[1], all)).toMatchObject({ lat: 45.6, source: 'other-wall' });
     expect(wallLocation(all[2], all)).toMatchObject({ lat: 45.61, source: 'planned' });
     expect(wallLocation(walls(['9A'])[0], [])).toBeNull();
+  });
+});
+
+describe('adding a test pit (ticket 04)', () => {
+  it('creates wall A (north) and wall B (south); a label with a wall letter adds just that wall', () => {
+    let r = addPitWalls(newSiteEvaluation(), '7');
+    expect(r.testPits.map((p) => p.label)).toEqual(['7A', '7B']);
+    expect(r.testPits.map((p) => wallSide(p.label))).toEqual(['north', 'south']);
+    r = addPitWalls(r, '3b');
+    expect(r.testPits.map((p) => p.label)).toEqual(['7A', '7B', '3B']);
+  });
+
+  it('gives both walls the planned location; a GPS fix belongs to wall A only', () => {
+    const planned = { lat: 45.6, lon: -111 };
+    const location = { lat: 45.6, lon: -111, accuracyM: 3, at: '' };
+    const r = addPitWalls(newSiteEvaluation(), '7', { planned, location });
+    expect(r.testPits.map((p) => [p.planned, p.location])).toEqual([[planned, location], [planned, null]]);
+  });
+
+  it('numbers the next pit after the highest pit number', () => {
+    expect(nextPitNumber(walls(['7A', '7B', '12A', 'LOT 19']))).toBe('13');
+    expect(nextPitNumber([])).toBe('1');
+  });
+
+  it('groups walls under their pit in the order pits were added, with one status', () => {
+    const groups = pitGroups(walls(['7A', '7B', '3B', '12']));
+    expect(groups.map((g) => [g.pit, g.walls.map((w) => w.label)])).toEqual([['7', ['7A', '7B']], ['3', ['3B']], ['12', ['12']]]);
+    expect(groupStatus(groups[0].walls)).toBe('not-started');
+  });
+
+  it('copying horizons leaves the horizon notes behind (0271: a driveway note on 29 walls)', () => {
+    let r = addPitWalls(newSiteEvaluation(), '7');
+    const [a, b] = r.testPits;
+    r = addHorizon(r, a.id, { designation: 'A', bottomIn: 12, notes: 'DRIVEWAY NEAR 7A', texture: { cls: 'LOAM', sandSize: '' } });
+    r = copyHorizons(r, a.id, b.id);
+    const copied = r.testPits[1].horizons[0];
+    expect([copied.designation, copied.texture.cls, copied.bottomIn, copied.notes]).toEqual(['A', 'LOAM', 12, '']);
   });
 });
 

@@ -26,7 +26,7 @@ test('perc test: soak branch, timed readings with alerts, reload, concurrent tes
   await page.getByRole('button', { name: 'Add perc test' }).click();
   await expect(page.getByRole('heading', { name: 'Perc test 1' })).toBeVisible();
 
-  await pick(page, 'At test pit', '1');
+  await pick(page, 'At test pit', '1A');
   await page.getByLabel('Lot', { exact: true }).fill('19');
   await page.getByLabel('Hole depth').fill('24');
   await page.getByLabel('Reference point above hole bottom').fill('22.625');
