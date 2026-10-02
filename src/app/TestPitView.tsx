@@ -16,6 +16,7 @@ import * as V from '../domain/vocabulary';
 import { go } from './App';
 import { Chips, NumberField, TextField, YesNoChips } from './fields';
 import { MunsellPicker } from './MunsellPicker';
+import { TextureGuide } from './TextureGuide';
 
 export function TestPitView(props: { record: FieldRecord; pitId: string; save: (r: FieldRecord) => void }) {
   const r = props.record;
@@ -127,6 +128,7 @@ function HorizonCard(props: {
         <fieldset class="group">
           <legend>Texture</legend>
           <Chips label="USDA class" options={V.TEXTURES} value={hz.texture.cls} onChange={(v) => set({ texture: { ...hz.texture, cls: v } })} other />
+          <TextureGuide current={hz.texture.cls} onUse={(cls) => set({ texture: { ...hz.texture, cls } })} />
           {sandy && <Chips label="Sand size" options={V.SAND_SIZES} value={hz.texture.sandSize} onChange={(v) => set({ texture: { ...hz.texture, sandSize: v } })} />}
           <NumberField label="Rock fragments (by volume)" unit="%" value={hz.rock.pct} onInput={(v) => set({ rock: { ...hz.rock, pct: v } })} />
           {(hz.rock.pct ?? 0) > 0 && (

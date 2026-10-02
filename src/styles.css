@@ -231,3 +231,12 @@ section > h2:first-child { margin-top: 24px; }
 }
 .chip { text-align: left; }
 .field input[readonly] { background: var(--surface); border-style: dashed; color: var(--muted); }
+
+/* Texture-by-feel guide */
+.guide { margin: 4px 0 14px; padding: 4px 12px 2px; background: var(--bg); border: 2px solid var(--primary); border-radius: 8px; }
+.guide-do { margin: 10px 0 6px; }
+.guide-q { margin: 10px 0 8px; font-weight: 700; font-size: 1.1rem; }
+.guide-answers { display: grid; gap: 8px; }
+.guide-answers .btn { justify-content: flex-start; text-align: left; }
+.guide-result { margin: 12px 0 4px; font-size: 1.1rem; }
+.guide-nav { display: flex; flex-wrap: wrap; gap: 8px; }
