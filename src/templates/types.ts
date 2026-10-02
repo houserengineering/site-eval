@@ -41,7 +41,39 @@ export interface SoilLogSnapshot {
   cells: Record<string, SnapshotCell>;
 }
 
+type PageSetup = SoilLogSnapshot['pageSetup'];
+
+/** Written by tools/snapshot_perc_test.py from the office Perc Test.xlsx. */
+export interface PercTestSnapshot {
+  kind: 'perc-test';
+  source: SoilLogSnapshot['source'];
+  sheetName: string;
+  printArea: string | null;
+  columns: Record<string, number>;
+  defaultColumnWidth: number;
+  rows: Record<string, number>;
+  merges: string[];
+  pageSetup: PageSetup;
+  inputs: Record<
+    'ownerName' | 'projectName' | 'soakBegan' | 'soakEnded' | 'holeDiameter' | 'testDate' | 'referenceHeight' | 'confirmationNumber' | 'title',
+    string
+  >;
+  /** Label text of cells that also carry their value (`Test hole dia:` + ` 6"`). */
+  labels: Record<'holeDiameter' | 'referenceHeight' | 'title', string>;
+  table: {
+    headerRow: number;
+    firstRow: number;
+    rows: number;
+    rowHeight: number | null;
+    columns: Record<'start' | 'end' | 'interval' | 'initial' | 'final' | 'drop' | 'rate', string>;
+  };
+  /** Value cells above the captions `Name (printed)`, `Signature`, `Date`, `Company`. */
+  signature: Record<'testerName' | 'signature' | 'certDate' | 'company', string>;
+  cells: Record<string, SnapshotCell>;
+}
+
 /** Everything the generator needs about the office templates. */
 export interface TemplateSet {
   soilLog: { spec: SoilLogSnapshot; logo: Uint8Array };
+  percTest: { spec: PercTestSnapshot };
 }

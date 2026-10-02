@@ -1,0 +1,2014 @@
+{
+ "kind": "perc-test",
+ "source": {
+  "path": "Office\\Tools\\Wastewater Tools\\SEPTIC\\SITE EVALUATION\\Perc Test.xlsx",
+  "sha256": "18b170754837af2e63d88961611325215e56037ad21d8fced7c5694ca886af27",
+  "modified": "2025-05-08T15:33:27+00:00",
+  "snapshotAt": "2026-10-02T03:17:27.853644+00:00"
+ },
+ "sheetName": "Sheet1",
+ "printArea": "A1:K27",
+ "columns": {
+  "A": 3.1406,
+  "D": 13.0,
+  "F": 6.1406,
+  "J": 9.7109,
+  "K": 13.2852
+ },
+ "defaultColumnWidth": 9.140625,
+ "rows": {
+  "1": 15.75,
+  "6": 15.75,
+  "9": 15.75,
+  "11": 15.75,
+  "19": 15.75,
+  "24": 15.75
+ },
+ "merges": [
+  "B10:B11",
+  "B19:D19",
+  "B20:D20",
+  "B24:D24",
+  "B25:D25",
+  "B2:C2",
+  "B3:C3",
+  "B4:C4",
+  "B5:D6",
+  "B8:D8",
+  "C10:C11",
+  "D10:D11",
+  "D2:E2",
+  "D3:E3",
+  "E10:F11",
+  "E12:F12",
+  "E13:F13",
+  "E14:F14",
+  "E15:F15",
+  "E16:F16",
+  "F19:I19",
+  "F20:I20",
+  "G10:H11",
+  "G12:H12",
+  "G13:H13",
+  "G14:H14",
+  "G15:H15",
+  "G16:H16",
+  "G2:H3",
+  "G6:I6",
+  "I10:J11",
+  "I12:J12",
+  "I13:J13",
+  "I14:J14",
+  "I15:J15",
+  "I16:J16",
+  "K10:K11"
+ ],
+ "pageSetup": {
+  "paperSize": 1,
+  "orientation": "portrait",
+  "fitToPage": true,
+  "fitToWidth": 1,
+  "fitToHeight": 1,
+  "margins": {
+   "left": 0.7,
+   "right": 0.7,
+   "top": 0.75,
+   "bottom": 0.75,
+   "header": 0.3,
+   "footer": 0.3
+  }
+ },
+ "inputs": {
+  "ownerName": "D2",
+  "soakBegan": "J2",
+  "projectName": "D3",
+  "soakEnded": "J3",
+  "holeDiameter": "B4",
+  "testDate": "J4",
+  "referenceHeight": "B5",
+  "confirmationNumber": "J6",
+  "title": "B8"
+ },
+ "labels": {
+  "holeDiameter": "Test hole dia:",
+  "referenceHeight": "Reference point elevation above hole bottom:",
+  "title": "Test #"
+ },
+ "table": {
+  "headerRow": 10,
+  "firstRow": 12,
+  "columns": {
+   "start": "B",
+   "end": "C",
+   "interval": "D",
+   "initial": "E",
+   "final": "G",
+   "drop": "I",
+   "rate": "K"
+  },
+  "rows": 5,
+  "rowHeight": null
+ },
+ "signature": {
+  "testerName": "B19",
+  "signature": "F19",
+  "certDate": "K19",
+  "company": "B24"
+ },
+ "cells": {
+  "B2": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "right"
+   },
+   "border": {
+    "left": "medium",
+    "right": "thin",
+    "top": "medium",
+    "bottom": "thin"
+   },
+   "value": "Owner name:"
+  },
+  "C2": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "medium",
+    "bottom": "thin"
+   }
+  },
+  "D2": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "left"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "medium",
+    "bottom": "thin"
+   }
+  },
+  "E2": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "medium",
+    "bottom": "thin"
+   }
+  },
+  "F2": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "top": "medium"
+   }
+  },
+  "G2": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "medium",
+    "bottom": "thin"
+   },
+   "value": "Date and time of\nSoak Period"
+  },
+  "H2": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "medium"
+   }
+  },
+  "I2": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "medium",
+    "bottom": "thin"
+   },
+   "value": "began:"
+  },
+  "J2": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "mm-dd-yy",
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "medium",
+    "bottom": "thin"
+   }
+  },
+  "K2": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "left": "thin",
+    "right": "medium",
+    "top": "medium",
+    "bottom": "thin"
+   }
+  },
+  "B3": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "right"
+   },
+   "border": {
+    "left": "medium",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "value": "Project name:"
+  },
+  "C3": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "D3": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "left"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "E3": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "G3": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "left": "thin",
+    "bottom": "thin"
+   }
+  },
+  "H3": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "bottom": "thin"
+   }
+  },
+  "I3": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "value": "ended:"
+  },
+  "J3": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "K3": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "left": "thin",
+    "right": "medium",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "B4": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "medium",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "value": "Test hole dia:"
+  },
+  "C4": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "D4": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "I4": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "value": "Test date:"
+  },
+  "J4": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "mm-dd-yy",
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "K4": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "medium"
+   }
+  },
+  "B5": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "medium",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   },
+   "value": "Reference point elevation above hole bottom:"
+  },
+  "C5": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "top": "thin"
+   }
+  },
+  "D5": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "thin"
+   }
+  },
+  "K5": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "medium"
+   }
+  },
+  "B6": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "left": "medium",
+    "bottom": "thin"
+   }
+  },
+  "C6": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "bottom": "thin"
+   }
+  },
+  "D6": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "bottom": "thin"
+   }
+  },
+  "E6": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "bottom": "medium"
+   }
+  },
+  "F6": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "bottom": "medium"
+   }
+  },
+  "G6": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "right"
+   },
+   "border": {
+    "bottom": "medium"
+   },
+   "value": "CONFIRMATION NUMBER:"
+  },
+  "H6": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "bottom": "medium"
+   }
+  },
+  "I6": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "bottom": "medium"
+   }
+  },
+  "J6": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "bottom": "medium"
+   }
+  },
+  "K6": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "medium",
+    "bottom": "medium"
+   }
+  },
+  "B8": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": true
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "left"
+   },
+   "value": "Test #"
+  },
+  "B10": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "medium",
+    "right": "medium",
+    "top": "medium",
+    "bottom": "medium"
+   },
+   "value": "Start Time\nof Test"
+  },
+  "C10": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "medium",
+    "right": "medium",
+    "top": "medium",
+    "bottom": "medium"
+   },
+   "value": "End Time\nof Test"
+  },
+  "D10": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "medium",
+    "right": "medium",
+    "top": "medium",
+    "bottom": "medium"
+   },
+   "value": "Time\nInterval (min)"
+  },
+  "E10": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "medium",
+    "right": "medium",
+    "top": "medium",
+    "bottom": "medium"
+   },
+   "value": "Initial Distance Below\nReference Point"
+  },
+  "F10": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "medium",
+    "top": "medium"
+   }
+  },
+  "G10": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "medium",
+    "right": "medium",
+    "top": "medium",
+    "bottom": "medium"
+   },
+   "value": "Final Distance Below\nReference Point"
+  },
+  "H10": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "medium",
+    "top": "medium"
+   }
+  },
+  "I10": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "medium",
+    "right": "medium",
+    "top": "medium",
+    "bottom": "medium"
+   },
+   "value": "Drop in\nWater Level (in)"
+  },
+  "J10": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "medium",
+    "top": "medium"
+   }
+  },
+  "K10": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center",
+    "wrapText": true
+   },
+   "border": {
+    "left": "medium",
+    "right": "medium",
+    "top": "medium",
+    "bottom": "medium"
+   },
+   "value": "Percolation\nRate (mpi)"
+  },
+  "B11": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "left": "medium",
+    "right": "medium",
+    "bottom": "medium"
+   }
+  },
+  "C11": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "left": "medium",
+    "right": "medium",
+    "bottom": "medium"
+   }
+  },
+  "D11": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "left": "medium",
+    "right": "medium",
+    "bottom": "medium"
+   }
+  },
+  "E11": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "left": "medium",
+    "bottom": "medium"
+   }
+  },
+  "F11": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "medium",
+    "bottom": "medium"
+   }
+  },
+  "G11": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "left": "medium",
+    "bottom": "medium"
+   }
+  },
+  "H11": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "medium",
+    "bottom": "medium"
+   }
+  },
+  "I11": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "left": "medium",
+    "bottom": "medium"
+   }
+  },
+  "J11": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "medium",
+    "bottom": "medium"
+   }
+  },
+  "K11": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "left": "medium",
+    "right": "medium",
+    "bottom": "medium"
+   }
+  },
+  "B12": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "h:mm",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "C12": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "h:mm",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "bottom": "thin"
+   }
+  },
+  "D12": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "bottom": "thin"
+   }
+  },
+  "E12": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "0.00",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "F12": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "G12": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "0.00",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "H12": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "I12": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "0.00",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "J12": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "K12": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "0",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "B13": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "h:mm",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "C13": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "h:mm",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "bottom": "thin"
+   }
+  },
+  "D13": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "bottom": "thin"
+   }
+  },
+  "E13": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "0.00",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "F13": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "G13": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "0.00",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "H13": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "I13": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "0.00",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "J13": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "K13": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "0",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "B14": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "h:mm",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "C14": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "h:mm",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "D14": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "bottom": "thin"
+   }
+  },
+  "E14": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "0.00",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "F14": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "G14": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "0.00",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "H14": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "I14": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "0.00",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "J14": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "K14": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "0",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "B15": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "h:mm",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "C15": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "h:mm",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "D15": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "bottom": "thin"
+   }
+  },
+  "E15": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "0.00",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "F15": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "G15": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "0.00",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "H15": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "I15": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "0.00",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "J15": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "K15": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "0",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "B16": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "h:mm",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "C16": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "h:mm",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "D16": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "bottom": "thin"
+   }
+  },
+  "E16": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "0.00",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "F16": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "G16": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "0.00",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "H16": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "I16": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "0.00",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "J16": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "K16": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "0",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "left": "thin",
+    "right": "thin",
+    "top": "thin",
+    "bottom": "thin"
+   }
+  },
+  "B19": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "bottom": "medium"
+   }
+  },
+  "C19": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "bottom": "medium"
+   }
+  },
+  "D19": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "bottom": "medium"
+   }
+  },
+  "F19": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "bottom": "medium"
+   }
+  },
+  "G19": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "bottom": "medium"
+   }
+  },
+  "H19": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "bottom": "medium"
+   }
+  },
+  "I19": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "bottom": "medium"
+   }
+  },
+  "K19": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "mm-dd-yy",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "bottom": "medium"
+   }
+  },
+  "B20": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "top": "medium"
+   },
+   "value": "Name (printed)"
+  },
+  "C20": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "top": "medium"
+   }
+  },
+  "D20": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "top": "medium"
+   }
+  },
+  "F20": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "top": "medium"
+   },
+   "value": "Signature"
+  },
+  "G20": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "top": "medium"
+   }
+  },
+  "H20": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "top": "medium"
+   }
+  },
+  "I20": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "top": "medium"
+   }
+  },
+  "K20": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "value": "Date"
+  },
+  "B24": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "bottom": "medium"
+   },
+   "value": "Houser Engineering"
+  },
+  "C24": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "bottom": "medium"
+   }
+  },
+  "D24": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "bottom": "medium"
+   }
+  },
+  "B25": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "alignment": {
+    "horizontal": "center"
+   },
+   "border": {
+    "top": "medium"
+   },
+   "value": "Company"
+  },
+  "C25": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "top": "medium"
+   }
+  },
+  "D25": {
+   "font": {
+    "name": "Calibri",
+    "size": 11.0,
+    "bold": false
+   },
+   "numFmt": "General",
+   "border": {
+    "top": "medium"
+   }
+  }
+ }
+}

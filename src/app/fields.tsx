@@ -154,3 +154,75 @@ export const YesNoChips = (props: { label: string; value: string; onChange: (v: 
     onChange={(v) => props.onChange(v as '' | 'Y' | 'N')}
   />
 );
+
+const SIXTEENTHS = Array.from({ length: 16 }, (_, i) => {
+  let n = i;
+  let d = 16;
+  while (n && n % 2 === 0) (n /= 2), (d /= 2);
+  return { value: i, label: i ? `${n}/${d}` : '0' };
+});
+
+/** Tape reading: whole inches plus sixteenths (no "/" needed on a phone keypad). */
+export function TapeField(props: { label: string; value: number | null; onInput: (v: number | null) => void }) {
+  const id = useId();
+  const whole = props.value == null ? null : Math.floor(Math.round(props.value * 16) / 16);
+  const six = props.value == null ? 0 : Math.round(props.value * 16) - (whole ?? 0) * 16;
+  const [draft, setDraft] = useState(whole == null ? '' : String(whole));
+  const shown = draft.trim() === '' ? (whole == null ? '' : String(whole)) : Number(draft) === whole ? draft : String(whole ?? '');
+  const set = (w: string, s: number) => {
+    const n = Number(w.trim());
+    // Whole inches take the sixteenths pick; a typed decimal (19.5) is kept, to the nearest 1/16.
+    props.onInput(w.trim() === '' || !Number.isFinite(n) ? null : Number.isInteger(n) ? n + s / 16 : Math.round(n * 16) / 16);
+  };
+  return (
+    <fieldset class="field tape" aria-labelledby={id}>
+      <span class="label" id={id}>{props.label}</span>
+      <div class="tape-row">
+        <input
+          type="text"
+          inputMode="numeric"
+          aria-label={`${props.label}, inches`}
+          value={shown}
+          autoComplete="off"
+          onInput={(e) => {
+            setDraft(e.currentTarget.value);
+            set(e.currentTarget.value, six);
+          }}
+        />
+        <span aria-hidden="true">in +</span>
+        <select aria-label={`${props.label}, sixteenths`} value={six} onChange={(e) => set(shown || '0', Number(e.currentTarget.value))}>
+          {SIXTEENTHS.map((o) => (
+            <option value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </div>
+    </fieldset>
+  );
+}
+
+/**
+ * Clock time of a LocalDateTime (`YYYY-MM-DDTHH:MM:SS`), editing only the time so it fits a phone
+ * column; the date is kept, or taken from `day` when the time is first entered.
+ */
+export function TimeField(props: { label: string; value: string; day: string; seconds?: boolean; onInput: (v: string) => void }) {
+  const id = useId();
+  return (
+    <div class="field">
+      <label for={id}>{props.label}</label>
+      <input
+        id={id}
+        type="time"
+        step={props.seconds ? 1 : 60}
+        value={props.value.slice(11, props.seconds ? 19 : 16)}
+        onInput={(e) => {
+          const v = e.currentTarget.value;
+          if (!v) return props.onInput('');
+          const day = props.value.slice(0, 10) || props.day;
+          // Without seconds shown, keep the recorded seconds so the interval does not shift.
+          const secs = props.value.slice(16, 19) || ':00';
+          props.onInput(`${day}T${v.length === 5 ? `${v}${props.seconds ? ':00' : secs}` : v}`);
+        }}
+      />
+    </div>
+  );
+}

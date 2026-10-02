@@ -1,7 +1,7 @@
 // Field record: everything captured on a site evaluation. Persisted as JSON on device
 // and (later) in Dropbox, so the shape is versioned and migrated on load.
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /** Header values are always text: `0999.001`, `SE 00001`, `3B` print exactly as entered. */
 export interface Header {
@@ -12,6 +12,8 @@ export interface Header {
   /** ISO date `YYYY-MM-DD` as entered on the date picker (kept as text). */
   date: string;
   confirmationNumber: string;
+  /** Owner name on the perc test form (DEQ-4 App. A form p126). */
+  ownerName: string;
 }
 
 export type YesNo = '' | 'Y' | 'N';
@@ -69,6 +71,54 @@ export interface TestPit {
   notes: string;
 }
 
+/**
+ * Times in perc tests are local wall-clock `YYYY-MM-DDTHH:MM:SS` strings (no zone): they print
+ * as the evaluator read them, and timers count from them so they survive backgrounding/reload.
+ * '' = not yet recorded.
+ */
+export type LocalDateTime = string;
+
+/** standard = fixed interval, measure drop; sandy = App. A sandy-soil test (refill to 6", 1 h);
+ * fixed-drop = time a fixed drop (Houser's fast-soil timing, research/01 §3.4). */
+export type PercMode = 'standard' | 'sandy' | 'fixed-drop';
+
+export interface PercReading {
+  id: string;
+  startAt: LocalDateTime;
+  endAt: LocalDateTime;
+  /** Distances below the reference point, inches (read to 1/16"). */
+  initialIn: number | null;
+  finalIn: number | null;
+}
+
+export interface PercTest {
+  id: string;
+  /** Test # as text (`1`, `3B`). */
+  label: string;
+  /** Linked test pit id ('' = none). */
+  testPitId: string;
+  lot: string;
+  holeDiameterIn: number | null;
+  holeDepthIn: number | null;
+  /** Reference point height above the hole bottom. */
+  referenceHeightIn: number | null;
+  /** Soil at test depth is sandy clay loam or finer → 4-h presoak, no sandy branch (App. A). */
+  soilFinerThanSCL: YesNo;
+  /** 12-inch soak fillings (App. A soaking step 1–2). */
+  fills: { startAt: LocalDateTime; endAt: LocalDateTime }[];
+  /** ≥4-h presoak with ≥12 in. of water (App. A soaking step 3). */
+  presoak: { startAt: LocalDateTime; endAt: LocalDateTime };
+  mode: PercMode;
+  /** Planned reading interval (standard/sandy) for the due alert. */
+  intervalMin: number | null;
+  /** Fixed drop timed in fixed-drop mode. */
+  fixedDropIn: number | null;
+  readings: PercReading[];
+  /** Tester's printed name; blank = header Eval. by. */
+  tester: string;
+  notes: string;
+}
+
 export interface FieldRecord {
   schemaVersion: typeof SCHEMA_VERSION;
   id: string;
@@ -76,6 +126,7 @@ export interface FieldRecord {
   updatedAt: string;
   header: Header;
   testPits: TestPit[];
+  percTests: PercTest[];
 }
 
 export const emptyHeader = (): Header => ({
@@ -85,6 +136,7 @@ export const emptyHeader = (): Header => ({
   evalBy: '',
   date: '',
   confirmationNumber: '',
+  ownerName: '',
 });
 
 const newId = () => crypto.randomUUID();
@@ -99,6 +151,7 @@ export function newSiteEvaluation(header: Partial<Header> = {}): FieldRecord {
     updatedAt: t,
     header: { ...emptyHeader(), ...header },
     testPits: [],
+    percTests: [],
   };
 }
 
@@ -128,6 +181,62 @@ export function updateTestPit(r: FieldRecord, pitId: string, patch: Partial<Omit
 
 export function removeTestPit(r: FieldRecord, pitId: string): FieldRecord {
   return touch({ ...r, testPits: r.testPits.filter((p) => p.id !== pitId) });
+}
+
+export const emptyPercTest = (): Omit<PercTest, 'id' | 'label'> => ({
+  testPitId: '',
+  lot: '',
+  holeDiameterIn: 6,
+  holeDepthIn: null,
+  referenceHeightIn: null,
+  soilFinerThanSCL: '',
+  fills: [],
+  presoak: { startAt: '', endAt: '' },
+  mode: 'standard',
+  intervalMin: 30,
+  fixedDropIn: 0.5,
+  readings: [],
+  tester: '',
+  notes: '',
+});
+
+export function addPercTest(r: FieldRecord, label: string, p: Partial<Omit<PercTest, 'id' | 'label'>> = {}): FieldRecord {
+  return touch({ ...r, percTests: [...r.percTests, { id: newId(), label, ...emptyPercTest(), ...p }] });
+}
+
+export function updatePercTest(r: FieldRecord, testId: string, patch: Partial<Omit<PercTest, 'id'>>): FieldRecord {
+  return touch({ ...r, percTests: r.percTests.map((t) => (t.id === testId ? { ...t, ...patch } : t)) });
+}
+
+export function removePercTest(r: FieldRecord, testId: string): FieldRecord {
+  return touch({ ...r, percTests: r.percTests.filter((t) => t.id !== testId) });
+}
+
+/** Adds a reading; it starts when the previous one ended and at its final distance unless given. */
+export function addReading(r: FieldRecord, testId: string, p: Partial<Omit<PercReading, 'id'>> = {}): FieldRecord {
+  const t = r.percTests.find((x) => x.id === testId);
+  if (!t) return r;
+  const prev = t.readings.at(-1);
+  const reading: PercReading = { id: newId(), startAt: prev?.endAt ?? '', endAt: '', initialIn: prev?.finalIn ?? null, finalIn: null, ...p };
+  return updatePercTest(r, testId, { readings: [...t.readings, reading] });
+}
+
+export function updateReading(r: FieldRecord, testId: string, readingId: string, patch: Partial<Omit<PercReading, 'id'>>): FieldRecord {
+  const t = r.percTests.find((x) => x.id === testId);
+  if (!t) return r;
+  return updatePercTest(r, testId, { readings: t.readings.map((x) => (x.id === readingId ? { ...x, ...patch } : x)) });
+}
+
+export function removeReading(r: FieldRecord, testId: string, readingId: string): FieldRecord {
+  const t = r.percTests.find((x) => x.id === testId);
+  if (!t) return r;
+  return updatePercTest(r, testId, { readings: t.readings.filter((x) => x.id !== readingId) });
+}
+
+/** Device clock as a LocalDateTime. */
+export function localNow(d = new Date()): LocalDateTime {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
 
 export const emptyMunsell = (): Munsell => ({ hue: '', value: '', chroma: '' });
@@ -245,6 +354,8 @@ const migrations: Record<number, (r: any) => any> = {
       }),
     })),
   }),
+  // v2 → v3: perc tests and the owner name.
+  2: (r) => ({ ...r, schemaVersion: 3, header: { ...emptyHeader(), ...r.header }, percTests: [] }),
 };
 
 export function migrate(raw: unknown): FieldRecord {

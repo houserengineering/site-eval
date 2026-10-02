@@ -1,13 +1,17 @@
 import { useState } from 'preact/hooks';
-import { addTestPit, updateHeader, type FieldRecord, type Header } from '../domain/fieldRecord';
+import { addPercTest, addTestPit, updateHeader, type FieldRecord, type Header } from '../domain/fieldRecord';
+import { percSummary } from '../domain/perc';
 import type { RecordStore } from '../storage/db';
 import { go } from './App';
 import { TextField } from './fields';
+import { useNow } from './PercTimers';
 import { loadTemplates } from './templates';
 
 export function SiteEvaluationView(props: { record: FieldRecord; save: (r: FieldRecord) => void; store: RecordStore }) {
   const r = props.record;
   const [pitLabel, setPitLabel] = useState('');
+  const [percLabel, setPercLabel] = useState('');
+  const now = useNow(5000);
   const [status, setStatus] = useState<string>();
   const h = (k: keyof Header) => (v: string) => props.save(updateHeader(r, { [k]: v }));
 
@@ -20,12 +24,21 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
     go(`#/se/${r.id}/pit/${next.testPits.at(-1)!.id}`);
   };
 
-  const exportSoilLogs = async () => {
-    setStatus('Generating soil logs…');
+  const addPerc = (e: Event) => {
+    e.preventDefault();
+    const label = percLabel.trim() || String(r.percTests.length + 1);
+    const next = addPercTest(r, label);
+    props.save(next);
+    setPercLabel('');
+    go(`#/se/${r.id}/perc/${next.percTests.at(-1)!.id}`);
+  };
+
+  const exportXlsx = (kind: 'soil-log-xlsx' | 'perc-test-xlsx', what: string) => async () => {
+    setStatus(`Generating ${what}…`);
     try {
       const { generate } = await import('../generator');
       const files = await generate(r, await loadTemplates());
-      const f = files.find((x) => x.kind === 'soil-log-xlsx')!;
+      const f = files.find((x) => x.kind === kind)!;
       const name = [r.header.projectNumber, f.path].filter(Boolean).join(' ');
       download(new Blob([f.bytes as BlobPart], { type: f.mimeType }), name);
       setStatus(`Saved ${name}`);
@@ -61,6 +74,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
           autoCapitalize="characters"
           hint="From GCCHD for Gallatin County site evaluations; leave blank elsewhere."
         />
+        <TextField label="Owner name" value={r.header.ownerName} onInput={h('ownerName')} autoCapitalize="words" hint="Printed on the perc test forms." />
       </section>
 
       <section aria-labelledby="pits">
@@ -92,11 +106,40 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
         </form>
       </section>
 
+      <section aria-labelledby="percs">
+        <h2 id="percs">Perc tests</h2>
+        {r.percTests.length === 0 && <p class="muted">No perc tests yet.</p>}
+        <ul class="list">
+          {r.percTests.map((t) => (
+            <li key={t.id}>
+              <a class="row-link" href={`#/se/${r.id}/perc/${t.id}`}>
+                <span class="row-title">
+                  Perc test {t.label}
+                  {t.lot && ` · Lot ${t.lot.replace(/^lot\s*/i, '')}`}
+                </span>
+                <span class="row-sub">{percSummary(t, now)}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+        <form class="inline-form" onSubmit={addPerc}>
+          <TextField label="New perc test #" value={percLabel} onInput={setPercLabel} autoCapitalize="characters" hint={`Blank uses ${r.percTests.length + 1}.`} />
+          <button class="btn primary" type="submit">
+            Add perc test
+          </button>
+        </form>
+      </section>
+
       <section aria-labelledby="out">
         <h2 id="out">Deliverables</h2>
-        <button class="btn primary block" onClick={exportSoilLogs}>
+        <button class="btn primary block" onClick={exportXlsx('soil-log-xlsx', 'soil logs')}>
           Export soil logs (Excel)
         </button>
+        {r.percTests.length > 0 && (
+          <button class="btn primary block" onClick={exportXlsx('perc-test-xlsx', 'perc tests')}>
+            Export perc tests (Excel)
+          </button>
+        )}
         {status && (
           <p class="status" role="status">
             {status}

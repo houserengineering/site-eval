@@ -1,14 +1,21 @@
 import { useEffect, useState } from 'preact/hooks';
 import { newSiteEvaluation, type FieldRecord } from '../domain/fieldRecord';
 import { openStore, type RecordStore } from '../storage/db';
+import { PercTestView } from './PercTestView';
+import { PercTimers } from './PercTimers';
 import { SiteEvaluationView } from './SiteEvaluationView';
 import { TestPitView } from './TestPitView';
 
-type Route = { name: 'home' } | { name: 'site'; id: string } | { name: 'pit'; id: string; pitId: string };
+type Route =
+  | { name: 'home' }
+  | { name: 'site'; id: string }
+  | { name: 'pit'; id: string; pitId: string }
+  | { name: 'perc'; id: string; testId: string };
 
 function parseRoute(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   if (parts[0] === 'se' && parts[1] && parts[2] === 'pit' && parts[3]) return { name: 'pit', id: parts[1], pitId: parts[3] };
+  if (parts[0] === 'se' && parts[1] && parts[2] === 'perc' && parts[3]) return { name: 'perc', id: parts[1], testId: parts[3] };
   if (parts[0] === 'se' && parts[1]) return { name: 'site', id: parts[1] };
   return { name: 'home' };
 }
@@ -32,6 +39,7 @@ export function App() {
   if (error) return <main class="page"><p class="alert" role="alert">{error}</p></main>;
   if (!store) return <main class="page" aria-busy="true" />;
   if (route.name === 'pit') return <RecordLoader store={store} id={route.id} render={(r, save) => <TestPitView record={r} pitId={route.pitId} save={save} />} />;
+  if (route.name === 'perc') return <RecordLoader store={store} id={route.id} render={(r, save) => <PercTestView record={r} testId={route.testId} save={save} />} />;
   if (route.name === 'site') return <RecordLoader store={store} id={route.id} render={(r, save) => <SiteEvaluationView record={r} save={save} store={store} />} />;
   return <Home store={store} />;
 }
@@ -60,7 +68,12 @@ function RecordLoader(props: {
         <a class="btn" href="#/">All site evaluations</a>
       </main>
     );
-  return <>{props.render(record, save)}</>;
+  return (
+    <>
+      {props.render(record, save)}
+      <PercTimers record={record} />
+    </>
+  );
 }
 
 function Home({ store }: { store: RecordStore }) {
@@ -104,6 +117,7 @@ function Home({ store }: { store: RecordStore }) {
               <span class="row-title">{r.header.projectNumber || 'No project #'} {r.header.projectName}</span>
               <span class="row-sub">
                 {r.testPits.length} test pit{r.testPits.length === 1 ? '' : 's'}
+                {r.percTests.length > 0 && ` · ${r.percTests.length} perc test${r.percTests.length === 1 ? '' : 's'}`}
                 {r.header.date && ` · ${r.header.date}`}
               </span>
             </a>

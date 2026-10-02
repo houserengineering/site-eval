@@ -20,6 +20,7 @@ npm run dev
 - `src/domain/fieldRecord.ts` — field record model (versioned schema + migrations).
 - `src/generator/` — `generate(fieldRecord, templates) → files`, the deliverable seam.
 - `src/templates/soil-log/` — snapshot of the office `Soil Log Template.xls` (layout only, sample values cleared, source SHA-256 recorded). Refresh with `tools/snapshot-soil-log.ps1` on the office PC.
+- `src/templates/perc-test/` — snapshot of the office `Perc Test.xlsx` (cells located by label; sample values cleared). Refresh with `python tools/snapshot_perc_test.py "%USERPROFILE%\Dropbox\Server\Office\Tools\Wastewater Tools\SEPTIC\SITE EVALUATION\Perc Test.xlsx" src/templates/perc-test`.
 - `src/storage/` — on-device IndexedDB persistence.
 - `src/app/` — the Preact UI.
 

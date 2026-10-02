@@ -240,3 +240,34 @@ section > h2:first-child { margin-top: 24px; }
 .guide-answers .btn { justify-content: flex-start; text-align: left; }
 .guide-result { margin: 12px 0 4px; font-size: 1.1rem; }
 .guide-nav { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Perc tests */
+.field input[type='time'], .tape select {
+  font: inherit; min-height: 52px; padding: 8px 10px; border: 2px solid var(--line); border-radius: 8px;
+  background: var(--bg); color: var(--text); width: 100%;
+}
+.tape { border: 0; padding: 0; min-width: 0; }
+.tape-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; }
+.tape-row input { font: inherit; min-height: 52px; padding: 8px 12px; border: 2px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); width: 100%; }
+.tape-row span { color: var(--muted); }
+.tape select:focus-visible, .tape-row input:focus-visible, .field input[type='time']:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
+.timer { font-size: 2.2rem; font-weight: 750; font-variant-numeric: tabular-nums; margin: 4px 0; }
+.timer.due { color: var(--danger); }
+.calc { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 4px 0 12px; }
+.calc div { background: var(--bg); border-radius: 6px; padding: 6px 8px; }
+.calc dt { color: var(--muted); font-size: 0.9rem; }
+.calc dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.btn-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin: 12px 0; }
+.btn-row .btn { width: 100%; }
+.ok-box { color: #144d18; background: #d8f0da; padding: 10px 12px; border-radius: 6px; font-weight: 650; }
+.timers {
+  position: sticky; bottom: 0; z-index: 5; margin: 0; padding: 8px max(16px, calc((100% - 40rem) / 2 + 16px)) calc(8px + env(safe-area-inset-bottom));
+  background: var(--primary); color: var(--primary-text);
+}
+.timers a { display: flex; justify-content: space-between; gap: 12px; min-height: 48px; align-items: center; color: inherit; text-decoration: none; font-weight: 650; }
+.timers a + a { border-top: 1px solid currentColor; }
+.timers a.due { background: #ffd8d8; color: #5c0000; margin: 0 -8px; padding: 0 8px; border-radius: 6px; }
+.timers a:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+.timers .t { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.card .card { background: var(--bg); border: 2px solid var(--line); }
+.card h3 { margin: 12px 0 8px; font-size: 1.1rem; }

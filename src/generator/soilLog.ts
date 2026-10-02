@@ -3,6 +3,7 @@ import ExcelJS from 'exceljs';
 import { dateText, depthText, type FieldRecord, type TestPit } from '../domain/fieldRecord';
 import { colorText, horizonNotes, pitFootnotes, structureText, textureText } from '../domain/soilLogText';
 import type { SoilLogSnapshot, TemplateSet } from '../templates/types';
+import { splitAddr, styleCell } from './xlsx';
 
 const EMU_PER_PX = 9525;
 
@@ -47,10 +48,7 @@ function drawTemplate(ws: ExcelJS.Worksheet, spec: SoilLogSnapshot, logoId: numb
   const t = spec.horizonTable;
   const lastHorizonRow = t.firstRow + t.rows - 1;
   const shift = (row: number) => (row > lastHorizonRow ? row + extraRows : row);
-  const at = (addr: string) => {
-    const [, col, row] = /^([A-Z]+)(\d+)$/.exec(addr)!;
-    return { col, row: Number(row) };
-  };
+  const at = splitAddr;
 
   for (const [col, width] of Object.entries(spec.columns)) ws.getColumn(col).width = width;
   for (const [row, height] of Object.entries(spec.rows)) ws.getRow(shift(Number(row))).height = height;
@@ -66,22 +64,7 @@ function drawTemplate(ws: ExcelJS.Worksheet, spec: SoilLogSnapshot, logoId: numb
     for (let i = 1; i <= extraRows; i++) cells.push([`${col}${row + i}`, c]);
   }
 
-  for (const [addr, c] of cells) {
-    const cell = ws.getCell(addr);
-    if (c.value !== undefined) cell.value = c.value;
-    cell.font = { name: c.font.name, size: c.font.size, bold: c.font.bold };
-    if (c.numFmt !== 'General') cell.numFmt = c.numFmt;
-    if (c.alignment) {
-      // Excel's "center" vertical alignment is ExcelJS's "middle".
-      const { vertical, ...rest } = c.alignment;
-      cell.alignment = { ...rest, ...(vertical && { vertical: vertical === 'center' ? 'middle' : vertical }) } as ExcelJS.Alignment;
-    }
-    if (c.border) {
-      cell.border = Object.fromEntries(Object.entries(c.border).map(([side, style]) => [side, { style }])) as unknown as ExcelJS.Borders;
-    }
-    // c.fill (yellow) marks input cells for office typists; deliverables print without it.
-    // c.comment is typist guidance; it becomes in-app help, not a deliverable comment.
-  }
+  for (const [addr, c] of cells) styleCell(ws.getCell(addr), c);
 
   const ps = spec.pageSetup;
   const lastRow = shift(formLastRow(spec));

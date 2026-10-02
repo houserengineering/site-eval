@@ -1,9 +1,10 @@
 // Deliverable generator: the one seam that turns a field record into files.
 import type { FieldRecord } from '../domain/fieldRecord';
 import type { TemplateSet } from '../templates/types';
+import { percTestXlsx } from './percTest';
 import { soilLogXlsx } from './soilLog';
 
-export type DeliverableKind = 'soil-log-xlsx' | 'field-record-json';
+export type DeliverableKind = 'soil-log-xlsx' | 'perc-test-xlsx' | 'field-record-json';
 
 export interface GeneratedFile {
   kind: DeliverableKind;
@@ -17,6 +18,9 @@ const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 export async function generate(record: FieldRecord, templates: TemplateSet): Promise<GeneratedFile[]> {
   return [
     { kind: 'soil-log-xlsx', path: 'Soil Logs.xlsx', bytes: await soilLogXlsx(record, templates), mimeType: XLSX },
+    ...(record.percTests.length
+      ? [{ kind: 'perc-test-xlsx' as const, path: 'Percolation Tests.xlsx', bytes: await percTestXlsx(record, templates), mimeType: XLSX }]
+      : []),
     {
       kind: 'field-record-json',
       path: 'Field Record.json',
