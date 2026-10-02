@@ -33,6 +33,8 @@ export interface GeneratedFile {
 export interface GenerateOptions {
   /** Pit photo bytes; without it the printed logs say the photo is not on this device. */
   photo?: PhotoSource;
+  /** The perc test module (a device setting); off leaves perc tests out of every deliverable. Default on. */
+  percTests?: boolean;
 }
 
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -48,7 +50,7 @@ export async function generate(fieldRecord: FieldRecord, templates: TemplateSet,
     if (bytes) photos.set(ref.id, bytes);
   }
   const soilWb = soilLogWorkbook(record, templates, photos);
-  const percWb = record.percTests.length ? percTestWorkbook(record, templates) : null;
+  const percWb = withPerc(record, opts) ? percTestWorkbook(record, templates) : null;
   const gwWb = record.wells.length ? groundwaterWorkbook(record) : null;
   // Workbook bytes first: rendering pages only reads the workbooks.
   const soilXlsx = new Uint8Array(await soilWb.xlsx.writeBuffer());
@@ -89,6 +91,8 @@ export async function generate(fieldRecord: FieldRecord, templates: TemplateSet,
   return files;
 }
 
+const withPerc = (record: FieldRecord, opts: GenerateOptions) => opts.percTests !== false && record.percTests.length > 0;
+
 /** The printed pages of each PDF deliverable (the print view draws these same pages). */
 export async function printPages(
   record: FieldRecord,
@@ -96,7 +100,7 @@ export async function printPages(
   opts: GenerateOptions = {},
   books = {
     soilWb: soilLogWorkbook(record, templates),
-    percWb: record.percTests.length ? percTestWorkbook(record, templates) : null,
+    percWb: withPerc(record, opts) ? percTestWorkbook(record, templates) : null,
     gwWb: record.wells.length ? groundwaterWorkbook(record) : null,
   },
 ): Promise<Record<PrintKind, Page[]>> {

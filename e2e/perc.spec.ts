@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import ExcelJS from 'exceljs';
 import { readFileSync } from 'node:fs';
+import { turnOnPercTests } from './settings';
 
 const shots = process.env.SHOTS_DIR;
 const shot = async (page: Page, name: string) => {
@@ -13,9 +14,51 @@ const tape = async (scope: Locator, label: string, inches: string, sixteenths = 
   await scope.getByLabel(`${label}, sixteenths`).selectOption(sixteenths);
 };
 
+test('perc tests are hidden until turned on in settings; turning them off keeps the records', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: 'New site evaluation' }).click();
+  await page.getByLabel('Project #').fill('0999.006');
+  await expect(page.getByRole('heading', { name: 'Perc tests' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Add perc test' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /^Perc tests/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Export perc tests (Excel)' })).toHaveCount(0);
+  const site = page.url();
+
+  await page.getByRole('link', { name: 'All site evaluations' }).click();
+  await turnOnPercTests(page);
+  await page.goto(site);
+  await page.getByRole('button', { name: 'Add perc test' }).click();
+  await expect(page.getByRole('heading', { name: 'Perc test 1' })).toBeVisible();
+  await page.getByRole('link', { name: 'Back to site evaluation' }).click();
+  await expect(page.getByRole('link', { name: /^Perc tests/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Export perc tests (Excel)' })).toBeVisible();
+
+  // Off again: everything perc is hidden (home list included), but the perc test is still saved.
+  await page.getByRole('link', { name: 'All site evaluations' }).click();
+  await expect(page.getByText('1 perc test')).toBeVisible();
+  await page.getByRole('link', { name: 'Settings' }).click();
+  await shot(page, '19-settings-perc-on');
+  await page.getByRole('checkbox', { name: 'Perc tests' }).uncheck();
+  await page.getByRole('link', { name: 'All site evaluations' }).click();
+  await expect(page.getByRole('link', { name: /^0999\.006/ })).toContainText('0 test pits');
+  await expect(page.getByText('1 perc test')).toHaveCount(0);
+  await page.goto(site);
+  await expect(page.getByRole('heading', { name: 'Perc tests' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /^Perc test 1/ })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /^Perc tests/ })).toHaveCount(0);
+  await shot(page, '19-site-perc-off');
+
+  await page.getByRole('link', { name: 'All site evaluations' }).click();
+  await shot(page, '19-home');
+  await turnOnPercTests(page);
+  await page.goto(site);
+  await expect(page.getByRole('link', { name: /^Perc test 1/ })).toBeVisible();
+});
+
 test('perc test: soak branch, timed readings with alerts, reload, concurrent tests, Excel', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-02T08:00:00') });
   await page.goto('./');
+  await turnOnPercTests(page);
   await page.getByRole('button', { name: 'New site evaluation' }).click();
   await page.getByLabel('Project #').fill('0999.004');
   await page.getByLabel('Project name').fill('Example Subdivision');

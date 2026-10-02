@@ -187,6 +187,11 @@ describe('site checks', () => {
     expect(all.map((w) => w.subject.kind)).toEqual(['site', 'site', 'pit', 'perc']);
     expect(all[2].subject.name).toBe('Test pit 1');
   });
+
+  it('leaves out perc warnings when the perc module is off', () => {
+    const r = record([pit({ location: null })], { use: 'PUBLIC' }, [perc({ holeDepthIn: null })]);
+    expect(allWarnings(r, NOW, { percTests: false }).map((w) => w.subject.kind)).toEqual(['site', 'site', 'pit']);
+  });
 });
 
 describe('groundwater observation reading A − B (DEQ-4 App. C)', () => {

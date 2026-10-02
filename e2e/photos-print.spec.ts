@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { PDFDocument } from 'pdf-lib';
+import { turnOnPercTests } from './settings';
 
 const shots = process.env.SHOTS_DIR;
 const shot = async (page: Page, name: string, fullPage = true) => {
@@ -11,6 +12,7 @@ test.use({ permissions: ['geolocation'], geolocation: { latitude: 45.678901, lon
 
 test('photo, GPS, certify on the certifier device, print preview and PDFs', async ({ page, context }) => {
   await page.goto('./');
+  await turnOnPercTests(page);
   await page.getByRole('button', { name: 'New site evaluation' }).click();
   await page.getByLabel('Project #').fill('0999.005');
   await page.getByLabel('Project name').fill('Example Subdivision');

@@ -176,6 +176,17 @@ describe('perc test form', () => {
     expect(file.path).toBe('Percolation Tests.xlsx');
     expect(await sheets(newSiteEvaluation())).toBeNull();
   });
+
+  it('leaves perc tests out of the deliverables when the perc module is off, without touching the record', async () => {
+    const r = addPercTest(record(), '2');
+    const before = JSON.stringify(r);
+    const files = await generate(r, templates, { percTests: false });
+    expect(files.some((f) => f.kind.startsWith('perc-test'))).toBe(false);
+    expect(files.map((f) => f.kind)).toContain('soil-log-pdf');
+    const json = JSON.parse(new TextDecoder().decode(files.find((f) => f.kind === 'field-record-json')!.bytes));
+    expect(json.percTests).toHaveLength(2);
+    expect(JSON.stringify(r)).toBe(before);
+  });
 });
 
 /** Note rows the generator inserted under the readings (text merged across the form). */

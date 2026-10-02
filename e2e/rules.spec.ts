@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { turnOnPercTests } from './settings';
 
 const shots = process.env.SHOTS_DIR;
 const shot = async (page: Page, name: string, el?: Locator) => {
@@ -11,6 +12,7 @@ const pick = (scope: Locator | Page, group: string, name: string) =>
 
 test('rule checks warn in pit and perc views, cite the rule, and are summarized before export', async ({ page }) => {
   await page.goto('./');
+  await turnOnPercTests(page);
   await page.getByRole('button', { name: 'New site evaluation' }).click();
   await page.getByLabel('Project #').fill('0999.008');
   // No proposed-system inputs (removed 2026-10-02): the checks use a 24" gravity trench, both reviews.

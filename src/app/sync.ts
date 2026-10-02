@@ -9,6 +9,7 @@ import { accountName, DropboxSync, finishSignIn, refreshAuth, startSignIn, type 
 import { fileDeliverables, MissingFolderError, NoFolderError, sendToPrintQueue, syncRecord, type FilingResult, type PrintableKind, type SyncContext } from '../sync/engine';
 import { photoSource } from './deliverables';
 import { loadTemplates } from './templates';
+import { settings } from './settings';
 
 export interface RecordSyncStatus {
   at?: string;
@@ -268,7 +269,7 @@ export class SyncService {
     const due = entry && (entry.deliverables || entry.print.length) && Date.now() - (this.lastFiled[id] ?? 0) >= FILE_EVERY_MS;
     if (due) {
       const [{ generate }, templates] = await Promise.all([import('../generator'), loadTemplates()]);
-      const files = await generate(record, templates, { photo: photoSource(this.store) });
+      const files = await generate(record, templates, { photo: photoSource(this.store), percTests: settings().percTests });
       const out = await fileDeliverables(record, files, ctx);
       await this.saveMerged(out.record); // keep which files are the app's even if the next sync fails
       record = (await syncRecord(out.record, ctx)).record;

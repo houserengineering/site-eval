@@ -6,6 +6,7 @@ import type { DeliverableKind, Page, PrintKind } from '../generator';
 import type { FontKey } from '../generator/page';
 import type { RecordStore } from '../storage/db';
 import { download, photoSource } from './deliverables';
+import { settings } from './settings';
 import { loadTemplates } from './templates';
 import { UnconfirmedNotice } from './Unconfirmed';
 
@@ -33,7 +34,7 @@ export function PrintView(props: { record: FieldRecord; kind: PrintKind; store: 
     let live = true;
     (async () => {
       const [{ printPages, forDeliverables }, templates] = await Promise.all([import('../generator'), loadTemplates()]);
-      const all = await printPages(forDeliverables(r), templates, { photo: photoSource(props.store) });
+      const all = await printPages(forDeliverables(r), templates, { photo: photoSource(props.store), percTests: settings().percTests });
       if (live) setPages(all[props.kind]);
     })().catch((e) => live && setStatus(`Could not build the pages: ${e.message}`));
     return () => void (live = false);
@@ -43,7 +44,7 @@ export function PrintView(props: { record: FieldRecord; kind: PrintKind; store: 
     setStatus('Writing PDF…');
     try {
       const { generate } = await import('../generator');
-      const f = (await generate(r, await loadTemplates(), { photo: photoSource(props.store) })).find((x) => x.kind === meta.file);
+      const f = (await generate(r, await loadTemplates(), { photo: photoSource(props.store), percTests: settings().percTests })).find((x) => x.kind === meta.file);
       if (!f) return setStatus('Nothing to save yet.');
       const name = [r.header.projectNumber, f.path].filter(Boolean).join(' ');
       download(new Blob([f.bytes as BlobPart], { type: f.mimeType }), name);

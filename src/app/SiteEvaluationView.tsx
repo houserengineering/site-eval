@@ -19,12 +19,14 @@ import { DropboxSection, SyncStatus } from './SyncPanel';
 import { allWarnings } from '../domain/rules';
 import { RuleWarnings } from './RuleWarnings';
 import { wellSummary } from './GroundwaterView';
+import { useSettings } from './settings';
 
 export function SiteEvaluationView(props: { record: FieldRecord; save: (r: FieldRecord) => void; store: RecordStore }) {
   const r = props.record;
   const [pitLabel, setPitLabel] = useState('');
   const [percLabel, setPercLabel] = useState('');
   const now = useNow(5000);
+  const { percTests } = useSettings();
   const [status, setStatus] = useState<string>();
   const h = (k: keyof Header) => (v: string) => props.save(updateHeader(r, { [k]: v }));
 
@@ -50,7 +52,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
     setStatus(`Generating ${what}…`);
     try {
       const { generate } = await import('../generator');
-      const files = await generate(r, await loadTemplates(), { photo: photoSource(props.store) });
+      const files = await generate(r, await loadTemplates(), { photo: photoSource(props.store), percTests });
       const f = files.find((x) => x.kind === kind)!;
       const name = [r.header.projectNumber, f.path].filter(Boolean).join(' ');
       download(new Blob([f.bytes as BlobPart], { type: f.mimeType }), name);
@@ -96,7 +98,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
           autoCapitalize="characters"
           hint="From GCCHD for Gallatin County site evaluations; leave blank elsewhere."
         />
-        <TextField label="Owner name" value={r.header.ownerName} onInput={h('ownerName')} autoCapitalize="words" hint="Printed on the perc test forms." />
+        <TextField label="Owner name" value={r.header.ownerName} onInput={h('ownerName')} autoCapitalize="words" hint={percTests ? 'Printed on the perc test forms.' : undefined} />
       </section>
 
 
@@ -145,6 +147,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
         </form>
       </section>
 
+      {percTests && (
       <section aria-labelledby="percs">
         <h2 id="percs">Perc tests</h2>
         {r.percTests.length === 0 && <p class="muted">No perc tests yet.</p>}
@@ -169,6 +172,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
         </form>
         <CertifyPanel record={r} save={props.save} store={props.store} />
       </section>
+      )}
 
       <section aria-labelledby="gw">
         <h2 id="gw">Groundwater monitoring</h2>
@@ -181,11 +185,11 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
 
       <section aria-labelledby="out">
         <h2 id="out">Deliverables</h2>
-        <RuleWarnings warnings={allWarnings(r, now)} title="Rule checks before export" showSubject />
+        <RuleWarnings warnings={allWarnings(r, now, { percTests })} title="Rule checks before export" showSubject />
         <p class="hint">Print or save PDF (letter):</p>
         <ul class="list">
           {(Object.keys(PRINT_KINDS) as PrintKind[])
-            .filter((k) => k !== 'groundwater' && (k !== 'perc-tests' || r.percTests.length > 0))
+            .filter((k) => k !== 'groundwater' && (k !== 'perc-tests' || (percTests && r.percTests.length > 0)))
             .map((k) => (
               <li key={k}>
                 <a class="row-link" href={`#/se/${r.id}/print/${k}`}>
@@ -198,7 +202,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
         <button class="btn primary block" onClick={exportXlsx('soil-log-xlsx', 'soil logs')}>
           Export soil logs (Excel)
         </button>
-        {r.percTests.length > 0 && (
+        {percTests && r.percTests.length > 0 && (
           <button class="btn primary block" onClick={exportXlsx('perc-test-xlsx', 'perc tests')}>
             Export perc tests (Excel)
           </button>

@@ -453,8 +453,10 @@ export function siteWarnings(r: FieldRecord): Warning[] {
 }
 
 /** Every warning on the record, site first, then pits and perc tests in order. */
-export function allWarnings(r: FieldRecord, now: string): Warning[] {
-  return [...siteWarnings(r), ...r.testPits.flatMap((p) => pitWarnings(r, p)), ...r.percTests.flatMap((t) => percWarnings(r, t, now))];
+/** Every warning, site first; `percTests: false` (the perc module is off) leaves out the perc tests'. */
+export function allWarnings(r: FieldRecord, now: string, opts: { percTests?: boolean } = {}): Warning[] {
+  const percs = opts.percTests === false ? [] : r.percTests;
+  return [...siteWarnings(r), ...r.testPits.flatMap((p) => pitWarnings(r, p)), ...percs.flatMap((t) => percWarnings(r, t, now))];
 }
 
 // ---- groundwater observation wells -----------------------------------------

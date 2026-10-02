@@ -14,6 +14,8 @@ import { TestPitView } from './TestPitView';
 import { setSyncService, SyncService, syncService } from './sync';
 import { DropboxOpenView } from './SyncPanel';
 import { readBackup, isBackup } from '../domain/backup';
+import { loadSettings, useSettings } from './settings';
+import { SettingsView } from './SettingsView';
 
 type Route =
   | { name: 'home' }
@@ -25,6 +27,7 @@ type Route =
   | { name: 'gw'; id: string }
   | { name: 'well'; id: string; wellId: string }
   | { name: 'certifier' }
+  | { name: 'settings' }
   | { name: 'dropbox' };
 
 function parseRoute(hash: string): Route {
@@ -37,6 +40,7 @@ function parseRoute(hash: string): Route {
   if (parts[0] === 'se' && parts[1] && parts[2] === 'gw') return { name: 'gw', id: parts[1] };
   if (parts[0] === 'se' && parts[1]) return { name: 'site', id: parts[1] };
   if (parts[0] === 'certifier') return { name: 'certifier' };
+  if (parts[0] === 'settings') return { name: 'settings' };
   if (parts[0] === 'dropbox') return { name: 'dropbox' };
   return { name: 'home' };
 }
@@ -49,10 +53,12 @@ export function App() {
   const [store, setStore] = useState<RecordStore>();
   const [error, setError] = useState<string>();
   const [route, setRoute] = useState(() => parseRoute(location.hash));
+  const { percTests } = useSettings();
 
   useEffect(() => {
     openStore().then(
       async (s) => {
+        await loadSettings(s);
         const sync = new SyncService(s);
         setSyncService(sync);
         const returnTo = await sync.init();
@@ -69,14 +75,15 @@ export function App() {
   if (error) return <main class="page"><p class="alert" role="alert">{error}</p></main>;
   if (!store) return <main class="page" aria-busy="true" />;
   if (route.name === 'pit') return <RecordLoader store={store} id={route.id} render={(r, save) => <TestPitView record={r} pitId={route.pitId} save={save} store={store} />} />;
-  if (route.name === 'perc') return <RecordLoader store={store} id={route.id} render={(r, save) => <PercTestView record={r} testId={route.testId} save={save} />} />;
+  if (route.name === 'perc' && percTests) return <RecordLoader store={store} id={route.id} render={(r, save) => <PercTestView record={r} testId={route.testId} save={save} />} />;
   if (route.name === 'print') return <RecordLoader store={store} id={route.id} render={(r, save) => <PrintView record={r} kind={route.kind} store={store} save={save} />} />;
   if (route.name === 'map') return <RecordLoader store={store} id={route.id} render={(r, save) => <SiteMapView record={r} save={save} store={store} />} />;
   if (route.name === 'gw') return <RecordLoader store={store} id={route.id} render={(r, save) => <GroundwaterView record={r} save={save} />} />;
   if (route.name === 'well') return <RecordLoader store={store} id={route.id} render={(r, save) => <WellView record={r} wellId={route.wellId} save={save} />} />;
   if (route.name === 'certifier') return <CertifierSetup store={store} />;
+  if (route.name === 'settings') return <SettingsView store={store} />;
   if (route.name === 'dropbox') return <DropboxOpenView store={store} />;
-  if (route.name === 'site') return <RecordLoader store={store} id={route.id} render={(r, save) => <SiteEvaluationView record={r} save={save} store={store} />} />;
+  if (route.name === 'site' || route.name === 'perc') return <RecordLoader store={store} id={route.id} render={(r, save) => <SiteEvaluationView record={r} save={save} store={store} />} />;
   return <Home store={store} />;
 }
 
@@ -88,6 +95,7 @@ function RecordLoader(props: {
   const [record, setRecord] = useState<FieldRecord | null>();
   const current = useRef<FieldRecord | null | undefined>(undefined);
   const [error, setError] = useState<string>();
+  const { percTests } = useSettings();
   useEffect(() => {
     setRecord(undefined);
     props.store.get(props.id).then((r) => setRecord(r ?? null), (e) => setError(e.message));
@@ -119,7 +127,7 @@ function RecordLoader(props: {
   return (
     <>
       {props.render(record, save)}
-      <PercTimers record={record} />
+      {percTests && <PercTimers record={record} />}
     </>
   );
 }
@@ -127,6 +135,7 @@ function RecordLoader(props: {
 function Home({ store }: { store: RecordStore }) {
   const [records, setRecords] = useState<FieldRecord[]>();
   const [problem, setProblem] = useState<string>();
+  const { percTests } = useSettings();
   useEffect(() => {
     store.list().then(
       ({ records, unreadable }) => {
@@ -176,6 +185,9 @@ function Home({ store }: { store: RecordStore }) {
     <main class="page">
       <header class="bar">
         <h1>Site evaluations</h1>
+        <a class="bar-link" href="#/settings">
+          Settings
+        </a>
       </header>
       <button class="btn primary block" onClick={create}>
         New site evaluation
@@ -200,7 +212,7 @@ function Home({ store }: { store: RecordStore }) {
               <span class="row-title">{r.header.projectNumber || 'No project #'} {r.header.projectName}</span>
               <span class="row-sub">
                 {r.testPits.length} test pit{r.testPits.length === 1 ? '' : 's'}
-                {r.percTests.length > 0 && ` · ${r.percTests.length} perc test${r.percTests.length === 1 ? '' : 's'}`}
+                {percTests && r.percTests.length > 0 && ` · ${r.percTests.length} perc test${r.percTests.length === 1 ? '' : 's'}`}
                 {r.wells?.length > 0 && ` · ${r.wells.length} observation well${r.wells.length === 1 ? '' : 's'}`}
                 {r.header.date && ` · ${r.header.date}`}
               </span>

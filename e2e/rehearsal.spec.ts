@@ -4,6 +4,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import ExcelJS from 'exceljs';
 import { readFileSync } from 'node:fs';
 import { PDFDocument } from 'pdf-lib';
+import { turnOnPercTests } from './settings';
 
 const shots = process.env.SHOTS_DIR;
 const shot = async (page: Page, name: string, fullPage = true) => {
@@ -55,6 +56,7 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
   await page.reload();
   await page.waitForFunction(() => !!(window as any).__fakeDropbox);
   await page.evaluate((f) => (window as any).__fakeDropbox.mkdir(f), folder); // the office made the job folder
+  await turnOnPercTests(page);
 
   // Start of day: load the job, confirm the flagged header values.
   await page.getByLabel('Load job file or backup').setInputFiles(jobPath);
