@@ -8,6 +8,8 @@ import { updateTestPit, type FieldRecord, type Horizon, type TestPit } from './f
 import { fillRecord } from './fillGaps';
 import { hueWarning } from './hueCheck';
 import { wallOf } from './pitWalls';
+import { bandColor, colorMismatch } from './photoColor';
+import { munsellNotation } from './vocabulary';
 
 /** Measured once when the photo is taken (on a downscaled copy); see `measurePhoto`. */
 export interface PhotoQuality {
@@ -27,7 +29,7 @@ export interface Acceptance {
   at: string;
 }
 
-export type FlagKind = 'depth' | 'short' | 'walls' | 'hue' | 'rock' | 'blank' | 'photo';
+export type FlagKind = 'depth' | 'short' | 'walls' | 'hue' | 'rock' | 'blank' | 'photo' | 'color';
 
 export interface Flag {
   /** Stable for one condition: `gap:12-14`, `short:84`, `rock:<horizon id>:65`. */
@@ -147,6 +149,21 @@ export function wallFlags(r: FieldRecord, wall: TestPit): Flag[] {
     const missing = [!(f.color.hue && f.color.value && f.color.chroma) && !f.color.other.trim() && 'no color', !f.texture.cls.trim() && 'no texture'].filter(Boolean) as string[];
     if (missing.length) add('blank', `blank:${h.id}`, `${name(h)}: ${missing.join(' and ')}.`, { horizonId: h.id });
   }
+
+  // Color against the wall-face photo, the photo spanning the surface to the log bottom.
+  const face = [...wall.photos].reverse().find((p) => p.face && p.color);
+  if (face?.color && ends > 0)
+    for (const h of hs) {
+      if (h.topIn == null || h.bottomIn == null) continue;
+      const band = bandColor(face.color, h.topIn, h.bottomIn, ends);
+      const reads = band && colorMismatch(h.color, band, face.whiteInFrame ? face.color.white : undefined);
+      const logged = munsellNotation(h.color.hue, h.color.value, h.color.chroma);
+      if (reads)
+        add('color', `color:${h.id}:${logged}:${face.id}`, `${name(h)}: the wall-face photo reads about ${reads}; logged ${logged}. Check the color.`, {
+          horizonId: h.id,
+          photoId: face.id,
+        });
+    }
 
   wall.photos.forEach((p, i) => {
     const problems = p.quality ? photoProblems(p.quality) : [];

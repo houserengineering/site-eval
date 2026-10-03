@@ -396,8 +396,8 @@ button.row-link:focus-visible { outline: 3px solid var(--focus); outline-offset:
 .walls { list-style: none; margin: 0; padding: 0 0 0 12px; border-left: 3px solid var(--line); }
 
 /* Settings */
-.field label.toggle { display: flex; align-items: center; gap: 12px; min-height: 52px; margin: 0; }
-.field label.toggle input { width: 28px; height: 28px; min-height: 0; margin: 0; padding: 0; accent-color: var(--primary); }
+.field label.toggle, .photos label.toggle { display: flex; align-items: center; gap: 12px; min-height: 52px; margin: 0; }
+.field label.toggle input, .photos label.toggle input { width: 28px; height: 28px; min-height: 0; margin: 0; padding: 0; accent-color: var(--primary); }
 .bar-link {
   margin-left: auto;
   display: inline-flex;

@@ -5,8 +5,9 @@ import type { Georef } from './georef';
 import type { Stamp } from './merge';
 import type { ObservationWell } from '../groundwater/wells';
 import type { Acceptance, PhotoQuality } from './pitChecks';
+import type { PhotoColor } from './photoColor';
 
-export const SCHEMA_VERSION = 10;
+export const SCHEMA_VERSION = 11;
 
 /** Header values are always text: `0999.001`, `SE 00001`, `3B` print exactly as entered. */
 export interface Header {
@@ -98,6 +99,12 @@ export interface PhotoRef {
   height: number;
   /** Sharpness and exposure, measured when taken; absent on photos from before v10. */
   quality?: PhotoQuality;
+  /** Strip colors and white reference, measured when taken; absent on photos from before v11. */
+  color?: PhotoColor;
+  /** Square to the wall, surface at the top edge and log bottom at the bottom: the photo the color check reads. */
+  face?: boolean;
+  /** A white card or tape is in the wall-face photo: it calibrates value and chroma. */
+  whiteInFrame?: boolean;
 }
 
 /** WGS84 position from the device; accuracy is the 68% radius the device reports. */
@@ -544,6 +551,8 @@ const migrations: Record<number, (r: any) => any> = {
   8: (r) => ({ ...r, schemaVersion: 9, areaSoils: {} }),
   // v9 → v10: pit checks accepted on each wall.
   9: (r) => ({ ...r, schemaVersion: 10, testPits: (r.testPits ?? []).map((p: any) => ({ ...p, accepted: p.accepted ?? {} })) }),
+  // v10 → v11: photo colors and the wall-face photo (optional fields).
+  10: (r) => ({ ...r, schemaVersion: 11 }),
 };
 
 export function migrate(raw: unknown): FieldRecord {

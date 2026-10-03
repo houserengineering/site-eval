@@ -82,3 +82,47 @@ test('pit checks: flags on the wall and in the pit list, retake prompt, accept w
   await page.getByRole('region', { name: 'Horizon 2' }).getByRole('textbox', { name: 'Bottom' }).fill('96');
   await expect(page.getByRole('region', { name: 'Pit checks' })).toHaveCount(0);
 });
+
+test('color check: the wall-face photo with a white card flags a logged color 2 values off; never sets it', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: 'New site evaluation' }).click();
+  await page.getByLabel('Project #').fill('0999.010');
+  await page.getByRole('button', { name: 'Add test pit' }).click();
+
+  // The photo shows 10YR 3/2 to 12" over 10YR 5/3; horizon A is logged 10YR 5/3.
+  for (const [n, designation, bottom] of [
+    [1, 'A', '12'],
+    [2, 'B', '96'],
+  ] as const) {
+    await page.getByRole('button', { name: 'Add horizon' }).click();
+    const h = page.getByRole('region', { name: `Horizon ${n}` });
+    await pick(h, 'Horizon', designation);
+    await h.getByRole('textbox', { name: 'Bottom' }).fill(bottom);
+    await pick(h, 'Hue', '10YR');
+    await pick(h, 'Value', '5');
+    await pick(h, 'Chroma', '3');
+    await pick(h, 'USDA class', 'LOAM');
+  }
+  await page.getByLabel('Take photo').setInputFiles({ name: 'wall.jpg', mimeType: 'image/jpeg', buffer: readFileSync('test/fixtures/pit-wall-face.jpg') });
+  await expect(page.getByText('1 photo saved on this device.')).toBeVisible();
+  const photos = page.getByRole('region', { name: 'Photos' });
+  const checks = page.getByRole('region', { name: 'Pit checks' });
+  await expect(page.getByRole('button', { name: /pit checks? open/ })).toHaveCount(0);
+
+  // Marked as the wall face: hue only without the card, and the hue matches.
+  await photos.getByLabel('Wall face (color check)').check();
+  await expect(page.getByRole('button', { name: /pit checks? open/ })).toHaveCount(0);
+
+  // With the white card, value is judged.
+  await photos.getByLabel('White card or tape in frame').check();
+  await expect(checks.getByRole('listitem')).toHaveText([/^Horizon A: the wall-face photo reads about (7\.5|10)YR 3\/2; logged 10YR 5\/3\. Check the color\./]);
+  await shot(page, '93-color-check', photos);
+  await shot(page, '94-color-flag', checks);
+  await page.getByRole('region', { name: 'Horizon 1' }).getByText(/^Horizon 1 · A/).click();
+  await expect(page.getByRole('region', { name: 'Horizon 1' }).getByRole('radiogroup', { name: 'Value', exact: true }).getByRole('radio', { name: '5', exact: true })).toHaveAttribute('aria-checked', 'true');
+
+  // Fixing the color clears it.
+  await pick(page.getByRole('region', { name: 'Horizon 1' }), 'Value', '3');
+  await pick(page.getByRole('region', { name: 'Horizon 1' }), 'Chroma', '2');
+  await expect(page.getByRole('button', { name: /pit checks? open/ })).toHaveCount(0);
+});
