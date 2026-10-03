@@ -7,6 +7,7 @@ it('resolves the entire project number and preserves the server root', () => {
   expect(dropboxFolder('0999.001')).toBe('/Server/0999/001');
   expect(dropboxFolder('/Server')).toBe('/Server');
   expect(dropboxFolder('C:\\Users\\Example\\Dropbox\\Server\\0999\\001')).toBe('/Server/0999/001');
+  expect(dropboxFolder('C:\\Users\\Example\\Dropbox (Example Team)\\Server\\0999\\001')).toBe('/Server/0999/001');
 });
 
 it('uses the exact existing subproject and repairs a broken saved folder', async () => {
@@ -20,6 +21,7 @@ it('uses the exact existing subproject and repairs a broken saved folder', async
 
 it('does not turn unrelated local folders or traversal into server paths', () => {
   expect(dropboxFolder('C:\\Users\\Example\\Downloads')).toBe('');
+  expect(dropboxFolder('C:\\Backup\\Server\\0999\\001')).toBe('');
   expect(dropboxFolder('../elsewhere')).toBe('');
   expect(folderProblem('C:\\Users\\Example\\Downloads')).toContain('Dropbox Server');
 });
