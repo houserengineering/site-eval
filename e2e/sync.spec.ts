@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 
 const shots = process.env.SHOTS_DIR;
 const shot = async (page: Page, name: string, fullPage = true) => {
@@ -6,6 +7,29 @@ const shot = async (page: Page, name: string, fullPage = true) => {
 };
 const DBX = '/Server/0999/Site Evaluation';
 const fakePaths = (page: Page) => page.evaluate(() => [...(window as any).__fakeDropbox.files.values()].map((f: any) => f.path as string).sort());
+
+test('Dropbox: defaults to the exact subproject, repairs the doubled root and preserves the whole confirmation', async ({ page }) => {
+  await page.goto('./?fake-dropbox');
+  await page.waitForFunction(() => !!(window as any).__fakeDropbox);
+  await page.evaluate(() => (window as any).__fakeDropbox.mkdir('/Server/0999/001'));
+  const job = JSON.parse(readFileSync('test/fixtures/example-job.json', 'utf8'));
+  job.header.projectNumber = '0999.001';
+  job.header.confirmationNumber = 'SE CONFIRM 00001';
+  job.deliverableFolder = '/Server/Server/Site Eval App';
+  await page.getByLabel('Load job file or backup').setInputFiles({ name: 'example-job.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(job)) });
+  const section = page.getByRole('region', { name: 'Dropbox and office printing' });
+  await expect(section.getByText('/Server/0999/001', { exact: true })).toBeVisible();
+  await expect(section.getByRole('status').filter({ hasText: /^Synced to Dropbox/ })).toBeVisible();
+  await section.getByRole('button', { name: 'Change folder' }).click();
+  await expect(section.getByRole('group', { name: 'Dropbox folders' }).getByText('/Server/0999/001', { exact: true })).toBeVisible();
+  const paths = await fakePaths(page);
+  expect(paths.some((p) => /^\/Server\/0999\/001\/Site Eval App\/Field Record/.test(p))).toBe(true);
+  const record = await page.evaluate(() => {
+    const file = [...(window as any).__fakeDropbox.files.values()].find((f: any) => /Field Record/.test(f.path)) as any;
+    return JSON.parse(new TextDecoder().decode(file.bytes));
+  });
+  expect(record.header.confirmationNumber).toBe('SE CONFIRM 00001');
+});
 
 test('Dropbox: sync, filing to convention beside office files, offline queue, print at office, backup, open from Dropbox', async ({ page, context }) => {
   test.setTimeout(150_000);

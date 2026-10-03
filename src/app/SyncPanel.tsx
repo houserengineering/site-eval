@@ -8,7 +8,8 @@ import { readJob } from '../domain/job';
 import { migrate } from '../domain/fieldRecord';
 import type { RecordStore } from '../storage/db';
 import type { RemoteEntry } from '../sync/adapter';
-import { APP_FOLDER, dropboxFolder, folderProblem, isFieldRecordName, SERVER_ROOT } from '../sync/naming';
+import { APP_FOLDER, dropboxFolder, folderProblem, isFieldRecordName, projectFolder, SERVER_ROOT } from '../sync/naming';
+import { resolveProjectFolder } from '../sync/projectFolder';
 import { syncRecord, type FilingResult } from '../sync/engine';
 import { go } from './App';
 import { download } from './deliverables';
@@ -87,7 +88,8 @@ export function DropboxSection(props: { record: FieldRecord; save: (r: FieldReco
       )}
       {choosing && (
         <FolderBrowser
-          start={r.deliverableFolder ? dropboxFolder(r.deliverableFolder) : `${SERVER_ROOT}/${r.header.projectNumber.split('.')[0] || ''}`.replace(/\/$/, '')}
+          start={r.deliverableFolder ? dropboxFolder(r.deliverableFolder) : projectFolder(r.header.projectNumber) || SERVER_ROOT}
+          project={r.header.projectNumber}
           action="Use this folder"
           onCancel={() => setChoosing(false)}
           onPick={(folder) => {
@@ -192,6 +194,7 @@ export function ConnectDropbox() {
 /** Steps through Dropbox folders under the server root; a path can also be pasted. */
 export function FolderBrowser(props: {
   start: string;
+  project?: string;
   action?: string;
   onPick?: (folder: string) => void;
   onCancel?: () => void;
@@ -202,6 +205,15 @@ export function FolderBrowser(props: {
   const [typed, setTyped] = useState('');
   const [entries, setEntries] = useState<RemoteEntry[]>();
   const [error, setError] = useState<string>();
+  useEffect(() => {
+    if (!props.project) return;
+    let live = true;
+    resolveProjectFolder(syncService().getAdapter()!, props.project, props.start).then(
+      (resolved) => { if (live) setFolder(resolved || SERVER_ROOT); },
+      (e) => { if (live) setError(e.message); },
+    );
+    return () => { live = false; };
+  }, []);
   useEffect(() => {
     let live = true;
     setEntries(undefined);
@@ -237,7 +249,11 @@ export function FolderBrowser(props: {
         class="inline-form"
         onSubmit={(e) => {
           e.preventDefault();
-          if (typed.trim()) setFolder(dropboxFolder(typed));
+          if (typed.trim()) {
+            const path = dropboxFolder(typed);
+            if (!path) setError('Enter a project number or a path inside the Dropbox Server folder.');
+            else setFolder(path);
+          }
           setTyped('');
         }}
       >

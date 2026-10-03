@@ -35,7 +35,7 @@ const refused: Record<number, string> = {
   401: 'the review service does not know this device token. Check it in Settings.',
   403: 'the review service refused this app.',
   429: 'too many reviews this hour; it will try again.',
-  503: 'the review service is not ready (no API key at the office yet).',
+    503: 'the office review service is not ready; check its Codex sign-in.',
 };
 
 export class ReviewQueue {

@@ -4,6 +4,12 @@ Septic site evaluations: excavated test pits logged by feel against DEQ soil log
 
 ## Language
 
+**Confirmation field**:
+The complete text entered by the evaluator, including any prefix. Store, back up and print it unchanged; never extract just its digits.
+
+**Project folder**:
+The exact existing Dropbox Server folder identified by the whole project number. For example, `0999.001` means `/Server/0999/001`. Resolve against the connected account; a parent folder or a similarly named folder does not establish that the subproject exists.
+
 **Test pit**:
 One excavated hole, numbered on the site plan. Dug to 96 inches unless groundwater or a limiting layer stops it.
 _Avoid_: hole, pit location

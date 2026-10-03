@@ -35,11 +35,22 @@ export const DELIVERABLE_NAMES: Record<Exclude<DeliverableKind, 'field-record-js
 export function dropboxFolder(folder: string): string {
   let f = folder.trim().replace(/\\/g, '/');
   if (!f) return '';
-  const server = /(^|\/)server\//i.exec(f);
+  const server = /(^|\/)server(?:\/|$)/i.exec(f);
   if (server) f = f.slice(server.index + server[0].length);
-  else f = f.replace(/^[a-z]:\//i, '').replace(/^\/+/, '');
+  else {
+    if (/^[a-z]:\//i.test(f) && !/^s:\//i.test(f)) return '';
+    f = f.replace(/^s:\//i, '').replace(/^\/+/, '');
+  }
   f = f.replace(/\/+$/, '').replace(/\/{2,}/g, '/');
-  return `${SERVER_ROOT}/${f}`;
+  if (f.split('/').some((part) => part === '.' || part === '..')) return '';
+  if (/^\d{4}\.\d{3}$/.test(f)) f = f.replace('.', '/');
+  return f ? `${SERVER_ROOT}/${f}` : SERVER_ROOT;
+}
+
+/** Exact project/subproject folder; never guess a parent or a similarly named folder. */
+export function projectFolder(project: string): string {
+  const p = project.trim();
+  return /^\d{4}(?:\.\d{3})?$/.test(p) ? dropboxFolder(p) : '';
 }
 
 /**
@@ -48,7 +59,7 @@ export function dropboxFolder(folder: string): string {
  */
 export function folderProblem(folder: string): string | undefined {
   const f = dropboxFolder(folder);
-  if (!f) return undefined;
+  if (!f) return folder.trim() ? 'Enter a project number or a path inside the Dropbox Server folder.' : undefined;
   if (/^\/server\/server(\/|$)/i.test(f)) return `${f} has the server folder twice (${SERVER_ROOT}${SERVER_ROOT}). Choose the project folder under ${SERVER_ROOT}.`;
   if (f.toLowerCase() === SERVER_ROOT.toLowerCase()) return `Choose a project folder under ${SERVER_ROOT}, not ${SERVER_ROOT} itself.`;
   if (f.toLowerCase().endsWith(`/${APP_FOLDER.toLowerCase()}`)) return `${APP_FOLDER} is where the app keeps its own files. Choose the folder above it.`;

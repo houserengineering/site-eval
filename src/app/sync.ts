@@ -14,6 +14,7 @@ import { openFlags } from '../domain/pitChecks';
 import { updateTestPit } from '../domain/fieldRecord';
 import type { AiReview } from '../domain/aiReview';
 import { REVIEW_SERVICE } from '../sync/naming';
+import { resolveProjectFolder } from '../sync/projectFolder';
 
 export interface RecordSyncStatus {
   at?: string;
@@ -284,10 +285,15 @@ export class SyncService {
 
   private async syncOne(id: string) {
     const entry = this.state.pending[id]; // before reading the record: an edit queued meanwhile stays queued
-    const local = await this.store.get(id);
+    let local = await this.store.get(id);
     if (!local) {
       if (entry) await this.dequeue(id, entry);
       return;
+    }
+    const resolvedFolder = await resolveProjectFolder(this.adapter!, local.header.projectNumber, local.deliverableFolder);
+    if (resolvedFolder && resolvedFolder !== local.deliverableFolder) {
+      local = stampEdits(local, { ...local, deliverableFolder: resolvedFolder }, this.state.who);
+      await this.saveMerged(local);
     }
     if (!local.deliverableFolder) {
       if (entry) throw new NoFolderError();

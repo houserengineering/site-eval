@@ -95,6 +95,17 @@ describe('confirm-on-site flags', () => {
     return wb.worksheets[0].getCell(templates.soilLog.spec.inputs.confirmationNumber).value;
   };
 
+  it('preserves the entire entered confirmation field in backups and every soil-log sheet', async () => {
+    let { record } = readJob(JSON.stringify(job()));
+    record = updateHeader(record, { confirmationNumber: 'SE CONFIRM 00001' });
+    const files = await generate(record, templates);
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(files.find((f) => f.kind === 'soil-log-xlsx')!.bytes as any);
+    for (const sheet of wb.worksheets) expect(sheet.getCell(templates.soilLog.spec.inputs.confirmationNumber).value).toBe('SE CONFIRM 00001');
+    const json = files.find((f) => f.kind === 'field-record-json')!;
+    expect(JSON.parse(new TextDecoder().decode(json.bytes)).header.confirmationNumber).toBe('SE CONFIRM 00001');
+  });
+
   it('marks an unconfirmed value on deliverables until it is confirmed, and blocks nothing', async () => {
     let { record } = readJob(JSON.stringify(job()));
     record = addHorizon(record, record.testPits[0].id, { designation: 'A', bottomIn: 12 });
