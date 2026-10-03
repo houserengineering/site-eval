@@ -93,7 +93,7 @@ export function DropboxSection(props: { record: FieldRecord; save: (r: FieldReco
           action="Use this folder"
           onCancel={() => setChoosing(false)}
           onPick={(folder) => {
-            props.save({ ...r, deliverableFolder: folder });
+            props.save({ ...r, deliverableFolder: folder, deliverableFolderSource: 'chosen' });
             setChoosing(false);
           }}
         />

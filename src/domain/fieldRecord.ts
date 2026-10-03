@@ -230,6 +230,8 @@ export interface FieldRecord {
   siteMap: SiteMap | null;
   /** Dropbox folder the deliverables are filed to ('' = not chosen yet). */
   deliverableFolder: string;
+  /** Automatic defaults follow project edits; explicit folder choices stay put. */
+  deliverableFolderSource?: 'project' | 'chosen';
   /** Who changed each field and when (merge metadata; see domain/merge.ts). */
   edits: Record<string, Stamp>;
   /** Files this app wrote to Dropbox, by lower-case path: the only files it may overwrite. */

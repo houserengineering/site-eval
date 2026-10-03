@@ -8,6 +8,36 @@ const shot = async (page: Page, name: string, fullPage = true) => {
 const DBX = '/Server/0999/Site Evaluation';
 const fakePaths = (page: Page) => page.evaluate(() => [...(window as any).__fakeDropbox.files.values()].map((f: any) => f.path as string).sort());
 
+test('Dropbox: an automatic folder follows a corrected project number', async ({ page }) => {
+  await page.goto('./?fake-dropbox');
+  await page.waitForFunction(() => !!(window as any).__fakeDropbox);
+  await page.evaluate(() => {
+    (window as any).__fakeDropbox.mkdir('/Server/0999/001');
+    (window as any).__fakeDropbox.mkdir('/Server/0999/002');
+  });
+  const job = JSON.parse(readFileSync('test/fixtures/example-job.json', 'utf8'));
+  job.header.projectNumber = '0999.001';
+  job.deliverableFolder = '';
+  await page.getByLabel('Load job file or backup').setInputFiles({ name: 'example-job.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(job)) });
+  const section = page.getByRole('region', { name: 'Dropbox and office printing' });
+  await expect(section.getByText('/Server/0999/001', { exact: true })).toBeVisible();
+  await page.getByLabel('Project #', { exact: true }).fill('0999.002');
+  await section.getByRole('button', { name: 'Sync now' }).click();
+  await expect(section.getByText('/Server/0999/002', { exact: true })).toBeVisible();
+  // An unresolved new project must not continue filing into the old default.
+  await page.getByLabel('Project #', { exact: true }).fill('0999.003');
+  await section.getByRole('button', { name: 'Sync now' }).click();
+  await expect(section.getByText('Not chosen', { exact: true })).toBeVisible();
+  // A deliberate folder selection is preserved across later project edits.
+  await section.getByRole('button', { name: 'Choose folder', exact: true }).click();
+  await section.getByLabel('Go to folder').fill('/Server/0999/001');
+  await section.getByLabel('Go to folder').press('Enter');
+  await section.getByRole('button', { name: 'Use this folder' }).click();
+  await page.getByLabel('Project #', { exact: true }).fill('0999.002');
+  await section.getByRole('button', { name: 'Sync now' }).click();
+  await expect(section.getByText('/Server/0999/001', { exact: true })).toBeVisible();
+});
+
 test('Dropbox: defaults to the exact subproject, repairs the doubled root and preserves the whole confirmation', async ({ page }) => {
   await page.goto('./?fake-dropbox');
   await page.waitForFunction(() => !!(window as any).__fakeDropbox);

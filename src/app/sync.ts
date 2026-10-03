@@ -13,7 +13,7 @@ import { settings } from './settings';
 import { openFlags } from '../domain/pitChecks';
 import { updateTestPit } from '../domain/fieldRecord';
 import type { AiReview } from '../domain/aiReview';
-import { REVIEW_SERVICE } from '../sync/naming';
+import { dropboxFolder, REVIEW_SERVICE } from '../sync/naming';
 import { resolveProjectFolder } from '../sync/projectFolder';
 
 export interface RecordSyncStatus {
@@ -290,11 +290,21 @@ export class SyncService {
       if (entry) await this.dequeue(id, entry);
       return;
     }
-    const resolvedFolder = await resolveProjectFolder(this.adapter!, local.header.projectNumber, local.deliverableFolder);
-    if (resolvedFolder && resolvedFolder !== local.deliverableFolder) {
-      local = stampEdits(local, { ...local, deliverableFolder: resolvedFolder }, this.state.who);
-      await this.saveMerged(local);
+    const observed = local;
+    const automatic = local.deliverableFolderSource === 'project';
+    const resolvedFolder = await resolveProjectFolder(this.adapter!, local.header.projectNumber, automatic ? '' : local.deliverableFolder);
+    if (resolvedFolder !== local.deliverableFolder && (resolvedFolder || automatic)) {
+      const saved = await this.store.update(id, (latest) => {
+        // A slow account lookup must not replace a project edit or manual choice made meanwhile.
+        if (!latest || latest.header.projectNumber !== observed.header.projectNumber || latest.deliverableFolder !== observed.deliverableFolder || latest.deliverableFolderSource !== observed.deliverableFolderSource) return undefined;
+        const source = !automatic && resolvedFolder === dropboxFolder(observed.deliverableFolder) ? 'chosen' : 'project';
+        return stampEdits(latest, { ...latest, deliverableFolder: resolvedFolder, deliverableFolderSource: source }, this.state.who);
+      });
+      if (saved) for (const fn of this.recordListeners) fn(saved);
     }
+    local = await this.store.get(id);
+    if (!local) return;
+    if (local.header.projectNumber !== observed.header.projectNumber || (local.deliverableFolder !== resolvedFolder && local.deliverableFolder !== observed.deliverableFolder)) return;
     if (!local.deliverableFolder) {
       if (entry) throw new NoFolderError();
       return;
