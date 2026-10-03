@@ -87,8 +87,10 @@ describe('soil log xlsx', () => {
       expect(got.font?.size, `${addr} size`).toBe(cell.font.size);
       expect(!!got.font?.bold, `${addr} bold`).toBe(cell.font.bold);
       if (cell.numFmt !== 'General') expect(got.numFmt, `${addr} numFmt`).toBe(cell.numFmt);
+      // Except the rule above the confirmation number, which comes off (Justin, 2026-10-03).
+      const confirmation = addr.replace(/[A-Z]+/, '') === spec.inputs.confirmationNumber.replace(/[A-Z]+/, '') && addr >= spec.inputs.confirmationNumber;
       for (const side of ['left', 'right', 'top', 'bottom'] as const) {
-        expect(got.border?.[side]?.style, `${addr} border ${side}`).toBe(cell.border?.[side]);
+        expect(got.border?.[side]?.style, `${addr} border ${side}`).toBe(confirmation && side === 'top' ? undefined : cell.border?.[side]);
       }
       expect(got.alignment?.horizontal, `${addr} align`).toBe(cell.alignment?.horizontal);
       expect(got.alignment?.vertical?.replace('middle', 'center'), `${addr} valign`).toBe(cell.alignment?.vertical);
@@ -164,7 +166,7 @@ describe('soil log xlsx', () => {
     const moved = `${label.replace(/\d+/, '')}${Number(label.replace(/\D/g, '')) + 2}`;
     expect(ws.getCell(moved).value).toBe('PHOTO OF TEST PIT');
     // The pit summary row now sits where the label was.
-    expect(String(ws.getCell(label).value)).toMatch(/^TOTAL DEPTH 120"/);
+    expect(String(ws.getCell(label).value)).toMatch(/^NO GROUNDWATER OBSERVED/);
     expect(ws.pageSetup.printArea).toBe(`A1:H${Number(spec.areas.photo.range.split(':')[1].replace(/\D/g, '')) + spec.wallOffset + 2}`);
   });
 
@@ -181,7 +183,7 @@ describe('soil log xlsx', () => {
     const ws = wb.worksheets[0];
     const row = spec.horizonTable.firstRow + spec.horizonTable.rows;
     expect(ws.getCell(`A${row}`).value).toBe(
-      'TOTAL DEPTH 12". NO GROUNDWATER OBSERVED. NO REDOXIMORPHIC FEATURES TO PIT DEPTH. LIMITING LAYER: NONE TO PIT DEPTH. SLOPE 2% (ESTIMATED).',
+      'NO GROUNDWATER OBSERVED. NO REDOXIMORPHIC FEATURES TO TEST PIT DEPTH. NO LIMITING LAYER WITHIN TEST PIT. SLOPE 2% (ESTIMATED).',
     );
     expect(ws.getCell(`H${row}`).isMerged).toBe(true);
     expect(ws.getCell(spec.areas.photo.label).value).toBe('PHOTO OF TEST PIT');

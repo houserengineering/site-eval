@@ -5,6 +5,7 @@ import { pitStatus } from '../src/domain/soilLogText';
 import { lonLatToPx, pxToLonLat, type Georef } from '../src/domain/georef';
 import { readJob } from '../src/domain/job';
 import { generate } from '../src/generator';
+import { locationPanel } from '../src/generator/locationPanel';
 import { loadTemplatesFromDisk } from './templates';
 
 const templates = loadTemplatesFromDisk();
@@ -78,6 +79,21 @@ describe('job file', () => {
     expect(record.deliverableFolder).toBe('0999\\site evaluation\\');
     expect(mapImage!.blob.type).toBe('image/png');
     expect(mapImage!.blob.size).toBeGreaterThan(50);
+  });
+
+  it('labels this wall on the location map by its exact name (TP1A, not TP 1)', () => {
+    const { record } = readJob(JSON.stringify(job()));
+    const measure = (text: string, _font: string, size: number) => text.length * size * 0.55;
+    const box = { x: 0, y: 0, w: 280, h: 200 };
+    const labels = (label: string, bytes?: Uint8Array) =>
+      locationPanel(box, record.testPits.find((p) => p.label === label)!, record, bytes, measure)
+        .filter((o: any) => o.k === 'text' && /^TP/.test(o.text))
+        .map((o: any) => o.text);
+    const png = new Uint8Array(Buffer.from(PNG_1PX, 'base64'));
+    expect(labels('1A', png)).toEqual(['TP1A']);
+    expect(labels('2B', png)).toEqual(['TP2B']);
+    // No map image: the to-scale plan names this wall the same way.
+    expect(labels('1B')).toContain('TP1B');
   });
 
   it('rejects files that are not job files', () => {

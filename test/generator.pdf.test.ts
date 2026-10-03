@@ -2,7 +2,7 @@
 // same workbooks as the .xlsx; photo, pit location and the certifier's signature.
 import ExcelJS from 'exceljs';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 import { certify, type CertifierProfile } from '../src/domain/certify';
 import {
@@ -16,6 +16,7 @@ import {
   type FieldRecord,
 } from '../src/domain/fieldRecord';
 import { forDeliverables, generate, printPages, type Page } from '../src/generator';
+import { pdfMeasure } from '../src/generator/pdf';
 import { GOLDEN_JOBS } from './golden/jobs';
 import { loadTemplatesFromDisk } from './templates';
 
@@ -66,6 +67,15 @@ function siteEvaluation(): FieldRecord {
 const pdfPages = async (bytes: Uint8Array) => (await PDFDocument.load(bytes)).getPageCount();
 
 describe('PDF deliverables', () => {
+  it('measures text as drawn: unkerned, so an all-caps line never runs over its cell border', async () => {
+    const measure = await pdfMeasure();
+    const times = await (await PDFDocument.create()).embedFont(StandardFonts.TimesRoman);
+    const line = 'NO LIMITING LAYER WITHIN TEST PIT. SLOPE 2% (ESTIMATED).';
+    const glyphs = [...line].reduce((w, ch) => w + times.widthOfTextAtSize(ch, 9), 0);
+    expect(measure(line, 'serif', 9)).toBeCloseTo(glyphs, 6);
+    expect(measure(line, 'serif', 9)).toBeGreaterThan(times.widthOfTextAtSize(line, 9));
+  });
+
   it('writes a soil log PDF (one letter page per pit) and a perc test PDF; no separate site evaluation packet', async () => {
     const files = await generate(siteEvaluation(), templates, { photo });
     const byKind = Object.fromEntries(files.map((f) => [f.kind, f]));
@@ -87,8 +97,8 @@ describe('PDF deliverables', () => {
     for (const s of ['SOIL PROFILE LOG', 'PROJECT #:', '0999.001', 'Example Subdivision', '10/2/2026', 'SE 00001', 'SILT LOAM', 'SANDY LOAM', '0"-12"', 'PHOTO OF TEST PIT'])
       expect(text).toContain(s);
     expect(text).toContain('45.678901° N, 111.234567° W ±11 ft');
-    expect(text).toContain('TP 1');
-    expect(text).toContain('TP 2');
+    expect(text).toContain('TP1');
+    expect(text).toContain('TP2');
     // Logo and the first photo.
     expect(images(pit1).map((i) => i.bytes)).toContain(photoBytes);
     const shot = images(pit1).find((i) => i.bytes === photoBytes)!;

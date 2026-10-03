@@ -31,7 +31,7 @@ describe('site plan labels', () => {
   it.each([7, 8])('no label overlaps another label or a pit marker (label size %i)', (size) => {
     const ops = drawSitePlan(box, pits, measure, { labelSize: size, highlightId: 'id-7' });
     const labels: Box[] = ops
-      .filter((o: any) => o.k === 'text' && /^TP /.test(o.text))
+      .filter((o: any) => o.k === 'text' && /^TP/.test(o.text))
       .map((o: any) => ({ x0: o.x, x1: o.x + o.w, y0: o.y - o.size * 0.75, y1: o.y + o.size * 0.2 }));
     const dots: Box[] = ops
       .filter((o: any) => o.k === 'circle' && o.fill)
@@ -39,7 +39,7 @@ describe('site plan labels', () => {
     // North arrow and scale bar strokes, and the scale label.
     for (const o of ops as any[]) {
       if (o.k === 'line') dots.push({ x0: Math.min(o.x1, o.x2) - 0.5, x1: Math.max(o.x1, o.x2) + 0.5, y0: Math.min(o.y1, o.y2) - 0.5, y1: Math.max(o.y1, o.y2) + 0.5 });
-      if (o.k === 'text' && !/^TP /.test(o.text)) dots.push({ x0: o.x, x1: o.x + o.w, y0: o.y - o.size * 0.75, y1: o.y + o.size * 0.2 });
+      if (o.k === 'text' && !/^TP/.test(o.text)) dots.push({ x0: o.x, x1: o.x + o.w, y0: o.y - o.size * 0.75, y1: o.y + o.size * 0.2 });
     }
     expect(labels).toHaveLength(pits.length);
     for (let i = 0; i < labels.length; i++) {

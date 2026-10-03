@@ -12,7 +12,7 @@ import {
   type Horizon,
   type TestPit,
 } from '../domain/fieldRecord';
-import { colorText, horizonNotes, missingItems, pitSummary, structureText, textureText } from '../domain/soilLogText';
+import { basisText, colorText, horizonNotes, missingItems, pitSummary, structureText, textureText } from '../domain/soilLogText';
 import * as V from '../domain/vocabulary';
 import { go } from './App';
 import { Chips, NumberField, TextField, YesNoChips } from './fields';
@@ -296,7 +296,7 @@ function PitSummary(props: { pit: TestPit; missing: string[]; save: (patch: Part
 
         <Chips label="Groundwater observed in pit" options={V.OBSERVED_WATER} value={w.kind} onChange={(v) => save({ observedWater: { ...w, kind: v as TestPit['observedWater']['kind'] } })} />
         {(w.kind === 'SEEPAGE' || w.kind === 'STANDING') && <NumberField label="Water depth" value={w.depthIn} onInput={(v) => save({ observedWater: { ...w, depthIn: v } })} />}
-        <Chips label="Basis" options={V.SHGW_BASIS} value={g.basis} onChange={(v) => save({ shgw: { ...g, basis: v } })} other />
+        <Chips label="Basis" options={V.SHGW_BASIS} value={basisText(g.basis)} onChange={(v) => save({ shgw: { ...g, basis: v } })} other />
 
         <Chips label="Limiting layer" options={V.LIMITING_LAYERS} value={l.type} onChange={(v) => save({ limitingLayer: { ...l, type: v as TestPit['limitingLayer']['type'] } })} />
         {l.type && l.type !== 'NONE' && <NumberField label="Depth to limiting layer" value={l.depthIn} onInput={(v) => save({ limitingLayer: { ...l, depthIn: v } })} />}

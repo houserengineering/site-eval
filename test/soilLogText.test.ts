@@ -152,17 +152,17 @@ describe('NOTES composer (office wording, research/01 §1.9)', () => {
       notes: 'pit dug by excavator',
     });
     expect(pitSummary(p)).toBe(
-      'TOTAL DEPTH 96". NO GROUNDWATER OBSERVED. NO REDOXIMORPHIC FEATURES TO PIT DEPTH. LIMITING LAYER: NONE TO PIT DEPTH. SLOPE 2% (ESTIMATED). PIT DUG BY EXCAVATOR.',
+      'NO GROUNDWATER OBSERVED. NO REDOXIMORPHIC FEATURES TO TEST PIT DEPTH. NO LIMITING LAYER WITHIN TEST PIT. SLOPE 2% (ESTIMATED). PIT DUG BY EXCAVATOR.',
     );
     const wet = { ...p, observedWater: { kind: 'SEEPAGE' as const, depthIn: 72 }, limitingLayer: { type: 'BEDROCK' as const, depthIn: 90, other: '' }, notes: '' };
-    expect(pitSummary(wet)).toBe('TOTAL DEPTH 96". GROUNDWATER SEEPS AT 72". NO REDOXIMORPHIC FEATURES TO PIT DEPTH. BEDROCK AT 90". SLOPE 2% (ESTIMATED).');
+    expect(pitSummary(wet)).toBe('GROUNDWATER SEEPS AT 72". NO REDOXIMORPHIC FEATURES TO TEST PIT DEPTH. BEDROCK AT 90". SLOPE 2% (ESTIMATED).');
     const blank = { ...p, horizons: [], observedWater: { kind: '' as const, depthIn: null }, limitingLayer: { type: '' as const, depthIn: null, other: '' }, shgw: { depthIn: null, deeperThan: false, basis: '' }, slope: { pct: null, shape: '', direction: '', method: '' }, notes: '' };
     expect(pitSummary(blank)).toBe('');
   });
 
   it('a new wall already reads as a normal pit (ticket 01 defaults)', () => {
     expect(pitSummary(pit({ horizons: [hz({ topIn: 0, bottomIn: 96 })] }))).toBe(
-      'TOTAL DEPTH 96". NO GROUNDWATER OBSERVED. NO REDOXIMORPHIC FEATURES TO PIT DEPTH. LIMITING LAYER: NONE TO PIT DEPTH. SLOPE 2% (ESTIMATED).',
+      'NO GROUNDWATER OBSERVED. NO REDOXIMORPHIC FEATURES TO TEST PIT DEPTH. NO LIMITING LAYER WITHIN TEST PIT. SLOPE 2% (ESTIMATED).',
     );
   });
 
@@ -173,7 +173,7 @@ describe('NOTES composer (office wording, research/01 §1.9)', () => {
       slope: { pct: 4, shape: 'PLANE', direction: 'NE', method: 'CLINOMETER' },
     });
     expect(pitSummary(old)).toBe(
-      'TOTAL DEPTH 96". NO GROUNDWATER OBSERVED. NO REDOXIMORPHIC FEATURES TO PIT DEPTH. LIMITING LAYER: NONE TO PIT DEPTH. SLOPE 4% (ESTIMATED).',
+      'NO GROUNDWATER OBSERVED. NO REDOXIMORPHIC FEATURES TO TEST PIT DEPTH. NO LIMITING LAYER WITHIN TEST PIT. SLOPE 4% (ESTIMATED).',
     );
   });
 });
@@ -195,7 +195,7 @@ describe('required-item hints (DEQ-4 §2.1.4.1, §2.1.8.1)', () => {
   it('a new wall needs nothing in its summary; no SHGW estimate, slope shape, direction or method', () => {
     expect(missingItems(pit({ horizons: [hz({ topIn: 0, bottomIn: 96 })] })).pit).toEqual([]);
     const p = pit();
-    expect([p.observedWater.kind, p.shgw.basis, p.limitingLayer.type, p.slope.pct]).toEqual(['NONE', 'NO REDOXIMORPHIC FEATURES TO PIT DEPTH', 'NONE', 2]);
+    expect([p.observedWater.kind, p.shgw.basis, p.limitingLayer.type, p.slope.pct]).toEqual(['NONE', 'NO REDOXIMORPHIC FEATURES TO TEST PIT DEPTH', 'NONE', 2]);
   });
 
   it('still flags a shallow pit with no limiting layer', () => {

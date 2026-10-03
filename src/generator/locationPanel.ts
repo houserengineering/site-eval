@@ -81,7 +81,8 @@ export function locationPanel(box: Rect, wall: TestPit, record: FieldRecord, map
       const r = hi ? 3.6 : 2.2;
       ops.push({ k: 'circle', x: cx, y: cy, r: r + 0.9, fill: '#ffffff' });
       ops.push({ k: 'circle', x: cx, y: cy, r, fill: hi ? RED : '#000000' });
-      const label = hi ? `TP ${m.pit}` : m.pit;
+      // This wall's exact name (TP1A, not TP 1): Justin's 2026-10-03 markup.
+      const label = hi ? `TP${wall.label}` : m.pit;
       const font = hi ? 'sans-bold' : 'sans';
       const w = measure(label, font, hi ? size + 1 : size);
       const lx = cx + r + 2;
@@ -122,7 +123,7 @@ export function locationPanel(box: Rect, wall: TestPit, record: FieldRecord, map
     const pseudo = markers.map(({ pit, loc }) => ({
       ...wall,
       id: pit === wallOf(wall.label).pit ? wall.id : `pit-${pit}`,
-      label: pit,
+      label: pit === wallOf(wall.label).pit ? wall.label : pit,
       location: { lat: loc.lat, lon: loc.lon, accuracyM: loc.accuracyM ?? 0, at: loc.at ?? '' },
     }));
     ops.push(...drawSitePlan(plot, pseudo, measure, { highlightId: wall.id, labelSize: 6.5 }));

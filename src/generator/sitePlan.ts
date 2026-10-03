@@ -54,7 +54,7 @@ export function drawSitePlan(box: Rect, pits: TestPit[], measure: Measure, opts:
 
   const placed = pts.map(({ pit, e, n }) => {
     const hi = pit.id === opts.highlightId;
-    const label = `TP ${pit.label}`;
+    const label = `TP${pit.label}`;
     const font = hi ? 'sans-bold' : 'sans';
     return { pit, hi, x: X(e), y: Y(n), r: hi ? size * 0.45 : size * 0.3, label, font: font as 'sans' | 'sans-bold', w: measure(label, font, size), lx: 0, ly: 0 };
   });

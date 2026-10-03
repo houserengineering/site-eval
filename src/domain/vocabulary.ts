@@ -213,14 +213,14 @@ export const OBSERVED_WATER = [
   { value: 'STANDING', label: 'Standing water' },
 ] as const;
 export const SHGW_BASIS = [
-  'NO REDOXIMORPHIC FEATURES TO PIT DEPTH',
+  'NO REDOXIMORPHIC FEATURES TO TEST PIT DEPTH',
   'REDOXIMORPHIC FEATURES',
   'OBSERVED WATER',
   'GROUNDWATER MONITORING',
   'NRCS SOIL SURVEY',
 ] as const;
 export const LIMITING_LAYERS = [
-  { value: 'NONE', label: 'None to pit depth' },
+  { value: 'NONE', label: 'None within test pit' },
   { value: 'BEDROCK', label: 'Bedrock' },
   { value: 'IMPERVIOUS', label: 'Impervious layer' },
   { value: 'SHGW', label: 'Seasonal high groundwater' },

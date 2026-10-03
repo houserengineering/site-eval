@@ -328,7 +328,7 @@ const blankTestPit = (): Omit<TestPit, 'id' | 'label'> => ({
 export const emptyTestPit = (): Omit<TestPit, 'id' | 'label'> => ({
   ...blankTestPit(),
   observedWater: { kind: 'NONE', depthIn: null },
-  shgw: { depthIn: null, deeperThan: false, basis: 'NO REDOXIMORPHIC FEATURES TO PIT DEPTH' },
+  shgw: { depthIn: null, deeperThan: false, basis: 'NO REDOXIMORPHIC FEATURES TO TEST PIT DEPTH' },
   limitingLayer: { type: 'NONE', depthIn: null, other: '' },
   slope: { pct: 2, shape: '', direction: '', method: '' },
 });

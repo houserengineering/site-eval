@@ -16,11 +16,28 @@ async function embedFonts(doc: PDFDocument): Promise<Record<FontKey, PDFFont>> {
 }
 
 let measurer: Promise<Measure> | undefined;
-/** Measures with the same font programs the PDF uses. */
+/**
+ * Measures with the same font programs the PDF uses. Glyph by glyph: pdf-lib's whole-string width
+ * subtracts kerning pairs, but the text is drawn unkerned, so all-caps lines printed wider than
+ * measured and could run over a cell's border.
+ */
 export function pdfMeasure(): Promise<Measure> {
   measurer ??= PDFDocument.create()
     .then(embedFonts)
-    .then((fonts) => (text, font, size) => fonts[font].widthOfTextAtSize(printable(text), size));
+    .then((fonts) => {
+      const widths = new Map<string, number>();
+      const glyph = (font: FontKey, ch: string) => {
+        const key = font + ch;
+        let w = widths.get(key);
+        if (w === undefined) widths.set(key, (w = fonts[font].widthOfTextAtSize(ch, 1000) / 1000));
+        return w;
+      };
+      return (text, font, size) => {
+        let w = 0;
+        for (const ch of printable(text)) w += glyph(font, ch);
+        return w * size;
+      };
+    });
   return measurer;
 }
 

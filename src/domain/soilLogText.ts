@@ -79,14 +79,17 @@ export function horizonNotes(pit: TestPit, i: number): string {
   return join([rockNote(h), up(h.consistence), up(h.plasticity), mottleNote(h), up(h.notes), ...depthNotes(pit, i)]);
 }
 
-export const DEFAULT_BASIS = 'NO REDOXIMORPHIC FEATURES TO PIT DEPTH';
+export const DEFAULT_BASIS = 'NO REDOXIMORPHIC FEATURES TO TEST PIT DEPTH';
+/** Records saved before Justin's 2026-10-03 wording hold the old default; they read and print the new one. */
+const LEGACY_BASIS = 'NO REDOXIMORPHIC FEATURES TO PIT DEPTH';
+export const basisText = (basis: string) => (basis === LEGACY_BASIS ? DEFAULT_BASIS : basis);
 
 /**
- * The summary row under a wall's horizon table: total depth, groundwater, its basis, limiting
- * layer and slope (always estimated), then the pit's own notes.
+ * The summary row under a wall's horizon table: groundwater, its basis, limiting layer and slope
+ * (always estimated), then the pit's own notes. No total depth: the horizon table shows it
+ * (Justin's 2026-10-03 markup).
  */
 export function pitSummary(pit: TestPit): string {
-  const depth = pitDepth(pit);
   const w = pit.observedWater;
   const water =
     w.kind === 'NONE'
@@ -97,7 +100,7 @@ export function pitSummary(pit: TestPit): string {
   const l = pit.limitingLayer;
   const limit =
     l.type === 'NONE'
-      ? 'LIMITING LAYER: NONE TO PIT DEPTH'
+      ? 'NO LIMITING LAYER WITHIN TEST PIT'
       : l.type === 'BEDROCK' && l.depthIn != null
         ? `BEDROCK AT ${inches(l.depthIn)}`
         : l.type && l.depthIn != null
@@ -105,9 +108,8 @@ export function pitSummary(pit: TestPit): string {
           : '';
   return join(
     [
-      depth != null && `TOTAL DEPTH ${inches(depth)}`,
       water,
-      up(pit.shgw.basis),
+      up(basisText(pit.shgw.basis)),
       limit,
       pit.slope.pct != null && `SLOPE ${pit.slope.pct}% (ESTIMATED)`,
       up(pit.notes).replace(/\.$/, ''),

@@ -159,6 +159,13 @@ function fillHeader(ws: ExcelJS.Worksheet, spec: SoilLogSnapshot, record: FieldR
   put(spec.inputs.evalBy, h.evalBy);
   put(spec.inputs.date, dateText(h.date));
   put(spec.inputs.confirmationNumber, h.confirmationNumber);
+  // The confirmation number is underlined like the other header fields; the template's extra rule
+  // above it comes off on every sheet (Justin's 2026-10-03 markup).
+  const conf = splitAddr(spec.inputs.confirmationNumber);
+  for (let c = ws.getColumn(conf.col).number; c <= ws.getColumn('H').number; c++) {
+    const cell = ws.getRow(conf.row).getCell(c);
+    if (cell.border?.top) cell.border = { ...cell.border, top: undefined };
+  }
 }
 
 function fillWall(ws: ExcelJS.Worksheet, spec: SoilLogSnapshot, b: WallBlock, wall: TestPit, all: TestPit[], wb: ExcelJS.Workbook, photos: Map<string, Uint8Array>) {

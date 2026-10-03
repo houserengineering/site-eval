@@ -21,7 +21,7 @@ test('full test pit capture: picks, mottles, rock modifier, pit summary, copy pr
 
   // A new wall's summary is collapsed to the line that will print, with the normal-pit defaults.
   const sum = page.getByRole('region', { name: 'Test pit summary' });
-  await expect(sum.locator('summary')).toContainText('NO GROUNDWATER OBSERVED. NO REDOXIMORPHIC FEATURES TO PIT DEPTH. LIMITING LAYER: NONE TO PIT DEPTH. SLOPE 2% (ESTIMATED).');
+  await expect(sum.locator('summary')).toContainText('NO GROUNDWATER OBSERVED. NO REDOXIMORPHIC FEATURES TO TEST PIT DEPTH. NO LIMITING LAYER WITHIN TEST PIT. SLOPE 2% (ESTIMATED).');
   await expect(sum.getByLabel('Slope', { exact: true })).toBeHidden();
   await shot(page, '09-new-wall-summary', sum);
 
@@ -124,6 +124,6 @@ test('full test pit capture: picks, mottles, rock modifier, pit summary, copy pr
     'B', '18"-102"', '2.5Y 5/3, LIGHT OLIVE BROWN, MOIST, RUBBED', 'COARSE SANDY LOAM', 'SINGLE GRAIN', 'N', 'Y',
     '40% ROCKS (GRAVEL TO COBBLES), LOOSE, NON-PLASTIC, COMMON MEDIUM DISTINCT 7.5YR 5/6 MOTTLES, LIMITING LAYER AT 60" (SEASONAL HIGH GROUNDWATER), GROUNDWATER SEEPS AT 90"',
   ]);
-  expect(ws.getCell('A16').value).toBe('TOTAL DEPTH 102". GROUNDWATER SEEPS AT 90". REDOXIMORPHIC FEATURES. LIMITING LAYER AT 60" (SEASONAL HIGH GROUNDWATER). SLOPE 4% (ESTIMATED).');
+  expect(ws.getCell('A16').value).toBe('GROUNDWATER SEEPS AT 90". REDOXIMORPHIC FEATURES. LIMITING LAYER AT 60" (SEASONAL HIGH GROUNDWATER). SLOPE 4% (ESTIMATED).');
   expect(wb.worksheets[1].getCell('A14').value).toBe('B');
 });
