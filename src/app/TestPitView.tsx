@@ -24,7 +24,7 @@ import { pitWarnings } from '../domain/rules';
 import { hueWarning } from '../domain/hueCheck';
 import { wallOf, wallSide } from '../domain/pitWalls';
 import { RuleWarnings } from './RuleWarnings';
-import { OpenChecksLink, WallChecks } from './PitChecks';
+import { AiReviewLine, OpenChecksLink, WallChecks } from './PitChecks';
 import { acceptFill, suggestions, type Fill, type FillField } from '../domain/fillGaps';
 
 export function TestPitView(props: { record: FieldRecord; pitId: string; save: (r: FieldRecord) => void; store: RecordStore }) {
@@ -100,6 +100,7 @@ export function TestPitView(props: { record: FieldRecord; pitId: string; save: (
       <PitMedia record={r} pit={pit} save={props.save} store={props.store} />
 
       <WallChecks record={r} wall={pit} save={props.save} />
+      <AiReviewLine record={r} wall={pit} />
 
       <section class="danger-zone">
         <button class="btn danger" onClick={remove}>

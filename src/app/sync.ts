@@ -11,6 +11,9 @@ import { photoSource } from './deliverables';
 import { loadTemplates } from './templates';
 import { settings } from './settings';
 import { openFlags } from '../domain/pitChecks';
+import { updateTestPit } from '../domain/fieldRecord';
+import type { AiReview } from '../domain/aiReview';
+import { REVIEW_SERVICE } from '../sync/naming';
 
 export interface RecordSyncStatus {
   at?: string;
@@ -163,6 +166,32 @@ export class SyncService {
 
   getAdapter(): SyncAdapter | undefined {
     return this.adapter;
+  }
+
+  /** Stores an AI review on its wall like an edit (stamped, synced) and shows it in open views. */
+  async saveReview(recordId: string, wallId: string, review: AiReview): Promise<FieldRecord | undefined> {
+    let edited = false;
+    const saved = await this.store.update(recordId, (cur) => {
+      if (!cur?.testPits.some((p) => p.id === wallId)) return undefined;
+      edited = true;
+      return this.recordEdited(cur, updateTestPit(cur, wallId, { aiReview: review }));
+    });
+    if (edited && saved) for (const fn of this.recordListeners) fn(saved);
+    return saved;
+  }
+
+  /** The review service URL the office PC publishes in Dropbox (ticket 11); the last one read when offline. */
+  async reviewServiceUrl(): Promise<string | undefined> {
+    const cached = await this.store.getSetting<string>('reviewServiceUrl');
+    try {
+      const got = this.adapter && (await this.adapter.read(REVIEW_SERVICE));
+      const url = got && JSON.parse(new TextDecoder().decode(got.bytes)).url;
+      if (typeof url === 'string' && /^https?:\/\//.test(url)) {
+        if (url !== cached) await this.store.setSetting('reviewServiceUrl', url);
+        return url;
+      }
+    } catch {}
+    return cached;
   }
 
   /** Stamps the change, queues it, and schedules a sync. Returns the record to save. */

@@ -6,8 +6,9 @@ import type { Stamp } from './merge';
 import type { ObservationWell } from '../groundwater/wells';
 import type { Acceptance, PhotoQuality } from './pitChecks';
 import type { PhotoColor } from './photoColor';
+import type { AiReview } from './aiReview';
 
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
 
 /** Header values are always text: `0999.001`, `SE 00001`, `3B` print exactly as entered. */
 export interface Header {
@@ -85,6 +86,8 @@ export interface TestPit {
   planned: LatLon | null;
   /** Pit checks accepted as they are (domain/pitChecks.ts), by flag id: who and when. */
   accepted: Record<string, Acceptance>;
+  /** The latest AI photo review (domain/aiReview.ts); absent until the wall has been reviewed. */
+  aiReview?: AiReview;
 }
 
 export interface LatLon {
@@ -553,6 +556,8 @@ const migrations: Record<number, (r: any) => any> = {
   9: (r) => ({ ...r, schemaVersion: 10, testPits: (r.testPits ?? []).map((p: any) => ({ ...p, accepted: p.accepted ?? {} })) }),
   // v10 → v11: photo colors and the wall-face photo (optional fields).
   10: (r) => ({ ...r, schemaVersion: 11 }),
+  // v11 → v12: the AI photo review on each wall (optional).
+  11: (r) => ({ ...r, schemaVersion: 12 }),
 };
 
 export function migrate(raw: unknown): FieldRecord {

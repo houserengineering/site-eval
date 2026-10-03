@@ -2,7 +2,8 @@
 // horizon counts, hue outside the site pattern, rock that is really bedrock, horizons with nothing
 // recorded, and a photo minimum standard. Each open flag blocks the soil log until it is fixed or
 // accepted; an acceptance records who and when on the wall and covers only the condition accepted
-// (the flag id carries the values), so a later change flags again.
+// (the flag id carries the values), so a later change flags again. The AI photo review (ticket 12)
+// adds its findings here too, while they still match the wall as reviewed.
 import { limitingDepth } from './rules';
 import { updateTestPit, type FieldRecord, type Horizon, type TestPit } from './fieldRecord';
 import { fillRecord } from './fillGaps';
@@ -10,6 +11,7 @@ import { hueWarning } from './hueCheck';
 import { wallOf } from './pitWalls';
 import { bandColor, colorMismatch } from './photoColor';
 import { munsellNotation } from './vocabulary';
+import { reviewKey } from './aiReview';
 
 /** Measured once when the photo is taken (on a downscaled copy); see `measurePhoto`. */
 export interface PhotoQuality {
@@ -29,7 +31,7 @@ export interface Acceptance {
   at: string;
 }
 
-export type FlagKind = 'depth' | 'short' | 'walls' | 'hue' | 'rock' | 'blank' | 'photo' | 'color';
+export type FlagKind = 'depth' | 'short' | 'walls' | 'hue' | 'rock' | 'blank' | 'photo' | 'color' | 'ai';
 
 export interface Flag {
   /** Stable for one condition: `gap:12-14`, `short:84`, `rock:<horizon id>:65`. */
@@ -101,6 +103,7 @@ export function photoProblems(q: PhotoQuality): string[] {
   return out;
 }
 
+const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 const join = (xs: string[]) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}`);
 const name = (h: Horizon) => `Horizon ${h.designation.trim() || `${h.topIn ?? '?'}"–${h.bottomIn ?? '?'}"`}`;
 
@@ -169,6 +172,15 @@ export function wallFlags(r: FieldRecord, wall: TestPit): Flag[] {
     const problems = p.quality ? photoProblems(p.quality) : [];
     if (problems.length) add('photo', `photo:${p.id}`, `Photo ${i + 1} is ${join(problems)}: retake it.`, { photoId: p.id });
   });
+
+  // AI photo review, only while it matches the wall as it is now.
+  const review = wall.aiReview;
+  if (review && review.key === reviewKey(wall))
+    review.findings.forEach((f, i) => {
+      const h = f.horizonId ? hs.find((x) => x.id === f.horizonId) : undefined;
+      const say = h ? `${name(h)}: ${lower(f.message)}` : lower(f.message);
+      add('ai', `ai:${review.key}:${i}:${f.check}`, `AI review: ${say}`, h ? { horizonId: h.id } : {});
+    });
 
   return out.map((f) => ({ ...f, wallId: wall.id, wallLabel: wall.label, ...accepted(r, wall, f) }));
 }

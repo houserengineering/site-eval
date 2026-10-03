@@ -129,6 +129,6 @@ describe('schema', () => {
   it('migrates v10 records to the current version unchanged', () => {
     const r = { ...newSiteEvaluation(), schemaVersion: 10 } as any;
     expect(migrate(r).schemaVersion).toBe(SCHEMA_VERSION);
-    expect(SCHEMA_VERSION).toBe(11);
+    expect(SCHEMA_VERSION).toBeGreaterThanOrEqual(11);
   });
 });

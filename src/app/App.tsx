@@ -14,7 +14,8 @@ import { TestPitView } from './TestPitView';
 import { setSyncService, SyncService, syncService } from './sync';
 import { DropboxOpenView } from './SyncPanel';
 import { readBackup, isBackup } from '../domain/backup';
-import { loadSettings, useSettings } from './settings';
+import { loadSettings, settings, useSettings } from './settings';
+import { ReviewQueue, setReviewQueue } from './reviewQueue';
 import { SettingsView } from './SettingsView';
 
 type Route =
@@ -62,6 +63,15 @@ export function App() {
         const sync = new SyncService(s);
         setSyncService(sync);
         const returnTo = await sync.init();
+        const reviews = new ReviewQueue({
+          store: s,
+          token: () => settings().reviewToken.trim(),
+          serviceUrl: () => sync.reviewServiceUrl(),
+          fetch: (...a) => fetch(...a),
+          save: (recordId, wallId, review) => sync.saveReview(recordId, wallId, review),
+        });
+        setReviewQueue(reviews);
+        void reviews.start();
         if (returnTo) location.hash = returnTo;
         setStore(s);
       },

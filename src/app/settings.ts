@@ -1,13 +1,16 @@
-// Device settings (kept on this device, never synced): which optional modules the app shows.
+// Device settings (kept on this device, never synced): which optional modules the app shows, and
+// the AI photo review device token.
 import { useEffect, useState } from 'preact/hooks';
 import type { RecordStore } from '../storage/db';
 
 export interface DeviceSettings {
   /** The perc test module. Off by default (Justin never runs perc tests); off hides it, records stay. */
   percTests: boolean;
+  /** AI photo review device token (`node service.mjs enroll` on the office PC); '' = review off. */
+  reviewToken: string;
 }
 
-const DEFAULTS: DeviceSettings = { percTests: false };
+const DEFAULTS: DeviceSettings = { percTests: false, reviewToken: '' };
 const KEY = 'settings';
 
 let current: DeviceSettings = DEFAULTS;

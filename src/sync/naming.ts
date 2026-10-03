@@ -14,6 +14,8 @@ export const SERVER_ROOT = '/Server';
 export const APP_FOLDER = 'Site Eval App';
 /** Dropped PDFs are printed at the office by the print agent (ticket 10), then moved to `Done`. */
 export const PRINT_QUEUE = `${SERVER_ROOT}/Office/Site Eval App/Print Queue`;
+/** The office review service writes its current URL here (`{ url, updatedAt, kind }`; ticket 11). */
+export const REVIEW_SERVICE = `${SERVER_ROOT}/Office/Site Eval App/Review Service.json`;
 
 export const DELIVERABLE_NAMES: Record<Exclude<DeliverableKind, 'field-record-json'>, string> = {
   'soil-log-xlsx': 'Soil Logs.xlsx',

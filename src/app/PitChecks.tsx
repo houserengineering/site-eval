@@ -4,6 +4,10 @@ import { acceptFlag, openFlags, wallFlags, type Flag } from '../domain/pitChecks
 import type { FieldRecord, TestPit } from '../domain/fieldRecord';
 import { stampText } from '../generator/sitePlan';
 import { syncService } from './sync';
+import { useEffect } from 'preact/hooks';
+import { reviewKey } from '../domain/aiReview';
+import { reviewQueue, useReviewStatus } from './reviewQueue';
+import { useSettings } from './settings';
 
 export function WallChecks(props: { record: FieldRecord; wall: TestPit; save: (r: FieldRecord) => void }) {
   const flags = wallFlags(props.record, props.wall);
@@ -33,6 +37,32 @@ export function WallChecks(props: { record: FieldRecord; wall: TestPit; save: (r
         ))}
       </ul>
     </section>
+  );
+}
+
+/** The AI photo review of this wall (ticket 12): queued whenever what it judges changes; says where it stands. */
+export function AiReviewLine(props: { record: FieldRecord; wall: TestPit }) {
+  const { reviewToken } = useSettings();
+  const key = reviewKey(props.wall);
+  const review = props.wall.aiReview;
+  const current = !!key && review?.key === key;
+  const status = useReviewStatus(props.wall.id);
+  useEffect(() => {
+    if (key && !current) void reviewQueue()?.request(props.record.id, props.wall.id);
+  }, [key, current, reviewToken]);
+  if (!key) return null;
+  let text: string;
+  if (current) {
+    const n = review!.findings.length;
+    const when = `AI review ${stampText(review!.at)}`;
+    text = review!.unreadable ? `${when}: its answer could not be read, so it raised no checks.` : n ? `${when}: ${n} check${n === 1 ? '' : 's'} in Pit checks.` : `${when}: nothing to flag.`;
+  } else if (!reviewToken.trim()) text = 'AI photo review is off on this device: add the review device token in Settings.';
+  else if (status?.state === 'running') text = 'AI review running…';
+  else text = status?.message ?? 'AI review queued.';
+  return (
+    <p class="hint ai-review" role="status" aria-label="AI review">
+      {text}
+    </p>
   );
 }
 
