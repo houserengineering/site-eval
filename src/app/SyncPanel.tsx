@@ -45,7 +45,7 @@ export function syncLine(s: SyncState, r: FieldRecord): { text: string; tone: 'o
 
 export function SyncStatus({ record }: { record: FieldRecord }) {
   const s = useSyncState();
-  const line = syncLine(s, record);
+  const line = record.demo ? { text: 'Demo: saved on this device only. Nothing goes to Dropbox.', tone: 'ok' } : syncLine(s, record);
   return (
     <p class={`sync-line ${line.tone}`} role="status">
       {line.text}
@@ -79,6 +79,13 @@ export function DropboxSection(props: { record: FieldRecord; save: (r: FieldReco
     setNote(s.online ? 'Sending the soil logs to the office printer…' : 'Will send to the office printer when there is signal.');
   };
 
+  if (r.demo)
+    return (
+      <section aria-labelledby="dbx">
+        <h2 id="dbx">Dropbox and office printing</h2>
+        <p class="hint">Off in the demo. On a real job, connect Dropbox here: the soil logs, photos and field record file into the project folder.</p>
+      </section>
+    );
   return (
     <section aria-labelledby="dbx">
       <h2 id="dbx">Dropbox and office printing</h2>

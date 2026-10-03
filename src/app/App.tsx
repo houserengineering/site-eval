@@ -1,3 +1,4 @@
+import { DemoGuide, startDemo } from './Demo';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { newSiteEvaluation, type FieldRecord } from '../domain/fieldRecord';
 import { openStore, type RecordStore } from '../storage/db';
@@ -138,6 +139,7 @@ function RecordLoader(props: {
     <>
       {props.render(record, save)}
       {percTests && <PercTimers record={record} />}
+      {record.demo && <DemoGuide record={record} store={props.store} />}
     </>
   );
 }
@@ -202,6 +204,9 @@ function Home({ store }: { store: RecordStore }) {
       <button class="btn primary block" onClick={create}>
         New site evaluation
       </button>
+      <button class="btn block" onClick={() => startDemo(store)}>
+        Try the demo
+      </button>
       <a class="btn block" href="#/dropbox">
         Open from Dropbox
       </a>
@@ -219,7 +224,7 @@ function Home({ store }: { store: RecordStore }) {
         {records?.map((r) => (
           <li key={r.id}>
             <a class="row-link" href={`#/se/${r.id}`}>
-              <span class="row-title">{r.header.projectNumber || 'No project #'} {r.header.projectName}</span>
+              <span class="row-title">{r.demo ? 'Demo:' : r.header.projectNumber || 'No project #'} {r.header.projectName}</span>
               <span class="row-sub">
                 {r.testPits.length} test pit{r.testPits.length === 1 ? '' : 's'}
                 {percTests && r.percTests.length > 0 && ` · ${r.percTests.length} perc test${r.percTests.length === 1 ? '' : 's'}`}

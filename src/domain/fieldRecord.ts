@@ -238,6 +238,8 @@ export interface FieldRecord {
   filed: Record<string, FiledFile>;
   /** Area soils reference by pit number, from the job file (office: knowledge/soils); fills blank structure. */
   areaSoils: Record<string, AreaHorizon[]>;
+  /** The in-app demo's sample job (app/Demo.tsx): never synced or filed. */
+  demo?: boolean;
 }
 
 /** A reference horizon at a pit: the soil survey or past logs in its map unit, with where it came from. */

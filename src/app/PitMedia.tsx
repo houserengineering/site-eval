@@ -1,4 +1,5 @@
 // Test pit photos (camera, stored on device) and GPS fix with accuracy and retake.
+import { samplePhoto } from './Demo';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { updateTestPit, type FieldRecord, type GpsFix, type PhotoRef, type TestPit } from '../domain/fieldRecord';
 import { accuracyFt, fixText, stampText } from '../generator/sitePlan';
@@ -90,7 +91,7 @@ function PitPhotos({ record, pit, store, patchPit }: Props) {
   }, [ids]);
 
   /** Saves picked photos; `retake` replaces that photo in its place. */
-  const add = async (files: FileList | null, retake?: string) => {
+  const add = async (files: FileList | File[] | null, retake?: string) => {
     if (!files?.length) return;
     setStatus('Saving photo…');
     try {
@@ -182,6 +183,11 @@ function PitPhotos({ record, pit, store, patchPit }: Props) {
           Take photo
           <input class="visually-hidden" type="file" accept="image/*" capture="environment" onChange={(e) => picked(e.currentTarget)} />
         </label>
+        {record.demo && (
+          <button type="button" class="btn" onClick={async () => add([await samplePhoto()])}>
+            Use a sample photo
+          </button>
+        )}
         <label class="btn">
           From gallery
           <input class="visually-hidden" type="file" accept="image/*" multiple onChange={(e) => picked(e.currentTarget)} />

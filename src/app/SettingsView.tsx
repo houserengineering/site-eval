@@ -23,6 +23,9 @@ export function SettingsView(props: { store: RecordStore }) {
         </p>
       </div>
       <div class="field">
+        <p class="field-label">
+          AI photo review <span class="badge warn">Beta</span> <span class="muted">optional</span>
+        </p>
         <label for="review-token">AI photo review device token</label>
         <input
           id="review-token"
@@ -34,7 +37,7 @@ export function SettingsView(props: { store: RecordStore }) {
         />
         <p class="hint" id="review-hint">
           From the office PC (<code>node service.mjs enroll "phone name"</code>). With a token, each wall's photos and log go to the office review service and what it
-          finds joins the pit checks. Leave it empty to turn the review off.
+          finds joins the pit checks. It is still being tuned: treat its flags as suggestions and accept any that do not apply. Leave it empty to turn the review off.
         </p>
       </div>
       {s.percTests && (

@@ -200,6 +200,7 @@ export class SyncService {
   /** Stamps the change, queues it, and schedules a sync. Returns the record to save. */
   recordEdited(prev: FieldRecord, next: FieldRecord): FieldRecord {
     const stamped = stampEdits(prev, next, this.state.who);
+    if (next.demo) return stamped;
     if (stamped !== next || stamped.deliverableFolder !== prev.deliverableFolder) this.queue(stamped.id, {});
     return stamped;
   }
@@ -300,6 +301,10 @@ export class SyncService {
     const entry = this.state.pending[id]; // before reading the record: an edit queued meanwhile stays queued
     let local = await this.store.get(id);
     if (!local) {
+      if (entry) await this.dequeue(id, entry);
+      return;
+    }
+    if (local.demo) {
       if (entry) await this.dequeue(id, entry);
       return;
     }

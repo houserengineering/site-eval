@@ -428,3 +428,15 @@ button.row-link:focus-visible { outline: 3px solid var(--focus); outline-offset:
 .hold p { margin: 0 0 4px; }
 .hold-walls { margin: 0; padding-left: 1.2rem; }
 .hold-walls a { display: inline-block; min-height: 44px; line-height: 44px; color: var(--text); }
+
+/* Demo guide (app/Demo.tsx): pinned to the bottom so the screen above stays usable. */
+.demo-guide { position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 50; max-width: 640px; margin: 0 auto; max-height: 45vh; overflow: auto;
+  background: var(--surface); color: var(--text); border: 2px solid #1d4f91; border-radius: 12px; padding: 12px 16px; box-shadow: 0 6px 24px rgba(0,0,0,.25); }
+.demo-guide h2 { margin: 4px 0; font-size: 1.15rem; }
+.demo-guide p { margin: 4px 0 8px; }
+.demo-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.demo-step { font-weight: 650; color: var(--muted); margin: 0; }
+.demo-pill { position: fixed; right: 12px; bottom: 12px; z-index: 50; min-height: 44px; padding: 8px 16px; border-radius: 22px; border: 2px solid #1d4f91;
+  background: var(--surface); color: var(--text); font: inherit; font-weight: 650; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+body:has(.demo-guide) .page { padding-bottom: 50vh; }
+.create-folder { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 8px 0; }
