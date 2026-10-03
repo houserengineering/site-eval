@@ -1,5 +1,6 @@
 // Device settings: optional modules shown on this device, and the AI photo review token.
 import type { RecordStore } from '../storage/db';
+import { dismissDemoTip, startDemo } from './Demo';
 import { changeSettings, useSettings } from './settings';
 
 export function SettingsView(props: { store: RecordStore }) {
@@ -13,6 +14,22 @@ export function SettingsView(props: { store: RecordStore }) {
         <h1>Settings</h1>
       </header>
       <p class="hint">These settings stay on this device.</p>
+      <div class="field">
+        <button
+          type="button"
+          class="btn block"
+          aria-describedby="demo-hint"
+          onClick={() => {
+            dismissDemoTip();
+            startDemo(props.store);
+          }}
+        >
+          Replay the demo
+        </button>
+        <p class="hint" id="demo-hint">
+          A guided practice run on a made-up job. It never goes to Dropbox and deletes itself when you finish.
+        </p>
+      </div>
       <div class="field">
         <label class="toggle">
           <input type="checkbox" checked={s.percTests} aria-describedby="perc-hint" onChange={(e) => changeSettings(props.store, { percTests: e.currentTarget.checked })} />

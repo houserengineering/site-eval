@@ -1,4 +1,4 @@
-import { DemoGuide, startDemo } from './Demo';
+import { demoTip, DemoGuide, dismissDemoTip, startDemo } from './Demo';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { newSiteEvaluation, type FieldRecord } from '../domain/fieldRecord';
 import { openStore, type RecordStore } from '../storage/db';
@@ -147,6 +147,7 @@ function RecordLoader(props: {
 function Home({ store }: { store: RecordStore }) {
   const [records, setRecords] = useState<FieldRecord[]>();
   const [problem, setProblem] = useState<string>();
+  const [tip, setTip] = useState(demoTip);
   const { percTests } = useSettings();
   useEffect(() => {
     store.list().then(
@@ -197,10 +198,25 @@ function Home({ store }: { store: RecordStore }) {
     <main class="page">
       <header class="bar">
         <h1>Site evaluations</h1>
-        <a class="bar-link" href="#/settings">
+        <a class={`bar-link${tip ? ' demo-target' : ''}`} href="#/settings">
           Settings
         </a>
       </header>
+      {tip && (
+        <div class="demo-tip" role="status">
+          <p>Demo finished and deleted. Replay it any time from Settings › Replay the demo.</p>
+          <button
+            type="button"
+            class="btn small"
+            onClick={() => {
+              dismissDemoTip();
+              setTip(false);
+            }}
+          >
+            OK
+          </button>
+        </div>
+      )}
       <button class="btn primary block" onClick={create}>
         New site evaluation
       </button>

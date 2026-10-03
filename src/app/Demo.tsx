@@ -7,6 +7,7 @@ import type { RecordStore } from '../storage/db';
 import { go } from './App';
 
 const STEP_KEY = 'site-eval:demo-step';
+const TIP_KEY = 'site-eval:demo-tip';
 const today = () => new Date().toLocaleDateString('en-CA');
 
 /** A new demo evaluation: made-up header, no client data. */
@@ -24,6 +25,20 @@ export async function startDemo(store: RecordStore) {
   await store.save(r);
   save(0);
   go(`#/se/${r.id}`);
+}
+
+/** After the demo ends, Home points once to Settings > Replay the demo. */
+export function demoTip(): boolean {
+  try {
+    return localStorage.getItem(TIP_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+export function dismissDemoTip() {
+  try {
+    localStorage.removeItem(TIP_KEY);
+  } catch {}
 }
 
 function load(): number {
@@ -91,7 +106,7 @@ const STEPS: Step[] = [
   {
     title: 'Done',
     body: () =>
-      'That is the whole loop. On a real job, connect Dropbox on the site evaluation and the logs file themselves into the project folder. Delete the demo when you are finished.',
+      'That is the whole loop. On a real job, connect Dropbox on the site evaluation and the logs file themselves into the project folder. Tap Finish to delete this demo job; replay it any time from Settings.',
     done: () => false,
   },
 ];
@@ -119,10 +134,13 @@ export function DemoGuide(props: { record: FieldRecord; store: RecordStore }) {
     if (done && s.title === 'Generate the soil log') to(step + 1);
   }, [done, step]);
 
-  const remove = async () => {
-    if (!confirm('Delete the demo site evaluation?')) return;
+  // Nathan, 2026-10-03: the demo job deletes itself at the end and Home points to Settings > Replay the demo.
+  const finish = async () => {
     await props.store.remove(r.id);
     save(0);
+    try {
+      localStorage.setItem(TIP_KEY, '1');
+    } catch {}
     go('#/');
   };
 
@@ -157,8 +175,8 @@ export function DemoGuide(props: { record: FieldRecord; store: RecordStore }) {
             {done || step === 0 ? 'Next' : 'Skip'}
           </button>
         ) : (
-          <button type="button" class="btn small danger" onClick={remove}>
-            Delete the demo
+          <button type="button" class="btn small primary" onClick={finish}>
+            Finish
           </button>
         )}
       </div>

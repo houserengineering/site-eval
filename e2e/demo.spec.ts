@@ -67,8 +67,16 @@ test('demo: guided walkthrough on a sample job that never reaches Dropbox', asyn
   // Nothing reached Dropbox, and the demo deletes itself.
   expect(await page.evaluate(() => [...(window as any).__fakeDropbox.files.keys()])).toEqual([]);
   expect(await page.evaluate(() => (window as any).__fakeDropbox.folderExists('/Server/Office/Site Evaluations'))).toBe(false);
-  page.once('dialog', (d) => d.accept());
-  await guide.getByRole('button', { name: 'Delete the demo' }).click();
+  await guide.getByRole('button', { name: 'Finish' }).click();
   await expect(page.getByRole('heading', { name: 'Site evaluations' })).toBeVisible();
   await expect(page.getByText('Demo:')).toHaveCount(0);
+  await expect(page.getByRole('status')).toContainText('Settings › Replay the demo');
+  await shot(page, 'demo-05-home-tip');
+
+  // Replay from Settings starts a fresh demo at step 1.
+  await page.getByRole('link', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: 'Replay the demo' }).click();
+  await expect(page.getByRole('complementary', { name: 'Demo guide' })).toContainText('step 1 of');
+  await page.goto('./?fake-dropbox');
+  await expect(page.getByRole('status')).toHaveCount(0);
 });

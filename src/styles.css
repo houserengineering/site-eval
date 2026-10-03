@@ -439,4 +439,8 @@ button.row-link:focus-visible { outline: 3px solid var(--focus); outline-offset:
 .demo-pill { position: fixed; right: 12px; bottom: 12px; z-index: 50; min-height: 44px; padding: 8px 16px; border-radius: 22px; border: 2px solid #1d4f91;
   background: var(--surface); color: var(--text); font: inherit; font-weight: 650; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
 body:has(.demo-guide) .page { padding-bottom: 50vh; }
+.demo-tip { display: flex; align-items: center; gap: 12px; border: 2px solid #1d4f91; border-radius: 8px; padding: 8px 12px; margin: 0 0 12px; }
+.demo-tip p { margin: 0; flex: 1; }
+.demo-target { outline: 3px solid #1d4f91; outline-offset: 3px; border-radius: 6px; }
+.bar .demo-target { outline-color: #ffd34d; }
 .create-folder { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 8px 0; }

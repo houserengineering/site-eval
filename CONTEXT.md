@@ -29,6 +29,13 @@ _Avoid_: rule warning (those cite DEQ/county rules and never hold anything)
 The one photo of a pit wall taken square to it, the surface at the top edge and the log bottom at the bottom, that the color check samples by depth. The user marks it, and marks whether a white card or tape is in frame; only then are value and chroma judged.
 _Avoid_: pit photo (most pit photos look down into the pit and show backdirt and shadow)
 
+**Demo**:
+A guided walkthrough of one made-up site evaluation, done in the real screens. A panel at the bottom says what to do next and ticks each step off when the user has done it. Started from Home (Try the demo) or Settings (Replay the demo); Finish deletes the demo evaluation and Home points to Settings to replay it. The demo evaluation never syncs or files to Dropbox.
+_Avoid_: tutorial, help page
+
+**Project folder (missing)**:
+A readable project number whose folder does not exist yet. The app shows the exact path and creates it only when the user asks. A blank or unreadable project number instead files to its own folder under `/Server/Office/Site Evaluations`.
+
 ## Relationships
 
 - A **Test pit** has two **Pit walls** (A and B); a soil log is one **Pit wall**.
