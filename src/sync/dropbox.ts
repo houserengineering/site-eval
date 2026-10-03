@@ -51,6 +51,16 @@ export class DropboxSync implements SyncAdapter {
     return m?.['.tag'] === 'folder';
   }
 
+  async createFolder(path: string): Promise<void> {
+    if (await this.folderExists(path)) return;
+    try {
+      await this.rpc('files/create_folder_v2', { path, autorename: false });
+    } catch (e) {
+      // Someone (another phone) created it meanwhile.
+      if (!(await this.folderExists(path))) throw e;
+    }
+  }
+
   private async rpc(endpoint: string, body: unknown): Promise<any | null> {
     const run = async () =>
       call(`${API}/${endpoint}`, {

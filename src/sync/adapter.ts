@@ -32,6 +32,8 @@ export interface SyncAdapter {
   write(path: string, bytes: Uint8Array, opts?: WriteOptions): Promise<RemoteFile>;
   /** Whether `path` is a folder in this account. Writing creates missing parents, so check first. */
   folderExists(path: string): Promise<boolean>;
+  /** Creates `path` and any missing parents; nothing happens if it already exists. */
+  createFolder(path: string): Promise<void>;
   /** The signed-in account's display name, for messages. */
   readonly account: string;
 }
@@ -72,6 +74,11 @@ export class FakeSync implements SyncAdapter {
 
   mkdir(path: string) {
     this.folders.add(key(path));
+  }
+
+  async createFolder(path: string): Promise<void> {
+    this.check();
+    this.mkdir(path);
   }
 
   async folderExists(path: string): Promise<boolean> {

@@ -1,5 +1,6 @@
 // Dropbox UI: the sync status line, the per-site-evaluation Dropbox section (folder, sync, print
-// at office, backup), connecting Dropbox, and opening a site evaluation from Dropbox.
+// at office, backup), connecting Dropbox, and opening a site evaluation from Dropbox.
+
 import { openFlags } from '../domain/pitChecks';
 import { useEffect, useState } from 'preact/hooks';
 import { backupName, makeBackup } from '../domain/backup';
@@ -28,7 +29,13 @@ export function syncLine(s: SyncState, r: FieldRecord): { text: string; tone: 'o
   const waiting = !!entry && !recordSynced;
   if (!s.connected) return { text: 'Saved on this device. Dropbox not connected.', tone: 'warn' };
   if (s.error) return { text: s.error, tone: 'bad' };
-  if (!r.deliverableFolder) return { text: 'Saved on this device. Choose a Dropbox folder to sync.', tone: 'warn' };
+  if (!r.deliverableFolder) {
+    const p = rs.plan;
+    if (p?.kind === 'missing') return { text: `Saved on this device. The project folder ${p.folder} is not in Dropbox yet.`, tone: 'warn' };
+    if (p?.kind === 'wrong-account') return { text: `Wrong Dropbox account: ${s.account || 'this account'} has no ${SERVER_ROOT}/Office folder. Nothing was created or filed. Connect the Houser Dropbox account.`, tone: 'bad' };
+    if (p?.kind === 'fallback') return { text: `Saved on this device. No project number, so it files to ${p.folder} once you add a test pit.`, tone: 'warn' };
+    return { text: 'Saved on this device. Choose a Dropbox folder to sync.', tone: 'warn' };
+  }
   if (rs.error) return { text: rs.error, tone: 'bad' };
   if (s.busy && waiting) return { text: 'Syncing…', tone: 'ok' };
   if (waiting) return { text: s.online ? 'Saved on this device. Syncing shortly.' : 'Saved on this device. Will sync when there is signal.', tone: 'warn' };
@@ -81,6 +88,9 @@ export function DropboxSection(props: { record: FieldRecord; save: (r: FieldReco
       {s.connected && <TextField label="Your name" value={s.who} onInput={(v) => sync.setWho(v)} autoCapitalize="words" hint={'Shown on your edits as "edited by".'} />}
       <p class="field-label">Deliverables folder</p>
       <p class="path">{r.deliverableFolder ? dropboxFolder(r.deliverableFolder) : 'Not chosen'}</p>
+      {s.connected && !r.deliverableFolder && rs.plan?.kind === 'missing' && !choosing && (
+        <CreateProjectFolder folder={rs.plan.folder} create={() => sync.createProjectFolder(r.id, rs.plan!.folder)} />
+      )}
       {s.connected && !choosing && (
         <button class={`btn ${rs.folderMissing ? 'primary' : 'small'}`} onClick={() => setChoosing(true)}>
           {rs.folderMissing ? 'Choose another folder' : r.deliverableFolder ? 'Change folder' : 'Choose folder'}
@@ -397,5 +407,32 @@ function AppFiles(props: { folder: string; entries: RemoteEntry[]; onOpen: (deli
         </li>
       ))}
     </ul>
+  );
+}
+
+/** A readable project number without a folder: show the exact path, create it only when asked. */
+function CreateProjectFolder(props: { folder: string; create: () => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  const create = async () => {
+    setBusy(true);
+    setError(undefined);
+    try {
+      await props.create();
+    } catch (e: any) {
+      setError(`Could not create the folder: ${e.message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div class="create-folder">
+      <p>This project has no folder in Dropbox yet. Create it here?</p>
+      <p class="path">{props.folder}</p>
+      <button class="btn primary" onClick={create} disabled={busy}>
+        {busy ? 'Creating…' : 'Create folder'}
+      </button>
+      {error && <p role="alert">{error}</p>}
+    </div>
   );
 }

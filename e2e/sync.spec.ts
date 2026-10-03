@@ -160,3 +160,57 @@ test('Dropbox: the wrong account (0271) files nothing and asks for a folder that
   await expect(dropbox.getByRole('alert')).toContainText('/Server/0999 is not in the Dropbox account Someone Else');
   expect(await fakePaths(page)).toEqual([]);
 });
+
+const loadJob = async (page: Page, edit: (job: any) => void) => {
+  const job = JSON.parse(readFileSync('test/fixtures/example-job.json', 'utf8'));
+  edit(job);
+  await page.getByLabel('Load job file or backup').setInputFiles({ name: 'example-job.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(job)) });
+  return page.getByRole('region', { name: 'Dropbox and office printing' });
+};
+
+test('Dropbox: a missing project folder is created only when asked, at the exact path shown', async ({ page }) => {
+  await page.goto('./?fake-dropbox');
+  await page.waitForFunction(() => !!(window as any).__fakeDropbox);
+  await page.evaluate(() => (window as any).__fakeDropbox.mkdir('/Server/Office'));
+  const section = await loadJob(page, (job) => {
+    job.header.projectNumber = '999-12';
+    job.deliverableFolder = '';
+  });
+  await expect(section.getByRole('status').filter({ hasText: 'The project folder /Server/0999/012 is not in Dropbox yet.' })).toBeVisible({ timeout: 15_000 });
+  await expect(section.getByText('/Server/0999/012', { exact: true })).toBeVisible();
+  expect(await fakePaths(page)).toEqual([]);
+  await shot(page, '75-create-project-folder');
+  await section.getByRole('button', { name: 'Create folder' }).click();
+  await expect(section.getByRole('status').filter({ hasText: 'Synced to Dropbox' })).toBeVisible({ timeout: 15_000 });
+  await expect(section.getByRole('button', { name: 'Create folder' })).toHaveCount(0);
+  expect(await page.evaluate(() => (window as any).__fakeDropbox.folderExists('/Server/0999/012'))).toBe(true);
+  expect((await fakePaths(page)).every((p) => p.startsWith('/Server/0999/012/'))).toBe(true);
+});
+
+test('Dropbox: without the office folders the account is the wrong one and nothing is created', async ({ page }) => {
+  await page.goto('./?fake-dropbox=Someone Else');
+  await page.waitForFunction(() => !!(window as any).__fakeDropbox);
+  await page.evaluate(() => (window as any).__fakeDropbox.mkdir('/Server/Server/Site Eval App'));
+  const section = await loadJob(page, (job) => {
+    job.header.projectNumber = '999-12';
+    job.deliverableFolder = '';
+  });
+  await expect(section.getByRole('status').filter({ hasText: 'Wrong Dropbox account: Someone Else has no /Server/Office folder.' })).toBeVisible({ timeout: 15_000 });
+  await expect(section.getByRole('button', { name: 'Create folder' })).toHaveCount(0);
+  expect(await fakePaths(page)).toEqual([]);
+});
+
+test('Dropbox: no project number files to its own folder under Office/Site Evaluations', async ({ page }) => {
+  await page.goto('./?fake-dropbox');
+  await page.waitForFunction(() => !!(window as any).__fakeDropbox);
+  await page.evaluate(() => (window as any).__fakeDropbox.mkdir('/Server/Office'));
+  const section = await loadJob(page, (job) => {
+    job.header.projectNumber = '';
+    job.deliverableFolder = '';
+  });
+  const folder = '/Server/Office/Site Evaluations/Example Subdivision 2026-10-02';
+  await expect(section.getByText(folder, { exact: true })).toBeVisible({ timeout: 15_000 });
+  await section.getByRole('button', { name: 'Sync now' }).click();
+  await expect(section.getByRole('status').filter({ hasText: 'Synced to Dropbox' })).toBeVisible({ timeout: 15_000 });
+  expect((await fakePaths(page)).some((p) => p.startsWith(`${folder}/`))).toBe(true);
+});

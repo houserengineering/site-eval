@@ -16,6 +16,8 @@ export const APP_FOLDER = 'Site Eval App';
 export const PRINT_QUEUE = `${SERVER_ROOT}/Office/Site Eval App/Print Queue`;
 /** The office review service writes its current URL here (`{ url, updatedAt, kind }`; ticket 11). */
 export const REVIEW_SERVICE = `${SERVER_ROOT}/Office/Site Eval App/Review Service.json`;
+/** Evaluations without a readable project number file here, one subfolder each (Nathan, 2026-10-03). */
+export const FALLBACK_ROOT = `${SERVER_ROOT}/Office/Site Evaluations`;
 
 export const DELIVERABLE_NAMES: Record<Exclude<DeliverableKind, 'field-record-json'>, string> = {
   'soil-log-xlsx': 'Soil Logs.xlsx',
@@ -44,14 +46,33 @@ export function dropboxFolder(folder: string): string {
   }
   f = f.replace(/\/+$/, '').replace(/\/{2,}/g, '/');
   if (f.split('/').some((part) => part === '.' || part === '..')) return '';
-  if (/^\d{4}(?:\.\d{1,3})+$/.test(f)) f = f.replace(/\./g, '/');
+  const number = projectPath(f);
+  if (number) f = number;
   return f ? `${SERVER_ROOT}/${f}` : SERVER_ROOT;
+}
+
+/**
+ * A project number as typed (`0279.001`, `279-1`, `279 1`, `0279_001`) as its folder path under the
+ * server: the project padded to 4 digits, the subproject to 3 (as all Server subprojects are),
+ * deeper levels as typed. '' when it is not a project number.
+ */
+function projectPath(project: string): string {
+  const p = project.trim();
+  if (!/^\d{3,4}(?:[.\-_ ]+\d{1,3})*$/.test(p)) return '';
+  const [job, sub, ...deeper] = p.split(/[.\-_ ]+/);
+  return [job.padStart(4, '0'), ...(sub ? [sub.padStart(3, '0')] : []), ...deeper].join('/');
 }
 
 /** Exact project/subproject folder; never guess a parent or a similarly named folder. */
 export function projectFolder(project: string): string {
-  const p = project.trim();
-  return /^\d{4}(?:\.\d{1,3})*$/.test(p) ? dropboxFolder(p) : '';
+  const path = projectPath(project);
+  return path ? `${SERVER_ROOT}/${path}` : '';
+}
+
+/** The fallback folder for one evaluation: `<project name or Untitled> <date>` under FALLBACK_ROOT. */
+export function fallbackFolder(header: { projectName: string; date: string }): string {
+  const name = `${header.projectName.trim() || 'Untitled'} ${header.date.trim()}`.replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim().replace(/[. ]+$/, '');
+  return `${FALLBACK_ROOT}/${name}`;
 }
 
 /**

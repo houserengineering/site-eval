@@ -14,7 +14,7 @@ import { openFlags } from '../domain/pitChecks';
 import { updateTestPit } from '../domain/fieldRecord';
 import type { AiReview } from '../domain/aiReview';
 import { dropboxFolder, REVIEW_SERVICE } from '../sync/naming';
-import { resolveProjectFolder } from '../sync/projectFolder';
+import { planProjectFolder, resolveProjectFolder, type FolderPlan } from '../sync/projectFolder';
 
 export interface RecordSyncStatus {
   at?: string;
@@ -26,6 +26,8 @@ export interface RecordSyncStatus {
   printed?: string[];
   /** Why the soil log was not filed (open pit checks); the rest was. */
   held?: string;
+  /** Set while the evaluation has no usable folder: what the project number points to in this account. */
+  plan?: FolderPlan;
 }
 
 export interface SyncState {
@@ -228,6 +230,17 @@ export class SyncService {
     await this.run();
   }
 
+  /** Creates the missing project folder the user confirmed, then files there. */
+  async createProjectFolder(recordId: string, folder: string) {
+    await this.adapter!.createFolder(folder);
+    const saved = await this.store.update(recordId, (latest) =>
+      latest && stampEdits(latest, { ...latest, deliverableFolder: folder, deliverableFolderSource: 'project' }, this.state.who),
+    );
+    if (saved) for (const fn of this.recordListeners) fn(saved);
+    this.setRecord(recordId, { plan: undefined, error: undefined, folderMissing: false });
+    await this.syncNow(recordId);
+  }
+
   async printAtOffice(recordId: string, kinds: PrintableKind[]) {
     this.lastFiled[recordId] = 0;
     await this.queue(recordId, { print: kinds });
@@ -292,7 +305,19 @@ export class SyncService {
     }
     const observed = local;
     const automatic = local.deliverableFolderSource === 'project';
-    const resolvedFolder = await resolveProjectFolder(this.adapter!, local.header.projectNumber, automatic ? '' : local.deliverableFolder);
+    let resolvedFolder = await resolveProjectFolder(this.adapter!, local.header.projectNumber, automatic ? '' : local.deliverableFolder);
+    let plan: FolderPlan | undefined;
+    if (!resolvedFolder && (automatic || !local.deliverableFolder)) {
+      plan = await planProjectFolder(this.adapter!, local.header, local.deliverableFolder);
+      // No readable project number: file to the evaluation's own fallback folder, once there is a pit
+      // to file (so the folder is named after the header, not after a half-typed one).
+      if (plan.kind === 'fallback' && local.testPits.length) {
+        await this.adapter!.createFolder(plan.folder);
+        resolvedFolder = plan.folder;
+        plan = undefined;
+      }
+    }
+    this.setRecord(id, { plan });
     if (resolvedFolder !== local.deliverableFolder && (resolvedFolder || automatic)) {
       const saved = await this.store.update(id, (latest) => {
         // A slow account lookup must not replace a project edit or manual choice made meanwhile.
@@ -306,6 +331,7 @@ export class SyncService {
     if (!local) return;
     if (local.header.projectNumber !== observed.header.projectNumber || (local.deliverableFolder !== resolvedFolder && local.deliverableFolder !== observed.deliverableFolder)) return;
     if (!local.deliverableFolder) {
+      if (plan) return; // the Dropbox section shows the plan; the edit stays queued until there is a folder
       if (entry) throw new NoFolderError();
       return;
     }
