@@ -22,6 +22,10 @@ test('Dropbox: defaults to the exact subproject, repairs the doubled root and pr
   await expect(section.getByRole('status').filter({ hasText: /^Synced to Dropbox/ })).toBeVisible();
   await section.getByRole('button', { name: 'Change folder' }).click();
   await expect(section.getByRole('group', { name: 'Dropbox folders' }).getByText('/Server/0999/001', { exact: true })).toBeVisible();
+  await section.getByLabel('Go to folder').fill('C:\\Backup\\Server\\0999\\001');
+  await section.getByLabel('Go to folder').press('Enter');
+  await expect(section.getByRole('alert')).toContainText('Enter a project number or a path inside the Dropbox Server folder.');
+  await expect(section.getByRole('group', { name: 'Dropbox folders' }).getByText('/Server/0999/001', { exact: true })).toBeVisible();
   const paths = await fakePaths(page);
   expect(paths.some((p) => /^\/Server\/0999\/001\/Site Eval App\/Field Record/.test(p))).toBe(true);
   const record = await page.evaluate(() => {
