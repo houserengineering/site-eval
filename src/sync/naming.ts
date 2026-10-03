@@ -44,14 +44,14 @@ export function dropboxFolder(folder: string): string {
   }
   f = f.replace(/\/+$/, '').replace(/\/{2,}/g, '/');
   if (f.split('/').some((part) => part === '.' || part === '..')) return '';
-  if (/^\d{4}\.\d{3}$/.test(f)) f = f.replace('.', '/');
+  if (/^\d{4}(?:\.\d{1,3})+$/.test(f)) f = f.replace(/\./g, '/');
   return f ? `${SERVER_ROOT}/${f}` : SERVER_ROOT;
 }
 
 /** Exact project/subproject folder; never guess a parent or a similarly named folder. */
 export function projectFolder(project: string): string {
   const p = project.trim();
-  return /^\d{4}(?:\.\d{3})?$/.test(p) ? dropboxFolder(p) : '';
+  return /^\d{4}(?:\.\d{1,3})*$/.test(p) ? dropboxFolder(p) : '';
 }
 
 /**
