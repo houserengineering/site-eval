@@ -8,10 +8,14 @@ export interface Box {
   height: number;
 }
 
+export type Side = 'above' | 'below';
+
 export interface TipPlace extends Box {
-  side: 'above' | 'below';
+  side: Side;
   /** Arrow position from the tip's left edge, pointing at the field's middle. */
   arrowLeft: number;
+  /** The room on that side: a taller tip scrolls inside it rather than cover the field. */
+  maxHeight: number;
 }
 
 /** Room between the field and its tip (the arrow sits in it). */
@@ -19,6 +23,8 @@ export const GAP = 14;
 /** Side gutters and the margin kept from the top and bottom of the screen. */
 const GUTTER = 16;
 const EDGE = 8;
+/** The least room worth giving a tip that scrolls inside. */
+const MIN_TIP = 120;
 
 export function unionRect(rects: Box[]): Box {
   const top = Math.min(...rects.map((r) => r.top));
@@ -28,37 +34,46 @@ export function unionRect(rects: Box[]): Box {
   return { top, left, width: right - left, height: bottom - top };
 }
 
-/** `view` is the visible screen (the visual viewport: smaller while the keyboard is up). */
-export function placeTip(target: Box, tip: { width: number; height: number }, view: Box): TipPlace {
+/**
+ * `view` is the visible screen (the visual viewport: smaller while the keyboard is up). `prefer` wins
+ * when the tip fits on both sides ('above' while the keyboard is up, the field sitting just over it).
+ */
+export function placeTip(target: Box, tip: { width: number; height: number }, view: Box, prefer: Side = 'below'): TipPlace {
   const width = Math.min(tip.width, view.width - 2 * GUTTER);
   const mid = target.left + target.width / 2;
   const left = clamp(mid - width / 2, view.left + GUTTER, view.left + view.width - GUTTER - width);
   const arrowLeft = clamp(mid - left, 20, width - 20);
-  const viewBottom = view.top + view.height;
-  const below = viewBottom - (target.top + target.height);
-  const above = target.top - view.top;
-  const need = tip.height + GAP + EDGE;
-  const side = below >= need ? 'below' : above >= need ? 'above' : below >= above ? 'below' : 'above';
-  const top =
-    side === 'below'
-      ? Math.min(target.top + target.height + GAP, viewBottom - EDGE - tip.height)
-      : Math.max(target.top - GAP - tip.height, view.top + EDGE);
-  return { side, top, left, width, height: tip.height, arrowLeft };
+  const room: Record<Side, number> = {
+    below: view.top + view.height - (target.top + target.height) - GAP - EDGE,
+    above: target.top - view.top - GAP - EDGE,
+  };
+  const other: Side = prefer === 'below' ? 'above' : 'below';
+  const side = room[prefer] >= tip.height ? prefer : room[other] >= tip.height ? other : room[prefer] >= room[other] ? prefer : other;
+  const maxHeight = Math.max(0, Math.floor(room[side]));
+  const height = Math.min(tip.height, maxHeight);
+  const top = side === 'below' ? target.top + target.height + GAP : target.top - GAP - height;
+  return { side, top, left, width, height, arrowLeft, maxHeight };
 }
 
 /** Pixels to scroll down (negative: up) so the field and its tip fit; 0 when they already do. */
-export function scrollToFit(target: Box, tipHeight: number, view: Box): number {
+export function scrollToFit(target: Box, tipHeight: number, view: Box, prefer: Side = 'below'): number {
   const need = tipHeight + GAP + EDGE;
   const viewBottom = view.top + view.height;
   const visible = target.top >= view.top + EDGE && target.top + target.height <= viewBottom - EDGE;
   const roomBelow = viewBottom - (target.top + target.height) >= need;
   const roomAbove = target.top - view.top >= need;
   if (visible && (roomBelow || roomAbove)) return 0;
+  const fieldBottomDown = Math.round(target.top + target.height - (viewBottom - EDGE));
+  // Keyboard up: the field just over the keyboard, its tip in the room left above it.
+  if (prefer === 'above' && target.height + GAP + 2 * EDGE + MIN_TIP <= view.height) return fieldBottomDown;
   if (target.height + need + EDGE <= view.height) {
     // Centre the field and its tip (below it) on the screen.
     const block = target.height + GAP + tipHeight;
     return Math.round(target.top - (view.top + (view.height - block) / 2));
   }
+  // The field fits, its tip does not in full: the whole field at the bottom, the tip scrolling inside
+  // the room above it.
+  if (target.height + GAP + 2 * EDGE + MIN_TIP <= view.height) return fieldBottomDown;
   // Taller than the screen: its top goes just under the tip.
   return Math.round(target.top - (view.top + EDGE + need));
 }

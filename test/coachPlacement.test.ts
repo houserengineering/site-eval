@@ -38,6 +38,31 @@ describe('coach tip placement (demo spec decision 9)', () => {
   });
 });
 
+describe('never over the field (Nathan, step 2 with the number keyboard up)', () => {
+  // Visual viewport over the keyboard, less the title bar; the field and its label are about 100px.
+  const kb = { top: 62, left: 0, width: 412, height: 424 };
+  const target = { top: 180, left: 8, width: 396, height: 100 };
+
+  it('does not slide the tip onto the field when neither side has its full height', () => {
+    const p = placeTip(target, { width: 420, height: 240 }, kb);
+    expect(overlaps(p, target)).toBe(false);
+    expect(p.top).toBeGreaterThanOrEqual(kb.top);
+    expect(p.top + p.height).toBeLessThanOrEqual(kb.top + kb.height);
+    expect(p.height).toBe(p.maxHeight);
+  });
+
+  it('scrolls the field down onto the keyboard and puts the tip above it', () => {
+    const d = scrollToFit(target, 240, kb, 'above');
+    const moved = { ...target, top: target.top - d };
+    expect(moved.top + moved.height).toBeLessThanOrEqual(kb.top + kb.height);
+    const p = placeTip(moved, { width: 420, height: 240 }, kb, 'above');
+    expect(p.side).toBe('above');
+    expect(p.height).toBe(240);
+    expect(overlaps(p, moved)).toBe(false);
+    expect(p.top).toBeGreaterThanOrEqual(kb.top);
+  });
+});
+
 describe('scrolling the field into view', () => {
   it('does not move a field that already has room for its tip', () => {
     expect(scrollToFit({ top: 200, left: 0, width: 380, height: 80 }, tip.height, view)).toBe(0);

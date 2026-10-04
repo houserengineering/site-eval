@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { RecordStore } from '../../storage/db';
 import { useAnimate } from '../settings';
 import { setPace } from './dom';
-import { placeTip, scrollToFit, unionRect, type Box } from './placement';
+import { placeTip, scrollToFit, unionRect, type Box, type Side } from './placement';
 import { demoState, markDemoDone, removeDemoRecords, setDemoState, useDemo } from './state';
 import { SCREEN_NAMES, STEPS, hashFor, screenOf, walls, type Ctx } from './steps';
 
@@ -35,6 +35,8 @@ const viewBox = (els: HTMLElement[] = []): Box => {
   const under = Math.max(box.top, bar.getBoundingClientRect().bottom);
   return { ...box, top: under, height: box.height - (under - box.top) };
 };
+/** The on-screen keyboard is up: the visual viewport is well short of the window. */
+const keyboardUp = () => !!visualViewport && visualViewport.height < innerHeight * 0.8;
 const same = (a: Box | null, b: Box | null) =>
   a === b || (!!a && !!b && Math.abs(a.top - b.top) < 0.5 && Math.abs(a.left - b.left) < 0.5 && Math.abs(a.width - b.width) < 0.5 && Math.abs(a.height - b.height) < 0.5);
 const focusInTarget = () => !!document.activeElement?.closest(`[${ATTR}]`);
@@ -48,6 +50,7 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
   const [box, setBox] = useState<(Box & { step: string }) | null>(null);
   const [view, setView] = useState<Box>(() => viewBox());
   const [tipH, setTipH] = useState(200);
+  const [prefer, setPrefer] = useState<Side>('below');
   const [phase, setPhase] = useState<'ready' | 'busy' | 'done'>('ready');
   const [, setTick] = useState(0);
   const [glide, setGlide] = useState(false);
@@ -68,54 +71,66 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
     return () => clearTimeout(t);
   }, [index]);
 
-  // Follow the target every frame (it moves as the user scrolls, types and the screen re-renders).
+  // Follow the target every frame (it moves as the user scrolls, types and the screen re-renders), and
+  // at once when the visible screen changes (the keyboard opening or closing).
+  const tipEl = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     let raf = 0;
     let marked: HTMLElement[] = [];
-    const loop = () => {
+    const update = () => {
       const { ctx, step, onScreen } = live.current;
       const els = onScreen && step.target ? step.target(ctx) : [];
       for (const el of marked) if (!els.includes(el)) el.removeAttribute(ATTR);
       for (const el of els) el.setAttribute(ATTR, step.id);
       marked = els;
-      const next = els.length ? pad(unionRect(els.map((e) => e.getBoundingClientRect()))) : null;
+      // Keyboard up in a group of fields: highlight just the one being typed in, with its label, so it
+      // and its tip fit in the room over the keyboard.
+      const active = document.activeElement;
+      const typing = keyboardUp() && active instanceof HTMLElement && els.some((e) => e.contains(active)) ? [active, ...((active as HTMLInputElement).labels ?? [])] : null;
+      const next = els.length ? pad(unionRect((typing ?? els).map((e) => e.getBoundingClientRect()))) : null;
       const key = stepKey(step, ctx);
       setBox((b) => (same(b, next) && b?.step === key ? b : next && { ...next, step: key }));
       const v = viewBox(els);
       setView((o) => (same(o, v) ? o : v));
+      setPrefer(keyboardUp() ? 'above' : 'below');
+      // Its full height, even while it scrolls inside a short room.
+      if (tipEl.current) setTipH(tipEl.current.scrollHeight);
+    };
+    const loop = () => {
+      update();
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
+    const vv = visualViewport;
+    vv?.addEventListener('resize', update);
+    vv?.addEventListener('scroll', update);
     return () => {
       cancelAnimationFrame(raf);
+      vv?.removeEventListener('resize', update);
+      vv?.removeEventListener('scroll', update);
       for (const el of marked) el.removeAttribute(ATTR);
     };
   }, []);
 
-  // Tip height, for placement (the tip mounts after the screen has loaded).
-  const observer = useRef<ResizeObserver | undefined>(undefined);
-  const tipRef = (el: HTMLDivElement | null) => {
-    observer.current?.disconnect();
-    if (!el) return;
-    observer.current = new ResizeObserver(() => setTipH(el.offsetHeight));
-    observer.current.observe(el);
-  };
-  useEffect(() => () => observer.current?.disconnect(), []);
-
-  // Scroll the field into view with room for its tip, once per step (and again on "Take me back").
-  // The tip can grow after that (a correction, the next part of horizon 2): scroll again if it no
-  // longer fits beside the field.
+  // Scroll the field into view with room for its tip, once per step and screen height (so again when
+  // the keyboard opens or closes) and on "Take me back". The tip can grow after that (a correction,
+  // the next part of horizon 2): scroll again if it no longer fits beside the field. Waits for the
+  // screen to settle (the keyboard slides in over several frames).
   const scrolledTipH = useRef(0);
+  const scrollKey = `${key}|${Math.round(view.height)}`;
   useEffect(() => {
     // The box lags a step change by a frame: wait for this step's.
     if (!box || !onScreen || box.step !== key) return;
-    const again = scrolledFor.current === key && tipH !== scrolledTipH.current && overlaps(placeTip(box, { width: 420, height: tipH }, view), box);
-    if (scrolledFor.current === key && !again) return;
-    scrolledFor.current = key;
-    scrolledTipH.current = tipH;
-    const d = scrollToFit(box, tipH, view);
-    if (d) scrollBy({ top: d, behavior: animate ? 'smooth' : 'auto' });
-  }, [box, tipH, onScreen, key, backs]);
+    const short = placeTip(box, { width: 420, height: tipH }, view, prefer).height < tipH;
+    if (scrolledFor.current === scrollKey && !(short && tipH !== scrolledTipH.current)) return;
+    const t = setTimeout(() => {
+      scrolledFor.current = scrollKey;
+      scrolledTipH.current = tipH;
+      const d = scrollToFit(box, tipH, view, prefer);
+      if (d) scrollBy({ top: d, behavior: animate && prefer === 'below' ? 'smooth' : 'auto' });
+    }, 120);
+    return () => clearTimeout(t);
+  }, [box, tipH, view, prefer, onScreen, scrollKey, backs]);
 
   // Typing, committing, focus moves: re-check the step. Enter on a highlighted field commits it.
   useEffect(() => {
@@ -205,8 +220,8 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
   const problem = onScreen ? step.problem?.(ctx) : undefined;
   const showProblem = problem && (!focusInTarget() || Date.now() - lastInput.current > 1200);
   const place = hole
-    ? placeTip(hole, { width: 420, height: tipH }, view)
-    : { side: 'none' as const, top: view.top + Math.max(8, (view.height - tipH) / 2), left: view.left + 16, width: Math.min(420, view.width - 32), height: tipH, arrowLeft: 0 };
+    ? placeTip(hole, { width: 420, height: tipH }, view, prefer)
+    : { side: 'none' as const, top: view.top + Math.max(8, (view.height - tipH) / 2), left: view.left + 16, width: Math.min(420, view.width - 32), height: Math.min(tipH, view.height - 16), arrowLeft: 0, maxHeight: view.height - 16 };
   if (!hole) place.left = view.left + (view.width - place.width) / 2;
 
   return (
@@ -222,15 +237,21 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
       ) : (
         <div class="coach-block dim" />
       )}
+      {hole && (
+        <span
+          class="coach-arrow"
+          aria-hidden="true"
+          style={{ left: `${place.left + place.arrowLeft}px`, top: `${place.side === 'below' ? place.top - 7 : place.top + place.height - 9}px` }}
+        />
+      )}
       <div
-        ref={tipRef}
-        class={`coach-tip ${place.side}`}
+        ref={tipEl}
+        class={`coach-tip ${place.side}${prefer === 'above' ? ' compact' : ''}`}
         data-coach-tip
         role="dialog"
         aria-label="Demo guide"
-        style={{ top: `${place.top}px`, left: `${place.left}px`, width: `${place.width}px` }}
+        style={{ top: `${place.top}px`, left: `${place.left}px`, width: `${place.width}px`, maxHeight: `${place.maxHeight}px` }}
       >
-        {hole && <span class="coach-arrow" aria-hidden="true" style={{ left: `${place.arrowLeft}px` }} />}
         <p class="coach-count">
           Demo · {index + 1} of {STEPS.length}
         </p>
@@ -299,5 +320,4 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
 
 const pad = (b: Box): Box => ({ top: b.top - PAD, left: b.left - PAD, width: b.width + 2 * PAD, height: b.height + 2 * PAD });
 const css = (b: Box) => ({ top: `${b.top}px`, left: `${b.left}px`, width: `${b.width}px`, height: `${b.height}px` });
-const overlaps = (a: Box, b: Box) => a.top < b.top + b.height && b.top < a.top + a.height;
 const stepKey = (step: (typeof STEPS)[number], ctx: Ctx) => `${step.id}:${step.part?.(ctx) ?? ''}`;

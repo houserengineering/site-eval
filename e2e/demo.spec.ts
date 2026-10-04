@@ -1,9 +1,33 @@
 // The demo (spec 2026-10-03): coach marks on the real screens, at phone width. Every step is checked
 // for a visible highlight around its field and a tip that does not cover it, and moves on when the
-// user does the step (or taps Show me). SHOTS_DIR saves a screenshot of every step.
+// user does the step (or taps Show me). Every step with a text, number or date field is checked again
+// with the field focused and a simulated on-screen keyboard: the visual viewport shrinks to 55% of the
+// window, as on Android, where the keyboard covers the page without resizing it. SHOTS_DIR saves a
+// screenshot of every step (and of every keyboard check, with the keyboard drawn in).
 import { expect, test, type Page } from '@playwright/test';
 
-test.use({ storageState: { cookies: [], origins: [] } });
+test.use({ storageState: { cookies: [], origins: [] }, viewport: { width: 412, height: 915 } });
+
+/** Stands in for window.visualViewport; __keyboard(true) opens the simulated keyboard. */
+function fakeKeyboard() {
+  const real = window.visualViewport!;
+  let up = false;
+  const fake = new EventTarget();
+  for (const k of ['offsetLeft', 'pageLeft', 'pageTop', 'width', 'scale'] as const) Object.defineProperty(fake, k, { get: () => real[k] });
+  Object.defineProperty(fake, 'height', { get: () => (up ? Math.round(innerHeight * 0.55) : real.height) });
+  Object.defineProperty(fake, 'offsetTop', { get: () => (up ? 0 : real.offsetTop) });
+  for (const type of ['resize', 'scroll']) real.addEventListener(type, () => fake.dispatchEvent(new Event(type)));
+  Object.defineProperty(window, 'visualViewport', { configurable: true, get: () => fake });
+  (window as any).__keyboard = (on: boolean) => {
+    up = on;
+    fake.dispatchEvent(new Event('resize'));
+  };
+}
+
+const TYPED = ['input:not([type])', 'text', 'number', 'tel', 'search', 'date']
+  .map((t) => (t.startsWith('input') ? t : `input[type="${t}"]`))
+  .concat('textarea')
+  .join(',');
 
 const shots = process.env.SHOTS_DIR;
 let n = 0;
@@ -12,6 +36,26 @@ const tip = (page: Page) => page.locator('[data-coach-tip]');
 /** Waits for the highlight to stop moving (scroll and glide), then checks it and saves a screenshot. */
 async function arrive(page: Page, title: string | RegExp, name: string, opts: { hole?: boolean; timeout?: number } = {}) {
   await expect(tip(page).getByRole('heading')).toContainText(title, { timeout: opts.timeout });
+  const shot = String(++n).padStart(2, '0');
+  await settleAndCheck(page, `${shot}-${name}`, opts.hole !== false);
+  if (opts.hole === false) return;
+  // A field that brings up the keyboard: focus it, open the keyboard, check, close it, check again.
+  const typed = await page.evaluate((sel) => {
+    for (const t of document.querySelectorAll<HTMLElement>('[data-coach-target]')) {
+      const el = t.matches(sel) ? t : t.querySelector<HTMLElement>(sel);
+      if (el) return el.focus(), true;
+    }
+    return false;
+  }, TYPED);
+  if (!typed) return;
+  await page.evaluate(() => (window as any).__keyboard(true));
+  await settleAndCheck(page, `${shot}-${name}-keyboard`, true, true);
+  await page.evaluate(() => (window as any).__keyboard(false));
+  await settleAndCheck(page, '', true);
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+}
+
+async function settleAndCheck(page: Page, name: string, hole: boolean, keyboard = false) {
   let last = '';
   await expect
     .poll(async () => {
@@ -21,27 +65,44 @@ async function arrive(page: Page, title: string | RegExp, name: string, opts: { 
       return still;
     }, { intervals: [250] })
     .toBe(true);
-  const g = await geometry(page);
-  if (shots) await page.screenshot({ path: `${shots}/${String(++n).padStart(2, '0')}-${name}.png` });
-  if (opts.hole !== false) {
+  const g = await geometry(page, keyboard);
+  if (shots && name) {
+    // The keyboard drawn over the bottom 45%, where a phone's would be.
+    if (keyboard)
+      await page.evaluate((top) => {
+        const k = Object.assign(document.createElement('div'), { id: 'fake-kb', textContent: 'keyboard' });
+        k.style.cssText = `position:fixed;left:0;right:0;bottom:0;top:${top}px;z-index:9999;background:#d9dde3;color:#555;font:20px sans-serif;display:grid;place-items:center;pointer-events:none`;
+        document.body.append(k);
+      }, g.vb);
+    await page.screenshot({ path: `${shots}/${name}.png` });
+    await page.evaluate(() => document.getElementById('fake-kb')?.remove());
+  }
+  if (keyboard) expect(g.vb, `${name}: keyboard open`).toBeLessThan(g.vh * 0.6);
+  if (hole) {
     expect(g.hole, `${name}: highlight`).not.toBeNull();
     expect(g.targets.length, `${name}: highlighted field`).toBeGreaterThan(0);
     for (const t of g.targets) {
       expect(t.top, `${name}: field inside highlight`).toBeGreaterThanOrEqual(g.hole!.top - 1);
       expect(t.bottom).toBeLessThanOrEqual(g.hole!.bottom + 1);
     }
-    const overlap = g.tip.top < g.hole!.bottom && g.hole!.top < g.tip.bottom;
-    expect(overlap, `${name}: tip covers the field`).toBe(false);
-    expect(g.hole!.top, `${name}: highlight on screen`).toBeGreaterThanOrEqual(-1);
+    for (const t of [g.hole!, ...g.targets]) {
+      const overlap = g.tip.top < t.bottom && t.top < g.tip.bottom && g.tip.left < t.right && t.left < g.tip.right;
+      expect(overlap, `${name}: tip covers the field`).toBe(false);
+      expect(t.top, `${name}: field on the visible screen`).toBeGreaterThanOrEqual(g.vt - 1);
+      expect(t.bottom, `${name}: field above the keyboard`).toBeLessThanOrEqual(g.vb + 1);
+    }
   }
-  expect(g.tip.top).toBeGreaterThanOrEqual(0);
-  expect(g.tip.bottom).toBeLessThanOrEqual(g.vh);
+  expect(g.tip.top, `${name}: tip on the visible screen`).toBeGreaterThanOrEqual(g.vt);
+  expect(g.tip.bottom, `${name}: tip above the keyboard`).toBeLessThanOrEqual(g.vb);
   expect(g.tip.left).toBeGreaterThanOrEqual(15);
   expect(g.tip.right).toBeLessThanOrEqual(g.vw - 15);
 }
 
-function geometry(page: Page) {
-  return page.evaluate(() => {
+/** With the keyboard up, the field is the one being typed in, with its label. */
+function geometry(page: Page, keyboard = false) {
+  return page.evaluate((keyboard) => {
+    const active = document.activeElement as HTMLInputElement;
+    const fields = keyboard ? [active, ...(active.labels ?? [])] : [...document.querySelectorAll('[data-coach-target]')];
     const box = (el: Element | null) => {
       if (!el) return null;
       const r = el.getBoundingClientRect();
@@ -50,11 +111,13 @@ function geometry(page: Page) {
     return {
       hole: box(document.querySelector('[data-coach-hole]')),
       tip: box(document.querySelector('[data-coach-tip]'))!,
-      targets: [...document.querySelectorAll('[data-coach-target]')].map((e) => box(e)!),
+      targets: fields.map((e) => box(e)!),
       vw: innerWidth,
       vh: innerHeight,
+      vt: visualViewport!.offsetTop,
+      vb: visualViewport!.offsetTop + visualViewport!.height,
     };
-  });
+  }, keyboard);
 }
 
 const showMe = (page: Page) => tip(page).getByRole('button', { name: 'Show me' }).click();
@@ -63,7 +126,8 @@ const pick = (page: Page, group: string, name: string) =>
   page.locator('[data-coach-target]').getByRole('radiogroup', { name: group, exact: true }).getByRole('radio', { name, exact: true }).click();
 
 test('first launch: the demo coaches the whole field path and ends in Settings', async ({ page }) => {
-  test.setTimeout(240_000);
+  test.setTimeout(300_000);
+  await page.addInitScript(fakeKeyboard);
   await page.goto('./?fake-dropbox');
   await page.waitForFunction(() => !!(window as any).__fakeDropbox);
   await page.evaluate(() => (window as any).__fakeDropbox.mkdir('/Server/Office'));
