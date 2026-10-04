@@ -15,6 +15,7 @@ import { go } from './App';
 import { download } from './deliverables';
 import { TextField } from './fields';
 import { syncService, useSyncState, type SyncState } from './sync';
+import { dropboxSetupLink, takeDropboxSetupResult } from './dropboxSetup';
 
 const time = (iso?: string) => (iso ? new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '');
 
@@ -215,8 +216,8 @@ export function ConnectDropbox() {
         Connect Dropbox
       </button>
       <p class="hint">
-        Dropbox opens. Sign in with your Houser Engineering login, the one that shows the Server folder, and tap Allow. You come back here connected. If Dropbox shows another
-        account, sign out of it at dropbox.com first. Justin's admin account cannot connect apps.
+        Easiest: open the phone setup link from the office once. Or tap Connect Dropbox, sign in to the Houser Dropbox (Justin Houser's account, the one with the Server
+        folder) and tap Allow. If Dropbox shows another account, sign out of it at dropbox.com first.
       </p>
       <details>
         <summary>Sign-in not working?</summary>
@@ -468,5 +469,62 @@ function CreateProjectFolder(props: { create: () => Promise<void> }) {
       </button>
       {error && <p role="alert">{error}</p>}
     </div>
+  );
+}
+
+/** Settings › Dropbox: this device's connection, and the setup link that connects other phones. */
+export function DropboxSettings() {
+  const s = useSyncState();
+  const [result] = useState(takeDropboxSetupResult);
+  const [copied, setCopied] = useState<string>();
+  const refresh = s.connected && !s.fake ? syncService().refreshToken() : undefined;
+  const copy = async () => {
+    const link = dropboxSetupLink(refresh!);
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied('Copied. Paste it into a text or email to each phone.');
+    } catch {
+      setCopied(link);
+    }
+  };
+  return (
+    <section aria-labelledby="dbx-settings">
+      <h2 id="dbx-settings">Dropbox</h2>
+      {result === 'ok' && (
+        <p class="sync-line ok" role="status">
+          This phone is connected to Dropbox as {s.account}. It stays connected; there is nothing else to set up.
+        </p>
+      )}
+      {result && result !== 'ok' && (
+        <p class="sync-line bad" role="alert">
+          The setup link did not work ({result}). Ask the office for a new one.
+        </p>
+      )}
+      {!s.connected && <ConnectDropbox />}
+      {s.connected && (
+        <p>
+          Connected to Dropbox as <strong>{s.account || 'an unnamed account'}</strong>.
+        </p>
+      )}
+      {refresh && (
+        <div class="dbx-option">
+          <p class="hint">
+            The phone setup link connects another phone to this Dropbox in one tap, for good: the phone renews its own access. Send it privately. Anyone with the link can
+            open the Houser Dropbox, so never post it.
+          </p>
+          <button class="btn small" onClick={copy}>
+            Copy phone setup link
+          </button>
+          {copied && (
+            <p class="hint path" role="status">
+              {copied}
+            </p>
+          )}
+        </div>
+      )}
+      {s.connected && !s.fake && !refresh && (
+        <p class="hint">This connection came from a pasted access token. It lasts about 4 hours and cannot make a phone setup link. To make one, disconnect and tap Connect Dropbox.</p>
+      )}
+    </section>
   );
 }

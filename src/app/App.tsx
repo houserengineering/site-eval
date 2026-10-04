@@ -17,6 +17,7 @@ import { DropboxOpenView } from './SyncPanel';
 import { readBackup, isBackup } from '../domain/backup';
 import { changeSettings, loadSettings, settings, useSettings } from './settings';
 import { markEnrolled, takeEnrollment, type Enrollment } from './enroll';
+import { setDropboxSetupResult, takeDropboxSetup } from './dropboxSetup';
 import { ReviewQueue, setReviewQueue } from './reviewQueue';
 import { SettingsView } from './SettingsView';
 import { Coach } from './demo/Coach';
@@ -70,6 +71,7 @@ export function App() {
   const [error, setError] = useState<string>();
   // Taken before the first route is read, so the token never shows in the address bar.
   const [enrollment] = useState(takeEnrollment);
+  const [dropboxSetup] = useState(takeDropboxSetup);
   const [route, setRoute] = useState(() => parseRoute(location.hash));
   const { percTests } = useSettings();
 
@@ -82,6 +84,7 @@ export function App() {
         const sync = new SyncService(s);
         setSyncService(sync);
         const returnTo = await sync.init();
+        if (dropboxSetup) await sync.useRefreshToken(dropboxSetup).then(() => setDropboxSetupResult('ok'), (e) => setDropboxSetupResult(e.message));
         const reviews = new ReviewQueue({
           store: s,
           token: () => settings().reviewToken.trim(),
@@ -96,7 +99,7 @@ export function App() {
         // The demo: resumed where it was left; required on a device's first launch (spec decision 6).
         const demo = demoState();
         if (demo && demo.step < FINALE && !(await s.get(demo.recordId))) setDemoState(null);
-        if (!returnTo && !enrollment && !demoDone() && !demoState()) await startDemo(s, false);
+        if (!returnTo && !enrollment && !dropboxSetup && !demoDone() && !demoState()) await startDemo(s, false);
         setStore(s);
         opened = s;
       },
@@ -106,6 +109,8 @@ export function App() {
       // An enrollment link opened while the app is already running.
       const e = takeEnrollment();
       if (e && opened) await saveEnrollment(opened, e);
+      const d = takeDropboxSetup();
+      if (d) await syncService().useRefreshToken(d).then(() => setDropboxSetupResult('ok'), (err) => setDropboxSetupResult(err.message));
       setRoute(parseRoute(location.hash));
     };
     addEventListener('hashchange', onHash);

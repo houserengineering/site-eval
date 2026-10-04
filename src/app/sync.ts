@@ -156,6 +156,23 @@ export class SyncService {
     this.kick(0);
   }
 
+  /** Connects with a setup link's refresh token; access then renews by itself (see dropboxSetup.ts). */
+  async useRefreshToken(refreshToken: string) {
+    const fresh = await refreshAuth({ accessToken: '', refreshToken, expiresAt: 0, accountName: '' });
+    const auth: DropboxAuth = { ...fresh, accountName: await accountName(fresh.accessToken) };
+    await this.store.setSetting('dropbox', auth);
+    this.auth = auth;
+    this.adapter = new DropboxSync(() => this.token(), auth.accountName);
+    this.set({ connected: true, account: auth.accountName, error: undefined });
+    if (this.state.who === 'This device') await this.setWho(auth.accountName);
+    this.kick(0);
+  }
+
+  /** The refresh token behind this connection, for a setup link; undefined for a pasted access token. */
+  refreshToken(): string | undefined {
+    return this.auth?.refreshToken;
+  }
+
   async disconnect() {
     await this.store.setSetting('dropbox', undefined);
     this.auth = undefined;

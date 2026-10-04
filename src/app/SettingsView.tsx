@@ -3,6 +3,7 @@ import type { RecordStore } from '../storage/db';
 import { startDemo } from './demo/state';
 import { useState } from 'preact/hooks';
 import { takeEnrolledNotice } from './enroll';
+import { DropboxSettings } from './SyncPanel';
 import { Chips } from './fields';
 import { changeSettings, useSettings } from './settings';
 import { FEATURES } from './features';
@@ -19,6 +20,7 @@ export function SettingsView(props: { store: RecordStore }) {
         <h1>Settings</h1>
       </header>
       <p class="hint">These settings stay on this device.</p>
+      <DropboxSettings />
       <div class="field">
         <button
           type="button"
