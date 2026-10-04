@@ -4,7 +4,7 @@
 // remembers who signed in, so the app keeps working in the field without signal.
 
 /** The site eval web app's OAuth client (public; Google Cloud project under the Houser account). */
-export const GOOGLE_CLIENT_ID = '';
+export const GOOGLE_CLIENT_ID = '796693259540-i3r1dn50pmfsn96d3rsfoc8qq0gn6d25.apps.googleusercontent.com';
 export const COMPANY_DOMAIN = 'houserengineering.com';
 
 const USER_KEY = 'site-eval:google-user';
