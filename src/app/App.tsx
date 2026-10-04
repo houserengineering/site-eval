@@ -17,7 +17,8 @@ import { DropboxOpenView } from './SyncPanel';
 import { readBackup, isBackup } from '../domain/backup';
 import { changeSettings, loadSettings, settings, useSettings } from './settings';
 import { markEnrolled, takeEnrollment, type Enrollment } from './enroll';
-import { setDropboxSetupResult, takeDropboxSetup } from './dropboxSetup';
+import { freshIdToken, onUserChange, signedInUser } from './google';
+import { SignInScreen } from './SignIn';
 import { ReviewQueue, setReviewQueue } from './reviewQueue';
 import { SettingsView } from './SettingsView';
 import { Coach } from './demo/Coach';
@@ -71,7 +72,8 @@ export function App() {
   const [error, setError] = useState<string>();
   // Taken before the first route is read, so the token never shows in the address bar.
   const [enrollment] = useState(takeEnrollment);
-  const [dropboxSetup] = useState(takeDropboxSetup);
+  // Employees only (Nathan, 2026-10-04): nothing shows until a company Google account has signed in on this device.
+  const [user, setUser] = useState(signedInUser);
   const [route, setRoute] = useState(() => parseRoute(location.hash));
   const { percTests } = useSettings();
 
@@ -83,8 +85,10 @@ export function App() {
         if (enrollment) await saveEnrollment(s, enrollment);
         const sync = new SyncService(s);
         setSyncService(sync);
-        const returnTo = await sync.init();
-        if (dropboxSetup) await sync.useRefreshToken(dropboxSetup).then(() => setDropboxSetupResult('ok'), (e) => setDropboxSetupResult(e.message));
+        await sync.init();
+        // Signed in before the store opened: start the office session with that token now.
+        const token = freshIdToken();
+        if (token && signedInUser()) void sync.signedIn(token, signedInUser()!.name);
         const reviews = new ReviewQueue({
           store: s,
           token: () => settings().reviewToken.trim(),
@@ -95,11 +99,10 @@ export function App() {
         setReviewQueue(reviews);
         setFixFallback((recordId, wallId, fix) => void sync.patchWall(recordId, wallId, { location: fix }));
         void reviews.start();
-        if (returnTo) location.hash = returnTo;
         // The demo: resumed where it was left; required on a device's first launch (spec decision 6).
         const demo = demoState();
         if (demo && demo.step < FINALE && !(await s.get(demo.recordId))) setDemoState(null);
-        if (!returnTo && !enrollment && !dropboxSetup && !demoDone() && !demoState()) await startDemo(s, false);
+        if (!enrollment && !demoDone() && !demoState()) await startDemo(s, false);
         setStore(s);
         opened = s;
       },
@@ -109,14 +112,17 @@ export function App() {
       // An enrollment link opened while the app is already running.
       const e = takeEnrollment();
       if (e && opened) await saveEnrollment(opened, e);
-      const d = takeDropboxSetup();
-      if (d) await syncService().useRefreshToken(d).then(() => setDropboxSetupResult('ok'), (err) => setDropboxSetupResult(err.message));
       setRoute(parseRoute(location.hash));
     };
     addEventListener('hashchange', onHash);
-    return () => removeEventListener('hashchange', onHash);
+    const offUser = onUserChange(setUser);
+    return () => {
+      removeEventListener('hashchange', onHash);
+      offUser();
+    };
   }, []);
 
+  if (!user) return <SignInScreen />;
   if (error) return <main class="page"><p class="alert" role="alert">{error}</p></main>;
   if (!store) return <main class="page" aria-busy="true" />;
   return (

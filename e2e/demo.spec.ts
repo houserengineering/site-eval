@@ -5,8 +5,9 @@
 // window, as on Android, where the keyboard covers the page without resizing it. SHOTS_DIR saves a
 // screenshot of every step (and of every keyboard check, with the keyboard drawn in).
 import { expect, test, type Page } from '@playwright/test';
+import { SIGNED_IN } from '../playwright.config';
 
-test.use({ storageState: { cookies: [], origins: [] }, viewport: { width: 412, height: 915 } });
+test.use({ storageState: { cookies: [], origins: [{ origin: new URL(process.env.E2E_URL ?? 'http://localhost:4173').origin, localStorage: [SIGNED_IN] }] }, viewport: { width: 412, height: 915 } });
 
 /** Stands in for window.visualViewport; __keyboard(true) opens the simulated keyboard. */
 function fakeKeyboard() {

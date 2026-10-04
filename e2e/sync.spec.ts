@@ -83,7 +83,7 @@ test('Dropbox: sync, filing to convention beside office files, offline queue, ba
 
   const dropbox = page.getByRole('region', { name: 'Dropbox', exact: true });
   await expect(dropbox.getByText(DBX, { exact: true })).toBeVisible();
-  await expect(dropbox.getByText('Connected to Dropbox as Test Dropbox.')).toBeVisible();
+  await expect(dropbox.getByText('Test Dropbox, through the office PC.')).toBeVisible();
   await dropbox.getByLabel('Your name').fill('Nathan Hart');
   await dropbox.getByRole('button', { name: 'Sync now' }).click();
   await expect(dropbox.getByText('Soil Logs.xlsx filed', { exact: false })).toBeVisible({ timeout: 30_000 });
@@ -144,7 +144,7 @@ test('Dropbox: the wrong account (0271) files nothing and asks for a folder that
 
   await page.getByLabel('Load job file or backup').setInputFiles('test/fixtures/example-job.json');
   const dropbox = page.getByRole('region', { name: 'Dropbox', exact: true });
-  await expect(dropbox.getByText('Connected to Dropbox as Someone Else.')).toBeVisible();
+  await expect(dropbox.getByText('Someone Else, through the office PC.')).toBeVisible();
   await expect(dropbox.getByRole('status').filter({ hasText: `${DBX} is not in the Dropbox account Someone Else. Nothing was filed.` })).toBeVisible({ timeout: 15_000 });
   await shot(page, '74-wrong-account');
 
@@ -213,31 +213,4 @@ test('Dropbox: no project number files to its own folder under Office/Site Evalu
   await section.getByRole('button', { name: 'Sync now' }).click();
   await expect(section.getByRole('status').filter({ hasText: 'Synced to Dropbox' })).toBeVisible({ timeout: 15_000 });
   expect((await fakePaths(page)).some((p) => p.startsWith(`${folder}/`))).toBe(true);
-});
-
-test('Dropbox: a phone setup link connects for good and can be passed on', async ({ page }) => {
-  const refresh = 'test-refresh-token-0123456789abcdef';
-  let refreshed = 0;
-  await page.route('https://api.dropboxapi.com/oauth2/token', async (route) => {
-    const body = new URLSearchParams(route.request().postData() ?? '');
-    expect(body.get('grant_type')).toBe('refresh_token');
-    expect(body.get('refresh_token')).toBe(refresh);
-    refreshed++;
-    await route.fulfill({ json: { access_token: `access-${refreshed}`, expires_in: 14400, token_type: 'bearer' } });
-  });
-  await page.route('https://api.dropboxapi.com/2/users/get_current_account', (route) => route.fulfill({ json: { name: { display_name: 'Justin Houser' } } }));
-  await page.route('https://api.dropboxapi.com/2/files/**', (route) => route.fulfill({ status: 409, body: '{"error_summary":"path/not_found/"}' }));
-  await page.goto(`./#/dropbox-setup/${refresh}`);
-  await expect(page.getByRole('status').filter({ hasText: 'This phone is connected to Dropbox as Justin Houser. It stays connected' })).toBeVisible({ timeout: 15_000 });
-  // The token never stays in the address bar or history.
-  expect(new URL(page.url()).hash).toBe('#/settings');
-  expect(refreshed).toBe(1);
-  // This phone can pass the connection on.
-  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
-  await page.getByRole('button', { name: 'Copy phone setup link' }).click();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(new RegExp(`#/dropbox-setup/${refresh}$`));
-  // Still connected after the app is opened again.
-  await page.reload();
-  await expect(page.getByText('Connected to Dropbox as Justin Houser.', { exact: true })).toBeVisible();
-  await expect(page.getByText('This phone is connected to Dropbox')).toHaveCount(0);
 });

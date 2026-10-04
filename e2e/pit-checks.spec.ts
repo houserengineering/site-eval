@@ -66,7 +66,7 @@ test('pit checks: flags on the wall and in the pit list, retake prompt, accept w
 
   // Accepting records who and when; the soil log is released.
   await checks.getByRole('button', { name: 'Accept: Log ends at 84"; log the wall to 96".' }).click();
-  await expect(checks.getByText(/^Accepted by This device \d+\/\d+\/\d+ \d+:\d\d [AP]M$/)).toBeVisible();
+  await expect(checks.getByText(/^Accepted by Test User \d+\/\d+\/\d+ \d+:\d\d [AP]M$/)).toBeVisible();
   await expect(checks.getByText('All accepted.')).toBeVisible();
   await expect(page.getByRole('button', { name: /pit checks? open/ })).toHaveCount(0);
   await shot(page, '92-check-accepted', checks);

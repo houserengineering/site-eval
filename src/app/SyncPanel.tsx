@@ -1,5 +1,6 @@
 // Dropbox UI: the sync status line, the per-site-evaluation Dropbox section (how it works, account,
-// destination folder, one main action, backup), connecting Dropbox, and opening a site evaluation from Dropbox.
+// destination folder, one main action, backup), Settings › Account and Dropbox, and opening a site evaluation from
+// Dropbox. Dropbox access comes from the office PC once someone has signed in with Google (src/sync/office.ts).
 
 import { useEffect, useState } from 'preact/hooks';
 import { backupName, makeBackup } from '../domain/backup';
@@ -15,7 +16,8 @@ import { go } from './App';
 import { download } from './deliverables';
 import { TextField } from './fields';
 import { syncService, useSyncState, type SyncState } from './sync';
-import { dropboxSetupLink, takeDropboxSetupResult } from './dropboxSetup';
+import { GoogleButton } from './SignIn';
+import { signedInUser, signOut } from './google';
 
 const time = (iso?: string) => (iso ? new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '');
 
@@ -26,7 +28,7 @@ export function syncLine(s: SyncState, r: FieldRecord): { text: string; tone: 'o
   // The record reached Dropbox after the last change; only the deliverables wait (refreshed each minute).
   const recordSynced = !!rs.at && (!entry || rs.at >= entry.changedAt);
   const waiting = !!entry && !recordSynced;
-  if (!s.connected) return { text: 'Saved on this device. Dropbox not connected.', tone: 'warn' };
+  if (!s.connected) return { text: 'Saved on this device. Not signed in, so nothing goes to Dropbox.', tone: 'warn' };
   if (s.error) return { text: s.error, tone: 'bad' };
   if (!r.deliverableFolder) {
     const p = rs.plan;
@@ -78,7 +80,7 @@ export function DropboxSection(props: { record: FieldRecord; save: (r: FieldReco
     return (
       <section aria-labelledby="dbx">
         <h2 id="dbx">Dropbox</h2>
-        <p class="hint">On a real job, connect Dropbox here once. The soil logs, photos and field record are then saved to the project folder. It is turned off for this practice job.</p>
+        <p class="hint">On a real job, the soil logs, photos and field record are saved to the project folder in Dropbox automatically. It is turned off for this practice job.</p>
       </section>
     );
   const folder = r.deliverableFolder ? dropboxFolder(r.deliverableFolder) : '';
@@ -89,15 +91,15 @@ export function DropboxSection(props: { record: FieldRecord; save: (r: FieldReco
   return (
     <section aria-labelledby="dbx">
       <h2 id="dbx">Dropbox</h2>
-      <p class="hint">Connect Dropbox once. Each site evaluation then saves to its project folder on the Server: the soil logs, photos and field record.</p>
+      <p class="hint">Each site evaluation saves to its project folder on the Server through the office PC: the soil logs, photos and field record.</p>
       <SyncStatus record={r} />
-      {!s.connected && <ConnectDropbox />}
+      {s.needsGoogle && <SignInAgain />}
       {s.connected && (
         <dl class="dbx-facts">
           <div>
             <dt>Account</dt>
             <dd>
-              <DropboxAccount account={s.account} fake={s.fake} main={main === 'account'} />
+              <DropboxAccount account={s.account} main={main === 'account'} />
             </dd>
           </div>
           <div>
@@ -183,55 +185,23 @@ function folderState(r: FieldRecord, plan: FolderPlan | undefined, missing: bool
 }
 
 /** Which Dropbox account files go to. On 0271 the phone was signed in to another account and nothing reached the office. */
-function DropboxAccount({ account, fake, main }: { account: string; fake: boolean; main: boolean }) {
+function DropboxAccount({ account, main }: { account: string; main: boolean }) {
   return (
     <>
       <p>
-        Connected to Dropbox as <strong>{account || 'an unnamed account'}</strong>.
+        <strong>{account || 'The Houser Dropbox'}</strong>, through the office PC.
       </p>
-      {main && <p class="hint">Disconnect, then connect again with your Houser Engineering login.</p>}
-      {!fake && (
-        <button class={`btn ${main ? 'primary' : 'small'}`} onClick={() => syncService().disconnect()}>
-          Disconnect Dropbox
-        </button>
-      )}
+      {main && <p class="hint">The office PC is connected to the wrong Dropbox. Ask the office to connect the Houser Dropbox again.</p>}
     </>
   );
 }
 
-export function ConnectDropbox() {
-  const [token, setToken] = useState('');
-  const [error, setError] = useState<string>();
-  const use = async () => {
-    try {
-      await syncService().useAccessToken(token);
-      setToken('');
-    } catch (e: any) {
-      setError(e.message);
-    }
-  };
+/** The office session ended (after 7 days, or the office cut it off): one Google sign-in gets Dropbox back. */
+function SignInAgain() {
   return (
-    <div class="connect">
-      <button class="btn primary block" onClick={() => syncService().connect()}>
-        Connect Dropbox
-      </button>
-      <p class="hint">
-        Easiest: open the phone setup link from the office once. Or tap Connect Dropbox, sign in to the Houser Dropbox (Justin Houser's account, the one with the Server
-        folder) and tap Allow. If Dropbox shows another account, sign out of it at dropbox.com first.
-      </p>
-      <details>
-        <summary>Sign-in not working?</summary>
-        <p class="hint">The office can make an access token in the Dropbox app console. Paste it here. It lasts about 4 hours, then you connect again.</p>
-        <TextField label="Access token" value={token} onInput={setToken} autoCapitalize="off" />
-        <button class="btn small" onClick={use} disabled={!token.trim()}>
-          Use token
-        </button>
-        {error && (
-          <p class="alert" role="alert">
-            {error}
-          </p>
-        )}
-      </details>
+    <div class="dbx-google">
+      <p class="hint">Sign in with Google again to keep saving to Dropbox. Your work is safe on this phone meanwhile.</p>
+      <GoogleButton />
     </div>
   );
 }
@@ -386,7 +356,8 @@ export function DropboxOpenView({ store }: { store: RecordStore }) {
         </a>
         <h1>Open from Dropbox</h1>
       </header>
-      {!s.connected && <ConnectDropbox />}
+      {!s.connected && <p class="hint">Sign in to open site evaluations from Dropbox.</p>}
+      {s.needsGoogle && <SignInAgain />}
       {s.connected && (
         <>
           <p class="hint">
@@ -472,59 +443,39 @@ function CreateProjectFolder(props: { create: () => Promise<void> }) {
   );
 }
 
-/** Settings › Dropbox: this device's connection, and the setup link that connects other phones. */
+/** Settings › Account and Dropbox: who is signed in on this device, and how Dropbox is reached. */
 export function DropboxSettings() {
   const s = useSyncState();
-  const [result] = useState(takeDropboxSetupResult);
-  const [copied, setCopied] = useState<string>();
-  const refresh = s.connected && !s.fake ? syncService().refreshToken() : undefined;
-  const copy = async () => {
-    const link = dropboxSetupLink(refresh!);
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopied('Copied. Paste it into a text or email to each phone.');
-    } catch {
-      setCopied(link);
-    }
+  const user = signedInUser();
+  const out = async () => {
+    if (!confirm('Sign out on this phone? Saved site evaluations stay on it, but nothing opens or goes to Dropbox until someone signs in again.')) return;
+    await syncService().signedOut();
+    signOut();
   };
   return (
-    <section aria-labelledby="dbx-settings">
-      <h2 id="dbx-settings">Dropbox</h2>
-      {result === 'ok' && (
-        <p class="sync-line ok" role="status">
-          This phone is connected to Dropbox as {s.account}. It stays connected; there is nothing else to set up.
-        </p>
-      )}
-      {result && result !== 'ok' && (
-        <p class="sync-line bad" role="alert">
-          The setup link did not work ({result}). Ask the office for a new one.
-        </p>
-      )}
-      {!s.connected && <ConnectDropbox />}
-      {s.connected && (
+    <>
+      <section aria-labelledby="account-settings">
+        <h2 id="account-settings">Account</h2>
         <p>
-          Connected to Dropbox as <strong>{s.account || 'an unnamed account'}</strong>.
+          Signed in as <strong>{user?.email}</strong>.
         </p>
-      )}
-      {refresh && (
-        <div class="dbx-option">
-          <p class="hint">
-            The phone setup link connects another phone to this Dropbox in one tap, for good: the phone renews its own access. Send it privately. Anyone with the link can
-            open the Houser Dropbox, so never post it.
+        <button class="btn small" onClick={out}>
+          Sign out
+        </button>
+      </section>
+      <section aria-labelledby="dbx-settings">
+        <h2 id="dbx-settings">Dropbox</h2>
+        <p class="hint">
+          This phone saves to {s.account ? <strong>{s.account}</strong> : 'the Houser Dropbox'} through the office PC, renewed automatically. There is nothing to set up. While the office PC is off,
+          work stays on this phone and goes to Dropbox when it is back.
+        </p>
+        {s.error && (
+          <p class="sync-line bad" role="alert">
+            {s.error}
           </p>
-          <button class="btn small" onClick={copy}>
-            Copy phone setup link
-          </button>
-          {copied && (
-            <p class="hint path" role="status">
-              {copied}
-            </p>
-          )}
-        </div>
-      )}
-      {s.connected && !s.fake && !refresh && (
-        <p class="hint">This connection came from a pasted access token. It lasts about 4 hours and cannot make a phone setup link. To make one, disconnect and tap Connect Dropbox.</p>
-      )}
-    </section>
+        )}
+        {s.needsGoogle && <SignInAgain />}
+      </section>
+    </>
   );
 }

@@ -571,7 +571,7 @@ export const STEPS: Step[] = [
     id: 'dropbox',
     screen: 'site',
     title: 'Dropbox',
-    text: () => 'On a real job, connect Dropbox here once, and the soil logs and photos are saved to the project folder automatically. It is turned off for this practice job.',
+    text: () => 'On a real job, the soil logs and photos are saved to the project folder in Dropbox automatically. It is turned off for this practice job.',
     target: () => one(document.querySelector<HTMLElement>('section[aria-labelledby="dbx"]')),
     button: { label: 'Next' },
   },

@@ -5,7 +5,9 @@ import type { FieldRecord, TestPit } from '../domain/fieldRecord';
 import { mergeRecords, sameRecord, stampEdits } from '../domain/merge';
 import type { OutboxEntry, RecordStore } from '../storage/db';
 import { AuthError, FakeSync, OfflineError, type SyncAdapter } from '../sync/adapter';
-import { accountName, DropboxSync, finishSignIn, refreshAuth, startSignIn, type DropboxAuth } from '../sync/dropbox';
+import { DropboxSync } from '../sync/dropbox';
+import { GoogleSignInNeeded, OfficeDropbox, type OfficeDropboxToken } from '../sync/office';
+import { freshIdToken, signedInUser } from './google';
 import { fileDeliverables, MissingFolderError, NoFolderError, sendToPrintQueue, syncRecord, type FilingResult, type PrintableKind, type SyncContext } from '../sync/engine';
 import { photoSource } from './deliverables';
 import { loadTemplates } from './templates';
@@ -44,6 +46,8 @@ export interface SyncState {
   records: Record<string, RecordSyncStatus>;
   /** Problem not tied to one record (sign-in). */
   error?: string;
+  /** Only a new Google sign-in gets Dropbox access back (the office session ended). */
+  needsGoogle?: boolean;
   fake: boolean;
 }
 
@@ -58,7 +62,7 @@ export class SyncService {
   state: SyncState = { connected: false, account: '', who: '', online: navigator.onLine, busy: false, pending: {}, records: {}, fake: false };
   private listeners = new Set<Listener>();
   private recordListeners = new Set<(r: FieldRecord) => void>();
-  private auth?: DropboxAuth;
+  private office: OfficeDropbox;
   private adapter?: SyncAdapter;
   private timer?: ReturnType<typeof setTimeout>;
   private open?: string;
@@ -66,10 +70,16 @@ export class SyncService {
   private running?: Promise<void>;
   private again = false;
 
-  constructor(private store: RecordStore) {}
+  constructor(private store: RecordStore) {
+    this.office = new OfficeDropbox({
+      fetch: (...a) => fetch(...a),
+      getSetting: (k) => store.getSetting(k),
+      setSetting: (k, v) => store.setSetting(k, v),
+      idToken: async () => freshIdToken(),
+    });
+  }
 
-  async init(): Promise<string | undefined> {
-    let returnTo: string | undefined;
+  async init(): Promise<void> {
     const params = new URLSearchParams(location.search);
     // `?fake-dropbox=Name` signs the fake in as another account (the 0271 wrong-account case).
     const saved = safeGet(FAKE_FLAG);
@@ -84,22 +94,12 @@ export class SyncService {
       this.adapter = f;
       this.set({ connected: true, account: f.account, fake: true });
     } else {
-      try {
-        const done = await finishSignIn();
-        if (done) {
-          await this.store.setSetting('dropbox', done.auth);
-          returnTo = done.hash;
-        }
-      } catch (e: any) {
-        this.set({ error: e.message });
-      }
-      this.auth = await this.store.getSetting<DropboxAuth>('dropbox');
-      if (this.auth) {
-        this.adapter = new DropboxSync(() => this.token(), this.auth.accountName);
-        this.set({ connected: true, account: this.auth.accountName });
-      }
+      // Dropbox comes only through the office PC now; a phone's own old connection (Connect Dropbox or a setup
+      // link, possibly to the wrong account) is dropped.
+      if (await this.store.getSetting('dropbox')) await this.store.setSetting('dropbox', undefined);
+      if (signedInUser()) await this.useOffice();
     }
-    const who = (await this.store.getSetting<string>('editor')) || this.state.account || 'This device';
+    const who = (await this.store.getSetting<string>('editor')) || signedInUser()?.name || this.state.account || 'This device';
     this.set({ who, pending: Object.fromEntries((await this.store.outbox()).map((e) => [e.recordId, e])) });
     addEventListener('online', () => {
       this.set({ online: true });
@@ -108,7 +108,6 @@ export class SyncService {
     addEventListener('offline', () => this.set({ online: false }));
     setInterval(() => this.kick(0), AUTO_MS);
     this.kick(0);
-    return returnTo;
   }
 
   subscribe(fn: Listener) {
@@ -131,53 +130,44 @@ export class SyncService {
     this.set({ records: { ...this.state.records, [id]: { ...this.state.records[id], ...patch } } });
   }
 
-  private async token(): Promise<string> {
-    if (!this.auth) throw new AuthError('Connect Dropbox first.');
-    if (this.auth.expiresAt - Date.now() < 5 * 60_000 && this.auth.refreshToken) {
-      this.auth = await refreshAuth(this.auth);
-      await this.store.setSetting('dropbox', this.auth);
+  /** Files through the office PC's Dropbox connection (src/sync/office.ts). */
+  private async useOffice() {
+    const last = await this.store.getSetting<OfficeDropboxToken>('officeDropbox');
+    const account = last?.accountName ?? '';
+    const adapter = new DropboxSync(async () => {
+      const t = await this.office.accessToken();
+      if (t.accountName && t.accountName !== this.state.account) {
+        adapter.account = t.accountName;
+        this.set({ account: t.accountName });
+      }
+      return t.accessToken;
+    }, account);
+    this.adapter = adapter;
+    this.set({ connected: true, account });
+  }
+
+  /** After the Google button: starts the office session now, while the ID token is fresh. */
+  async signedIn(idToken: string, name: string) {
+    if (this.state.fake) return;
+    if (this.state.who === 'This device') await this.setWho(name);
+    this.set({ error: undefined, needsGoogle: false });
+    if (!this.adapter) await this.useOffice();
+    try {
+      await this.office.session(idToken);
+    } catch (e: any) {
+      // No signal or the office PC is off: the token stays usable for an hour, and later syncs retry.
+      if (!(e instanceof OfflineError)) this.set({ error: e.message, needsGoogle: e instanceof GoogleSignInNeeded });
     }
-    return this.auth.accessToken;
-  }
-
-  connect() {
-    return startSignIn();
-  }
-
-  /** Signs in with an access token generated in the Dropbox app console (lasts about 4 hours). */
-  async useAccessToken(token: string) {
-    const t = token.trim();
-    const auth: DropboxAuth = { accessToken: t, expiresAt: Date.now() + 4 * 3600_000, accountName: await accountName(t) };
-    await this.store.setSetting('dropbox', auth);
-    this.auth = auth;
-    this.adapter = new DropboxSync(() => this.token(), auth.accountName);
-    this.set({ connected: true, account: auth.accountName, error: undefined });
-    if (this.state.who === 'This device') await this.setWho(auth.accountName);
     this.kick(0);
   }
 
-  /** Connects with a setup link's refresh token; access then renews by itself (see dropboxSetup.ts). */
-  async useRefreshToken(refreshToken: string) {
-    const fresh = await refreshAuth({ accessToken: '', refreshToken, expiresAt: 0, accountName: '' });
-    const auth: DropboxAuth = { ...fresh, accountName: await accountName(fresh.accessToken) };
-    await this.store.setSetting('dropbox', auth);
-    this.auth = auth;
-    this.adapter = new DropboxSync(() => this.token(), auth.accountName);
-    this.set({ connected: true, account: auth.accountName, error: undefined });
-    if (this.state.who === 'This device') await this.setWho(auth.accountName);
-    this.kick(0);
-  }
-
-  /** The refresh token behind this connection, for a setup link; undefined for a pasted access token. */
-  refreshToken(): string | undefined {
-    return this.auth?.refreshToken;
-  }
-
-  async disconnect() {
-    await this.store.setSetting('dropbox', undefined);
-    this.auth = undefined;
-    this.adapter = this.state.fake ? this.adapter : undefined;
-    this.set({ connected: this.state.fake, account: this.state.fake ? this.state.account : '' });
+  /** Settings › Sign out: this device keeps its saved work but loses Dropbox until someone signs in again. */
+  async signedOut() {
+    await this.office.forget();
+    if (!this.state.fake) {
+      this.adapter = undefined;
+      this.set({ connected: false, account: '', error: undefined, needsGoogle: false });
+    }
   }
 
   async setWho(name: string) {
@@ -206,7 +196,7 @@ export class SyncService {
     return saved;
   }
 
-  /** The review service URL the office PC publishes in Dropbox (ticket 11); the last one read when offline. */
+  /** The review service URL the office PC publishes in Dropbox (ticket 11), else in the gist; the last one read when offline. */
   async reviewServiceUrl(): Promise<string | undefined> {
     const cached = await this.store.getSetting<string>('reviewServiceUrl');
     try {
@@ -217,7 +207,7 @@ export class SyncService {
         return url;
       }
     } catch {}
-    return cached;
+    return (await this.office.serviceUrl(true)) ?? cached;
   }
 
   /** Stamps the change, queues it, and schedules a sync. Returns the record to save. */
@@ -301,6 +291,7 @@ export class SyncService {
         try {
           await this.syncOne(id);
           this.setRecord(id, { error: undefined, folderMissing: false });
+          if (this.state.error) this.set({ error: undefined, needsGoogle: false });
         } catch (e: any) {
           if (e instanceof OfflineError) {
             this.set({ online: navigator.onLine });
@@ -308,7 +299,8 @@ export class SyncService {
             break;
           }
           if (e instanceof AuthError) {
-            this.set({ error: e.message });
+            this.set({ error: e.message, needsGoogle: e instanceof GoogleSignInNeeded });
+            if (!(e instanceof GoogleSignInNeeded) && !this.state.fake) await this.office.dropToken();
             break;
           }
           const folder = e instanceof NoFolderError || e instanceof MissingFolderError;

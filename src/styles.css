@@ -642,3 +642,16 @@ body:has(.coach) { padding-bottom: 70vh; }
 /* The back control: a drawn chevron, centred in its 48px target (the ‹ glyph sits low). */
 .back { font-size: 0; padding: 0; }
 .back::before { content: ''; width: 13px; height: 13px; margin-left: 6px; border: solid currentColor; border-width: 0 0 3px 3px; transform: rotate(45deg); }
+
+/* Sign-in: one centred column under the bar; Google draws its own button. */
+.signin-body { display: grid; justify-items: center; text-align: center; gap: var(--s2); max-width: 26rem; margin: 0 auto; padding: var(--s6) 0 var(--s5); }
+.signin-icon { width: 72px; height: 72px; border-radius: var(--radius-lg); }
+.signin-org { margin: var(--s2) 0 0; font-size: var(--fs-over); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.signin-title { margin: 0; font-size: var(--fs-title); line-height: 1.2; }
+.signin-body > .hint { margin: 0 0 var(--s3); }
+.signin-foot { margin-top: var(--s4) !important; }
+.google-signin { display: grid; justify-items: center; gap: var(--s3); width: 100%; }
+.google-button { min-height: 44px; display: flex; justify-content: center; width: 100%; }
+.dbx-google { display: grid; gap: var(--s2); margin: 0 0 var(--s4); }
+.dbx-google .google-signin { justify-items: start; }
+.dbx-google .google-button { justify-content: flex-start; }
