@@ -136,7 +136,7 @@ function PitPhotos({ record, pit, store, patchPit }: Props) {
   return (
     <section class="card" aria-labelledby={`photos-${pit.id}`}>
       <h2 id={`photos-${pit.id}`}>Photos</h2>
-      {pit.photos.length === 0 && <p class="muted">No photo yet. The first photo prints on the soil log.</p>}
+      {pit.photos.length === 0 && <p class="muted">No photo yet. The first photo goes on the soil log.</p>}
       <p class="muted">For the color check, take one photo square to the wall, surface at the top edge and log bottom at the bottom, and mark it Wall face.</p>
       <ul class="photos">
         {pit.photos.map((p, i) => (

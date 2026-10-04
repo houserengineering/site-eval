@@ -19,7 +19,7 @@ test('Dropbox: an automatic folder follows a corrected project number', async ({
   job.header.projectNumber = '0999.001';
   job.deliverableFolder = '';
   await page.getByLabel('Load job file or backup').setInputFiles({ name: 'example-job.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(job)) });
-  const section = page.getByRole('region', { name: 'Dropbox and office printing' });
+  const section = page.getByRole('region', { name: 'Dropbox', exact: true });
   await expect(section.getByText('/Server/0999/001', { exact: true })).toBeVisible();
   await page.getByLabel('Project #', { exact: true }).fill('0999.002');
   await section.getByRole('button', { name: 'Sync now' }).click();
@@ -47,7 +47,7 @@ test('Dropbox: defaults to the exact subproject, repairs the doubled root and pr
   job.header.confirmationNumber = 'SE CONFIRM 00001';
   job.deliverableFolder = '/Server/Server/Site Eval App';
   await page.getByLabel('Load job file or backup').setInputFiles({ name: 'example-job.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(job)) });
-  const section = page.getByRole('region', { name: 'Dropbox and office printing' });
+  const section = page.getByRole('region', { name: 'Dropbox', exact: true });
   await expect(section.getByText('/Server/0999/001', { exact: true })).toBeVisible();
   await expect(section.getByRole('status').filter({ hasText: /^Synced to Dropbox/ })).toBeVisible();
   await section.getByRole('button', { name: 'Change folder' }).click();
@@ -65,7 +65,7 @@ test('Dropbox: defaults to the exact subproject, repairs the doubled root and pr
   expect(record.header.confirmationNumber).toBe('SE CONFIRM 00001');
 });
 
-test('Dropbox: sync, filing to convention beside office files, offline queue, print at office, backup, open from Dropbox', async ({ page, context }) => {
+test('Dropbox: sync, filing to convention beside office files, offline queue, backup, open from Dropbox', async ({ page, context }) => {
   test.setTimeout(150_000);
   await page.goto('./?fake-dropbox');
   await page.evaluate(() => navigator.serviceWorker.ready);
@@ -79,7 +79,7 @@ test('Dropbox: sync, filing to convention beside office files, offline queue, pr
   await expect(page.getByRole('heading', { name: '0999.007' })).toBeVisible();
   await expect(page.getByRole('status').filter({ hasText: /^Synced to Dropbox/ }).first()).toBeVisible({ timeout: 15_000 });
 
-  const dropbox = page.getByRole('region', { name: 'Dropbox and office printing' });
+  const dropbox = page.getByRole('region', { name: 'Dropbox', exact: true });
   await expect(dropbox.getByText(DBX, { exact: true })).toBeVisible();
   await expect(dropbox.getByText('Connected to Dropbox as Test Dropbox.')).toBeVisible();
   await dropbox.getByLabel('Your name').fill('Nathan Hart');
@@ -101,7 +101,7 @@ test('Dropbox: sync, filing to convention beside office files, offline queue, pr
 
   // Offline: edits queue on the phone, then sync when signal returns.
   await context.setOffline(true);
-  await page.getByLabel('Owner name').fill('Example Owner LLC');
+  await page.getByLabel('Evaluated by').fill('Example Evaluator');
   await expect(page.getByText('Saved on this device. Will sync when there is signal.').first()).toBeVisible({ timeout: 15_000 });
   await shot(page, '71-offline-queued', false);
   await context.setOffline(false);
@@ -110,13 +110,11 @@ test('Dropbox: sync, filing to convention beside office files, offline queue, pr
     const f = [...(window as any).__fakeDropbox.files.values()].find((x: any) => /Field Record/.test(x.path));
     return JSON.parse(new TextDecoder().decode(f.bytes));
   });
-  expect(synced.header.ownerName).toBe('Example Owner LLC');
+  expect(synced.header.evalBy).toBe('Example Evaluator');
   expect(Object.values(synced.edits).map((e: any) => e.by)).toContain('Nathan Hart');
 
-  // Print at office: the combined PDF lands in the print queue.
-  await dropbox.getByRole('button', { name: 'Print at office' }).click();
-  await expect(dropbox.getByText(/Sent to the office print queue: 0999\.007 Soil Logs \d{4}-\d\d-\d\d \d{6}\.pdf/)).toBeVisible({ timeout: 30_000 });
-  expect((await fakePaths(page)).some((p) => p.startsWith('/Server/Office/Site Eval App/Print Queue/0999.007 Soil Logs '))).toBe(true);
+  // Soil logs are only ever PDFs (Nathan, 2026-10-04): no Print at office button.
+  await expect(dropbox.getByRole('button', { name: 'Print at office' })).toHaveCount(0);
 
   // Backup to a file.
   const dl = page.waitForEvent('download');
@@ -133,7 +131,7 @@ test('Dropbox: sync, filing to convention beside office files, offline queue, pr
   await shot(page, '73-open-from-dropbox');
   await open.getByRole('button', { name: /Site evaluation in progress/ }).click();
   await expect(page.getByRole('heading', { name: '0999.007' })).toBeVisible();
-  await expect(page.getByLabel('Owner name')).toHaveValue('Example Owner LLC');
+  await expect(page.getByLabel('Evaluated by')).toHaveValue('Example Evaluator');
 });
 
 test('Dropbox: the wrong account (0271) files nothing and asks for a folder that exists', async ({ page }) => {
@@ -143,7 +141,7 @@ test('Dropbox: the wrong account (0271) files nothing and asks for a folder that
   await page.evaluate(() => (window as any).__fakeDropbox.mkdir('/Server/Server/Site Eval App')); // what that account had
 
   await page.getByLabel('Load job file or backup').setInputFiles('test/fixtures/example-job.json');
-  const dropbox = page.getByRole('region', { name: 'Dropbox and office printing' });
+  const dropbox = page.getByRole('region', { name: 'Dropbox', exact: true });
   await expect(dropbox.getByText('Connected to Dropbox as Someone Else.')).toBeVisible();
   await expect(dropbox.getByRole('status').filter({ hasText: `${DBX} is not in the Dropbox account Someone Else. Nothing was filed.` })).toBeVisible({ timeout: 15_000 });
   await shot(page, '74-wrong-account');
@@ -165,7 +163,7 @@ const loadJob = async (page: Page, edit: (job: any) => void) => {
   const job = JSON.parse(readFileSync('test/fixtures/example-job.json', 'utf8'));
   edit(job);
   await page.getByLabel('Load job file or backup').setInputFiles({ name: 'example-job.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(job)) });
-  return page.getByRole('region', { name: 'Dropbox and office printing' });
+  return page.getByRole('region', { name: 'Dropbox', exact: true });
 };
 
 test('Dropbox: a missing project folder is created only when asked, at the exact path shown', async ({ page }) => {

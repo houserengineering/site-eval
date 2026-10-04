@@ -1,6 +1,6 @@
 // One field guide for the grey examples on every text and number field and for the demo's answer
-// key (demo spec 2026-10-03, decision 4). Placeholder examples are made up; the demo's answer key is
-// a real job (see DEMO_KEY).
+// key (demo spec 2026-10-03, decision 4). The examples are the 0271 job's, the same job as the demo's
+// answer key (DEMO_KEY), so a placeholder never shows a made-up value (Nathan, 2026-10-04).
 
 export interface GuideEntry {
   /** Grey placeholder shown while the field is empty. */
@@ -10,12 +10,12 @@ export interface GuideEntry {
 /** By field label, as the screens pass it. */
 export const FIELD_GUIDE: Record<string, GuideEntry> = {
   // Site evaluation header
-  'Project #': { example: '0279.001' },
-  'Project name': { example: 'Smith Minor Subdivision' },
-  Location: { example: '1234 Example Road, Belgrade' },
-  'Evaluated by': { example: 'J. Smith' },
-  'Confirmation number': { example: 'SE CONFIRM 00123' },
-  'Owner name': { example: 'John and Jane Smith' },
+  'Project #': { example: '0271.001' },
+  'Project name': { example: 'Stillwater Subdivision' },
+  Location: { example: '6133 Bigelow Road, Bozeman MT 59718' },
+  'Evaluated by': { example: 'Justin Houser' },
+  'Confirmation number': { example: 'SE CONFIRM 00278' },
+  'Owner name': { example: 'BC Bigelow LLC' },
   'New test pit #': { example: '1' },
   'New perc test #': { example: '1' },
   // Test pit wall
@@ -38,19 +38,19 @@ export const FIELD_GUIDE: Record<string, GuideEntry> = {
   'Hole diameter': { example: '6' },
   'Hole depth': { example: '24' },
   'Reference point above hole bottom': { example: '30' },
-  'Tester (printed name)': { example: 'J. Smith' },
+  'Tester (printed name)': { example: 'Justin Houser' },
   'Fixed drop': { example: '1' },
   'Reading interval': { example: '30' },
   'Perc test notes': { example: 'PRESOAKED OVERNIGHT' },
   'Initial distance below reference point': { example: '12' },
   'Final distance below reference point': { example: '13' },
-  'Printed name': { example: 'J. Smith, PE' },
+  'Printed name': { example: 'Justin Houser' },
   Company: { example: 'Houser Engineering' },
   // Groundwater monitoring
   'New observation well #': { example: '1' },
   'Observation well #': { example: '1' },
-  'Monitored by': { example: 'J. Smith' },
-  'Section, township, range': { example: 'S12, T1S, R5E' },
+  'Monitored by': { example: 'Justin Houser' },
+  'Section, township, range': { example: 'S35, T2S, R5E' },
   'Lot #': { example: '3' },
   'Other location info': { example: 'NE corner of lot 3' },
   'Stick-up as installed (B)': { example: '24' },
@@ -58,11 +58,11 @@ export const FIELD_GUIDE: Record<string, GuideEntry> = {
   'A: total depth measured': { example: '120' },
   'A: top of pipe to water': { example: '84' },
   'B: top of pipe to ground': { example: '24' },
-  'Read by': { example: 'J. Smith' },
+  'Read by': { example: 'Justin Houser' },
   // Dropbox
   'Your name': { example: 'Justin' },
   'Access token': { example: 'Paste the token from the office' },
-  'Go to folder': { example: '/Server/0279/001' },
+  'Go to folder': { example: '/Server/0271/001' },
 };
 
 export const placeholderFor = (label: string) => FIELD_GUIDE[label]?.example ?? '';
@@ -74,7 +74,7 @@ export interface DemoHorizon {
   color: { hue: string; value: string; chroma: string };
   texture: string;
   rockPct: number;
-  /** Rock size, needed from 15% up. */
+  /** Rock size: the demo picks it whenever there is rock (the soil log needs it from 15% up). */
   rockKind?: string;
   structure: { shape: string; grade: string; size: string };
   consistence: string;
@@ -106,6 +106,7 @@ export const DEMO_KEY = {
       color: { hue: '10YR', value: '3', chroma: '2' },
       texture: 'CLAY LOAM',
       rockPct: 10,
+      rockKind: 'GRAVEL',
       structure: { shape: 'BLOCKY', grade: 'MODERATE', size: 'FINE' },
       consistence: 'FRIABLE',
       plasticity: 'SLIGHTLY PLASTIC',

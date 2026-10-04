@@ -119,7 +119,7 @@ export function CertifierSetup(props: { store: RecordStore }) {
       </p>
       {loaded && (
         <form onSubmit={saveIt}>
-          <TextField label="Printed name" value={p.name} onInput={(v) => setP({ ...p, name: v })} autoCapitalize="words" hint="As it prints under the signature, e.g. Justin Houser, PE" />
+          <TextField label="Printed name" value={p.name} onInput={(v) => setP({ ...p, name: v })} autoCapitalize="words" hint="As it appears under the signature." />
           <TextField label="Company" value={p.company} onInput={(v) => setP({ ...p, company: v })} autoCapitalize="words" />
           {p.signaturePng && (
             <div class="field">

@@ -206,7 +206,7 @@ function HorizonCard(props: {
               onChange={(v) => set({ rock: { ...hz.rock, kind2: v } })}
             />
           )}
-          {textureText(hz) && <p class="readout">Prints as <strong>{textureText(hz)}</strong></p>}
+          {textureText(hz) && <p class="readout">On the soil log: <strong>{textureText(hz)}</strong></p>}
         </fieldset>
 
         <fieldset class="group">
@@ -223,7 +223,7 @@ function HorizonCard(props: {
           )}
           {suggest('structure')}
           {hz.structure.other && <TextField label="Structure as typed" value={hz.structure.other} onInput={(v) => set({ structure: { ...hz.structure, other: v } })} autoCapitalize="characters" hint="Picking above replaces this text." />}
-          {structureText(hz) && <p class="readout">Prints as <strong>{structureText(hz)}</strong></p>}
+          {structureText(hz) && <p class="readout">On the soil log: <strong>{structureText(hz)}</strong></p>}
         </fieldset>
 
         <Chips label="Consistence" options={V.CONSISTENCE} value={hz.consistence} onChange={(v) => set({ consistence: v })} hint="Moist: loose … extremely firm. Dry: soft … very hard." />
@@ -331,7 +331,7 @@ function Suggestion(props: { fill: Fill; accept: (f: Fill) => void }) {
         <span class="suggest-value">
           {FIELD_NAMES[f.field]}: {YES_NO[f.value] ?? f.value}
         </span>
-        <span class="suggest-source">Soil log prints this: {f.source}</span>
+        <span class="suggest-source">Goes on the soil log if left blank ({f.source})</span>
       </p>
       <button type="button" class="btn small" onClick={() => props.accept(f)}>
         Use

@@ -23,8 +23,14 @@ describe('field guide (demo spec decision 4)', () => {
     expect(missing).toEqual([]);
   });
 
-  it('shows 0279.001 as the project number example and the demo uses the real 0271.001 job', () => {
-    expect(placeholderFor('Project #')).toBe('0279.001');
+  it('shows the real 0271.001 job as the examples, the same values as the demo (Nathan, 2026-10-04)', () => {
+    expect(placeholderFor('Project #')).toBe(DEMO_KEY.header.projectNumber);
+    expect(placeholderFor('Project name')).toBe(DEMO_KEY.header.projectName);
+    expect(placeholderFor('Location')).toBe(DEMO_KEY.header.location);
+    expect(placeholderFor('Evaluated by')).toBe(DEMO_KEY.header.evalBy);
+    expect(placeholderFor('Confirmation number')).toBe(DEMO_KEY.header.confirmationNumber);
+    expect(placeholderFor('Go to folder')).toBe('/Server/0271/001');
+    for (const l of Object.keys(FIELD_GUIDE)) expect(placeholderFor(l)).not.toMatch(/Smith|Example|0279/);
     expect(DEMO_KEY.header).toMatchObject({ projectNumber: '0271.001', evalBy: 'Justin Houser', location: '6133 Bigelow Road, Bozeman MT 59718' });
   });
 
@@ -33,6 +39,7 @@ describe('field guide (demo spec decision 4)', () => {
     expect(a).toMatchObject({ designation: 'O', topIn: 0, bottomIn: 12, color: { hue: '10YR', value: '3', chroma: '2' }, texture: 'CLAY LOAM' });
     expect(b).toMatchObject({ topIn: a.bottomIn, bottomIn: 96 });
     // From 15% rock the size is needed for the texture modifier.
-    for (const h of DEMO_KEY.horizons) if (h.rockPct >= 15) expect(h.rockKind).toBeTruthy();
+    // Every horizon with rock names its size, so the demo walks the size chips (Nathan, 2026-10-04).
+    for (const h of DEMO_KEY.horizons) if (h.rockPct > 0) expect(h.rockKind).toBeTruthy();
   });
 });

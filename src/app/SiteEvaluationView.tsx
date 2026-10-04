@@ -114,7 +114,8 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
           disabled={r.header.gallatin === 'N'}
           hint={r.header.gallatin === 'N' ? 'Only Gallatin County site evaluations have one.' : 'From the GCCHD.'}
         />
-        <TextField label="Owner name" value={r.header.ownerName} onInput={h('ownerName')} autoCapitalize="words" hint={percTests ? 'Printed on the perc test forms.' : undefined} />
+        {/* Only the perc test forms carry the owner: hidden with perc tests off, the value kept (Nathan, 2026-10-04). */}
+        {percTests && <TextField label="Owner name" value={r.header.ownerName} onInput={h('ownerName')} autoCapitalize="words" hint="On the perc test forms." />}
       </section>
 
 
@@ -203,7 +204,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
         <h2 id="out">Deliverables</h2>
         <SoilLogHold record={r} />
         <RuleWarnings warnings={allWarnings(r, now, { percTests })} title="Rule checks before export" showSubject />
-        <p class="hint">Print or save PDF (letter):</p>
+        <p class="hint">{percTests && r.percTests.length > 0 ? 'PDFs:' : 'Soil log PDFs:'}</p>
         <ul class="list">
           {(Object.keys(PRINT_KINDS) as PrintKind[])
             .filter((k) => k !== 'groundwater' && (k !== 'perc-tests' || (percTests && r.percTests.length > 0)))

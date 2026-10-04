@@ -61,6 +61,13 @@ export interface Step {
   /** A short correction for a wrong entry, shown on the field. */
   problem?: (c: Ctx) => string | undefined;
   showMe?: (c: Ctx) => Promise<void>;
+  /** A picture under the tip's text: what the user is asked to make (a good wall photo). */
+  image?: string;
+  /**
+   * Taps on the highlighted Take photo, From gallery or Retake run Show me (the sample photo) instead of
+   * opening the camera: a practice job has no wall to photograph.
+   */
+  samplePhoto?: boolean;
   /** The tip's own button on steps the user reads (Next, Finish, Done). */
   button?: { label: string; run?: (c: Ctx) => Promise<void> | void };
   /** The tip may cover the highlight's lower part when neither side has room (a printed page). */
@@ -197,11 +204,16 @@ const PARTS: Part[] = [
   {
     name: 'rock',
     title: 'Rock fragments',
-    text: (h) => (h.rockKind ? 'Enter the rock fragments as a percent by volume. From 15% up, also pick the rock size' : 'Enter the rock fragments as a percent by volume'),
+    text: (h) => (h.rockKind ? 'Enter the rock fragments as a percent by volume, then pick the rock size' : 'Enter the rock fragments as a percent by volume'),
     sample: (h) => (h.rockKind ? `${h.rockPct}%, ${lower(h.rockKind)}` : `${h.rockPct}%`),
     target: (card) => [field('Rock fragments (by volume)', card), field('Rock size', card)],
     typed: true,
-    done: (w, i) => hz(w, i)!.rock.pct != null && !missingItems(w).horizons[i].some((m) => m.startsWith('rock')),
+    // The size is picked too, though the soil log needs it only from 15% (Nathan, 2026-10-04: the demo
+    // skipped it at 10%). ROCKS is the unpicked default.
+    done: (w, i) => {
+      const r = hz(w, i)!.rock;
+      return r.pct != null && (r.pct === 0 || r.kind !== 'ROCKS') && !missingItems(w).horizons[i].some((m) => m.startsWith('rock'));
+    },
     show: async (card, h) => {
       await type(input('Rock fragments (by volume)', card), String(h.rockPct));
       if (h.rockKind) await pick(card, 'Rock size', h.rockKind);
@@ -331,15 +343,22 @@ async function acceptOpen(c: Ctx) {
 
 const checksText = (n: number) =>
   n === 1
-    ? "One pit check is still open, and the soil log can't be printed until it is cleared. Tap Show me to accept it for this practice job."
-    : `${n} pit checks are still open, and the soil log can't be printed until they are cleared. Tap Show me to accept them for this practice job.`;
+    ? 'One pit check is still open, and the soil log PDF waits until it is cleared. Tap Show me to accept it for this practice job.'
+    : `${n} pit checks are still open, and the soil log PDF waits until they are cleared. Tap Show me to accept them for this practice job.`;
 
 // ---- The script -----------------------------------------------------------------------------------
 
 export const STEPS: Step[] = [
-  headerStep('project-number', 'Project #', 'projectNumber', 'Project #', 'This practice job takes about five minutes. Enter the project number', (v) =>
-    /^\d{4}\.\d{3}$/.test(v.trim()) ? undefined : 'Use four digits, a dot, then three digits, like 0271.001.',
-  ),
+  {
+    ...headerStep('project-number', 'Project #', 'projectNumber', 'Project #', '', (v) =>
+      /^\d{4}\.\d{3}$/.test(v.trim()) ? undefined : 'Use four digits, a dot, then three digits, like 0271.001.',
+    ),
+    // A replay has no Exit button: the phone's back button ends it (Nathan, 2026-10-04), said once here.
+    text: () =>
+      demoState()?.replay
+        ? 'This practice job takes about five minutes, and your back button ends it. Enter the project number'
+        : 'This practice job takes about five minutes. Enter the project number',
+  },
   headerStep('project-name', 'Project name', 'projectName', 'Project name', 'Enter the project name'),
   {
     id: 'location',
@@ -413,8 +432,8 @@ export const STEPS: Step[] = [
       c.wallA?.location
         ? 'GPS saved the location of this pit.'
         : gpsWaiting()
-          ? 'GPS started when you added the pit, and it saves the location by itself once it is within 10 ft. Indoors, tap Show me to use a practice location.'
-          : 'There is no GPS fix yet. Tap Capture GPS, or tap Show me to use a practice location.',
+          ? "GPS is finding this pit's location and saves it once it is within 10 ft."
+          : 'There is no GPS fix yet. Tap Capture GPS.',
     target: () => one(gpsCard()),
     done: (c) => !!c.wallA?.location,
     showMe: async (c) => {
@@ -436,7 +455,9 @@ export const STEPS: Step[] = [
     id: 'photo',
     screen: 'pitA',
     title: 'Photo of the wall',
-    text: () => 'Take a photo of the wall before you log it, with the ground surface at the top of the frame.',
+    text: () => 'Take a photo of the wall before you log it, with the ground surface at the top, like this one.',
+    image: goodPhotoUrl,
+    samplePhoto: true,
     target: () => one(document.querySelector<HTMLElement>('section[aria-labelledby^="photos-"] > .btn-row:last-of-type')),
     done: (c) => (c.wallA?.photos.length ?? 0) > 0,
     showMe: async () => giveFile(photoInput(), await goodPhoto()),
@@ -529,7 +550,9 @@ export const STEPS: Step[] = [
     id: 'retake',
     screen: 'pitB',
     title: 'Retake a bad photo',
-    text: () => "This practice photo is too dark and blurry to check soil colours. Retake it; the soil log can't be printed until you do.",
+    text: () => 'This photo is too dark and blurry to read the soil colours. Tap Retake to replace it with one like this.',
+    image: goodPhotoUrl,
+    samplePhoto: true,
     target: (c) => shown([plantedItem(c)?.querySelector<HTMLElement>('.alert'), plantedItem(c)?.querySelector<HTMLElement>('.btn-row')]),
     done: (c) => !!demoState()?.planted && !plantedPhoto(c),
     showMe: async (c) => giveFile(plantedItem(c)?.querySelector<HTMLInputElement>('input[type="file"]') ?? null, await goodPhoto()),
@@ -572,7 +595,7 @@ export const STEPS: Step[] = [
     id: 'finished',
     screen: 'print',
     title: 'The finished soil log',
-    text: () => 'This is the soil log as it prints. Tap Finish to delete this practice job.',
+    text: () => 'This is the soil log PDF. Tap Finish to delete this practice job.',
     target: () => one(document.querySelector<HTMLElement>('.sheets .sheet')),
     tipOver: true,
     button: {

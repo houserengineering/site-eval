@@ -56,6 +56,11 @@ const typingInTarget = () => {
 const same = (a: Box | null, b: Box | null) =>
   a === b || (!!a && !!b && Math.abs(a.top - b.top) < 0.5 && Math.abs(a.left - b.left) < 0.5 && Math.abs(a.width - b.width) < 0.5 && Math.abs(a.height - b.height) < 0.5);
 const focusInTarget = () => !!document.activeElement?.closest(`[${ATTR}]`);
+/** A text box in the highlight has the focus: the typing is not committed yet (a tapped chip keeps the focus too, but is done). */
+const textFocusInTarget = () => {
+  const a = document.activeElement;
+  return (a instanceof HTMLTextAreaElement || (a instanceof HTMLInputElement && TYPED.has(a.type))) && !!a.closest(`[${ATTR}]`);
+};
 /**
  * ready: the user's turn. busy: Show me or a button is working. shown: Show me finished and the step is
  * about to complete (its buttons stay hidden, so they do not flash). done: completed, moving on.
@@ -239,7 +244,7 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
   // The user's own action completes the step.
   const valid = !!step.done && (onScreen || !!step.leaves) && step.done(ctx);
   useEffect(() => {
-    if ((phase === 'ready' || phase === 'shown') && valid && (!step.typed || !focusInTarget())) void complete();
+    if ((phase === 'ready' || phase === 'shown') && valid && (!step.typed || !textFocusInTarget())) void complete();
   });
 
   const showMe = async () => {
@@ -277,6 +282,36 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
     await removeDemoRecords(props.store);
     location.hash = '#/';
   };
+  // A replay ends on the phone's back button (Nathan, 2026-10-04): the tip has no Exit button. Not
+  // popstate: Chromium fires it for every hash change, the app's own included. The Navigation API tells a
+  // back or forward ('traverse') from a new navigation. The first run has to be finished once ("Take me
+  // back" covers wandering off).
+  useEffect(() => {
+    const nav = (window as { navigation?: EventTarget }).navigation;
+    if (!props.replay || !nav) return;
+    const on = (e: Event) => {
+      if ((e as Event & { navigationType?: string }).navigationType === 'traverse') void exit();
+    };
+    nav.addEventListener('navigate', on);
+    return () => nav.removeEventListener('navigate', on);
+  }, [props.replay]);
+
+  // A practice job has no wall to photograph: a tap on the highlighted Take photo, From gallery or Retake
+  // puts in the sample photo (Show me) instead of opening the camera.
+  const runShowMe = useRef(showMe);
+  runShowMe.current = showMe;
+  useEffect(() => {
+    if (!step.samplePhoto) return;
+    const on = (e: MouseEvent) => {
+      const label = (e.target as Element | null)?.closest?.('label');
+      if (!label?.querySelector('input[type="file"]') || !label.closest(`[${ATTR}]`)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (live.current.step.samplePhoto) void runShowMe.current();
+    };
+    document.addEventListener('click', on, true);
+    return () => document.removeEventListener('click', on, true);
+  }, [index]);
   const takeBack = () => {
     scrolledFor.current = '';
     const h = hashFor(step.screen, ctx);
@@ -361,6 +396,7 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
               )}
               {phase === 'done' && <span class="coach-check"> ✓</span>}
             </p>
+            {onScreen && step.image && <img class="coach-image" src={step.image} alt="A good photo of a test pit wall, ground surface at the top" />}
             {showProblem && (
               <p class="coach-problem" role="alert">
                 {problem}
@@ -390,11 +426,6 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
               {!step.button && (
                 <button type="button" class="link-btn" onClick={skip} disabled={phase !== 'ready'}>
                   Skip
-                </button>
-              )}
-              {props.replay && (
-                <button type="button" class="link-btn" onClick={exit}>
-                  Exit demo
                 </button>
               )}
               <span class="coach-count">

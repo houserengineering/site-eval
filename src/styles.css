@@ -603,8 +603,11 @@ body:has(.coach) { padding-bottom: 70vh; }
 .coach-sample strong { color: var(--text); }
 .coach-problem { color: var(--danger); font-weight: 650; }
 .coach-check { color: var(--ok); }
+/* What the step asks for (a good wall photo), under the text. */
+.coach-image { display: block; height: 120px; width: auto; max-width: 100%; object-fit: cover; margin: 0 0 var(--s3); border-radius: var(--radius); }
 /* Buttons, the text action and the count: one 48px row, one centre line. */
 .coach-actions { position: sticky; bottom: 0; display: flex; align-items: center; gap: var(--s2); background: var(--tip-bg); }
+.coach-actions .btn, .coach-actions .link-btn { white-space: nowrap; }
 .coach-actions .btn { min-height: var(--control-sm); padding: 0 var(--s4); }
 .coach-actions .link-btn { padding: 0 var(--s3); text-decoration: none; }
 .coach-actions.is-waiting > :not(.coach-count) { visibility: hidden; }

@@ -153,7 +153,11 @@ test('first launch: the demo coaches the whole field path and ends in Settings',
   await expect(tip(page)).toContainText('This practice job takes about five minutes. Enter the project number, e.g. 0271.001.');
   await expect(tip(page).getByRole('button', { name: 'Exit demo' })).toHaveCount(0);
   const projectNo = page.getByLabel('Project #');
-  await expect(projectNo).toHaveAttribute('placeholder', '0279.001');
+  // The examples are the real 0271 job's, as in the demo (Nathan, 2026-10-04).
+  await expect(projectNo).toHaveAttribute('placeholder', '0271.001');
+  await expect(page.getByLabel('Project name')).toHaveAttribute('placeholder', 'Stillwater Subdivision');
+  // Owner name prints only on perc test forms: hidden while perc tests are off, so the demo skips nothing.
+  await expect(page.getByLabel('Owner name')).toHaveCount(0);
   // Taps outside the highlight are blocked.
   const back = await page.getByRole('link', { name: 'All site evaluations' }).boundingBox();
   await page.mouse.click(back!.x + back!.width / 2, back!.y + back!.height / 2);
@@ -198,6 +202,7 @@ test('first launch: the demo coaches the whole field path and ends in Settings',
   await page.getByLabel('New test pit #').fill('1');
   await page.getByRole('button', { name: 'Add test pit' }).click();
   await arrive(page, 'GPS started when you added the pit', 'gps');
+  await expect(tip(page).locator('p').first()).toHaveText(/^(GPS is finding this pit's location and saves it once it is within 10 ft\.|There is no GPS fix yet\. Tap Capture GPS\.)$/);
   await showMe(page);
   await arrive(page, 'Retake GPS if it looks wrong', 'gps-retake');
   await next(page);
@@ -208,7 +213,13 @@ test('first launch: the demo coaches the whole field path and ends in Settings',
   await arrive(page, 'You left the demo step', 'left-step', { hole: false });
   await tip(page).getByRole('button', { name: 'Take me back' }).click();
   await arrive(page, 'Photo of the wall', 'photo-back');
-  await page.locator('[data-coach-target] input[type="file"][capture]').setInputFiles('src/app/demo/demo-wall-good.jpg');
+  // The tip shows what a good photo looks like; Take photo puts in the sample instead of the camera.
+  await expect(tip(page).getByRole('img')).toBeVisible();
+  let chooser = false;
+  page.on('filechooser', () => (chooser = true));
+  await page.locator('[data-coach-target] label', { hasText: 'Take photo' }).click();
+  await expect(page.locator('ul.photos > li')).toHaveCount(1);
+  expect(chooser, 'the camera did not open').toBe(false);
 
   // Wall A, horizon 1 by the user's own taps.
   await arrive(page, 'Log the first horizon', 'add-horizon');
@@ -223,11 +234,16 @@ test('first launch: the demo coaches the whole field path and ends in Settings',
   await pick(page, 'Hue', '10YR');
   await pick(page, 'Value', '3');
   await pick(page, 'Chroma', '2');
+  await expect(page.getByRole('region', { name: 'Horizon 1' }).getByRole('radio', { name: '10YR', exact: true })).toHaveAttribute('aria-checked', 'true');
   await arrive(page, 'Texture', 'h1-texture');
   await pick(page, 'USDA class', 'CLAY LOAM');
   await arrive(page, 'Rock fragments', 'h1-rock');
+  // The rock size is asked for even at 10% (Nathan, 2026-10-04).
+  await expect(tip(page)).toContainText('Enter the rock fragments as a percent by volume, then pick the rock size, e.g. 10%, gravel.');
   await page.getByRole('region', { name: 'Horizon 1' }).getByLabel('Rock fragments (by volume)').fill('10');
-  await next(page);
+  await page.getByRole('region', { name: 'Horizon 1' }).getByLabel('Rock fragments (by volume)').blur();
+  await expect(tip(page).getByRole('heading')).toContainText('Rock fragments');
+  await page.getByRole('region', { name: 'Horizon 1' }).getByRole('radiogroup', { name: 'Rock size' }).getByRole('radio', { name: /^GRAVEL/ }).click();
   // Structure: the shape alone does not finish the step; grade and size are asked for next.
   await arrive(page, 'Structure', 'h1-structure');
   await expect(tip(page)).toContainText('Pick the shape, then the grade and size, e.g. blocky, moderate, fine.');
@@ -258,6 +274,8 @@ test('first launch: the demo coaches the whole field path and ends in Settings',
 
   // Show me goes at a human pace: a whole horizon takes a while.
   await arrive(page, 'Test pit summary', 'summary', { timeout: 90_000 });
+  // Show me's hue is the chip shown picked, in the soil hues.
+  await expect(page.getByRole('region', { name: 'Horizon 2' }).getByRole('radio', { name: '10YR', exact: true })).toHaveAttribute('aria-checked', 'true');
   await next(page);
 
   // Wall B: back to the list and into wall 1B, one step.
@@ -272,15 +290,24 @@ test('first launch: the demo coaches the whole field path and ends in Settings',
   // The planted pit check: a dark, blurred photo to retake.
   await arrive(page, 'Retake a bad photo', 'retake');
   await expect(page.locator('[data-coach-target].alert')).toHaveText('This photo is blurry and too dark. Retake it.');
-  await page.getByLabel('Retake photo 1').setInputFiles('src/app/demo/demo-wall-good.jpg');
+  await expect(tip(page)).toContainText('This photo is too dark and blurry to read the soil colours. Tap Retake to replace it with one like this.');
+  await expect(tip(page).getByRole('img')).toBeVisible();
+  await page.locator('[data-coach-target] label', { hasText: 'Retake' }).click();
+  expect(chooser, 'the camera did not open').toBe(false);
   await arrive(page, 'Back to the site evaluation', 'to-site-2');
   await page.getByRole('link', { name: 'Back to site evaluation' }).click();
 
   await arrive(page, 'Dropbox', 'dropbox');
+  await expect(page.locator('#dbx')).toHaveText('Dropbox');
   await next(page);
   await arrive(page, 'Open the soil log', 'soil-log');
   await showMe(page);
   await arrive(page, 'The finished soil log', 'finished', { timeout: 15_000 });
+  // Soil logs are PDFs, never printed (Nathan, 2026-10-04).
+  await expect(tip(page)).toContainText('This is the soil log PDF. Tap Finish to delete this practice job.');
+  await expect(page.getByRole('heading', { name: 'Soil logs', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Print/ })).toHaveCount(0);
+  await expect(page.getByText(/print|copier/i)).toHaveCount(0);
 
   // Nothing reached Dropbox.
   expect(await page.evaluate(() => [...(window as any).__fakeDropbox.files.keys()])).toEqual([]);
@@ -297,11 +324,21 @@ test('first launch: the demo coaches the whole field path and ends in Settings',
   await expect(page.getByRole('heading', { name: 'Site evaluations' })).toBeVisible();
   await expect(tip(page)).toHaveCount(0);
 
-  // A replay from Settings can be exited.
+  // A replay from Settings ends on the phone's back button; the tip has no Exit button.
   await page.getByRole('link', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'Replay the demo' }).click();
   await arrive(page, 'Project #', 'replay-start');
-  await tip(page).getByRole('button', { name: 'Exit demo' }).click();
+  await expect(tip(page)).toContainText('This practice job takes about five minutes, and your back button ends it.');
+  await expect(tip(page).getByRole('button', { name: 'Exit demo' })).toHaveCount(0);
+  // The app's own moves do not end it (Chromium fires popstate for them too): on past adding the pit.
+  for (const label of ['Project #', 'Project name', 'Location', 'Evaluated by and date', 'Gallatin County and the confirmation number']) {
+    await expect(tip(page).getByRole('heading')).toContainText(label, { timeout: 15_000 });
+    await showMe(page);
+  }
+  await expect(tip(page).getByRole('heading')).toContainText('only when you are standing at it');
+  await showMe(page);
+  await expect(tip(page).getByRole('heading')).toContainText('GPS started when you added the pit', { timeout: 15_000 });
+  await page.goBack();
   await expect(page.getByRole('heading', { name: 'Site evaluations' })).toBeVisible();
   await expect(tip(page)).toHaveCount(0);
   await expect(page.getByRole('link', { name: /0271|No project #/ })).toHaveCount(0);

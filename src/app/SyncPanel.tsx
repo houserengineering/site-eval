@@ -1,7 +1,6 @@
 // Dropbox UI: the sync status line, the per-site-evaluation Dropbox section (folder, sync, print
 // at office, backup), connecting Dropbox, and opening a site evaluation from Dropbox.
 
-import { openFlags } from '../domain/pitChecks';
 import { useEffect, useState } from 'preact/hooks';
 import { backupName, makeBackup } from '../domain/backup';
 import type { FieldRecord } from '../domain/fieldRecord';
@@ -16,7 +15,6 @@ import { go } from './App';
 import { download } from './deliverables';
 import { TextField } from './fields';
 import { syncService, useSyncState, type SyncState } from './sync';
-import { settings } from './settings';
 
 const time = (iso?: string) => (iso ? new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '');
 
@@ -74,21 +72,17 @@ export function DropboxSection(props: { record: FieldRecord; save: (r: FieldReco
     download(new Blob([text], { type: 'application/json' }), name);
     setNote(`Saved ${name}. Keep it off this phone (email it or save it to Drive).`);
   };
-  const print = async () => {
-    await sync.printAtOffice(r.id, settings().percTests && r.percTests.length ? ['soil-log-pdf', 'perc-test-pdf'] : ['soil-log-pdf']);
-    setNote(s.online ? 'Sending the soil logs to the office printer…' : 'Will send to the office printer when there is signal.');
-  };
 
   if (r.demo)
     return (
       <section aria-labelledby="dbx">
-        <h2 id="dbx">Dropbox and office printing</h2>
+        <h2 id="dbx">Dropbox</h2>
         <p class="hint">On a real job, connect Dropbox here once. The soil logs, photos and field record are then saved to the project folder. It is turned off for this practice job.</p>
       </section>
     );
   return (
     <section aria-labelledby="dbx">
-      <h2 id="dbx">Dropbox and office printing</h2>
+      <h2 id="dbx">Dropbox</h2>
       <SyncStatus record={r} />
       {!s.connected && <ConnectDropbox />}
       {s.connected && <DropboxAccount account={s.account} fake={s.fake} />}
@@ -117,11 +111,10 @@ export function DropboxSection(props: { record: FieldRecord; save: (r: FieldReco
       )}
       {s.connected && r.deliverableFolder && (
         <div class="btn-row">
+          {/* No "Print at office" button: soil logs are only ever PDFs (Nathan, 2026-10-04). The print queue
+              (sync.printAtOffice) is kept, unused. */}
           <button class="btn" onClick={() => sync.syncNow(r.id)} disabled={s.busy}>
             Sync now
-          </button>
-          <button class="btn" onClick={print} disabled={openFlags(r).length > 0}>
-            Print at office
           </button>
         </div>
       )}

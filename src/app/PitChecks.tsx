@@ -86,7 +86,7 @@ export function SoilLogHold(props: { record: FieldRecord }) {
   return (
     <section class="hold" aria-label="Soil log held">
       <p>
-        <strong>Soil log held:</strong> {open.length} pit check{open.length === 1 ? '' : 's'} open. Fix or accept each to print, export or file the soil log.
+        <strong>Soil log held:</strong> {open.length} pit check{open.length === 1 ? '' : 's'} open. Fix or accept each to save, export or file the soil log.
       </p>
       <ul class="hold-walls">
         {walls.map((w) => (

@@ -1,5 +1,5 @@
-// Print preview: the PDF deliverable's own pages drawn as SVG, one letter sheet per page, for the
-// system print dialog (Android Chrome prints the page, not a PDF file). Save PDF writes the file.
+// PDF preview: the PDF deliverable's own pages drawn as SVG, one letter sheet per page. Save PDF writes
+// the file. Soil logs are never printed, only PDFs (Nathan, 2026-10-04), so there is no Print button.
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import type { FieldRecord } from '../domain/fieldRecord';
 import type { DeliverableKind, Page, PrintKind } from '../generator';
@@ -65,26 +65,22 @@ export function PrintView(props: { record: FieldRecord; kind: PrintKind; store: 
           <a class="back" href={back} aria-label="Back to site evaluation">
             ‹
           </a>
-          <h1>Print {meta.title.toLowerCase()}</h1>
+          <h1>{meta.title}</h1>
         </header>
         <div class="btn-row">
-          <button class="btn primary" onClick={() => print()} disabled={!pages?.length || held}>
-            Print…
-          </button>
-          <button class="btn" onClick={savePdf} disabled={!pages?.length || held}>
+          <button class="btn primary" onClick={savePdf} disabled={!pages?.length || held}>
             Save PDF
           </button>
         </div>
         {held && <SoilLogHold record={r} />}
         <UnconfirmedNotice record={r} save={props.save} context="preview" />
-        <p class="hint">Letter paper{pages?.some((p) => p.w > p.h) ? ', landscape' : ''}, scale 100% (Default). On the office Wi-Fi, pick the office copier in the print dialog.</p>
         {status && (
           <p class="status" role="status">
             {status}
           </p>
         )}
         {pages === undefined && !status && <p class="muted">Laying out pages…</p>}
-        {pages?.length === 0 && <p class="muted">Nothing to print yet.</p>}
+        {pages?.length === 0 && <p class="muted">Nothing to show yet.</p>}
         {pages && pages.length > 0 && (
           <p class="muted">
             {pages.length} page{pages.length === 1 ? '' : 's'}

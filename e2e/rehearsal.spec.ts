@@ -62,7 +62,7 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
   // Start of day: load the job, confirm the flagged header values.
   await page.getByLabel('Load job file or backup').setInputFiles(jobPath);
   await expect(page.getByRole('heading', { name: project })).toBeVisible();
-  await page.getByRole('region', { name: 'Dropbox and office printing' }).getByLabel('Your name').fill('Nathan Hart');
+  await page.getByRole('region', { name: 'Dropbox', exact: true }).getByLabel('Your name').fill('Nathan Hart');
   const confirmBox = page.getByRole('region', { name: 'Confirm on site' });
   await shot(page, 'r01-job-loaded');
   for (let k = 0; k < 20 && (await confirmBox.count()); k++) await confirmBox.getByRole('button', { name: /^Confirm / }).first().click();
@@ -209,7 +209,7 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
   await expect(page.getByRole('status').filter({ hasText: /^Synced to Dropbox/ }).first()).toBeVisible({ timeout: 30_000 });
 
   // Open pit checks hold the soil log; everything else files. Accepting them releases it.
-  const dropbox = page.getByRole('region', { name: 'Dropbox and office printing' });
+  const dropbox = page.getByRole('region', { name: 'Dropbox', exact: true });
   await expect(dropbox.getByText(folder, { exact: true })).toBeVisible();
   await dropbox.getByRole('button', { name: 'Sync now' }).click();
   await expect(dropbox.getByText(/^Soil log not filed: \d+ pit checks? open\.$/)).toBeVisible({ timeout: 60_000 });
@@ -246,7 +246,7 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
   expect(record.unconfirmed ?? {}).toEqual({});
   await shot(page, 'r07-filed');
 
-  // Print preview of the soil logs, then the copier queue.
+  // The soil log PDF preview; Chromium's print-to-PDF of it keeps the page count.
   await page.getByRole('link', { name: /^Soil logs/ }).click();
   await expect(page.getByRole('img', { name: `Soil logs page 1 of ${soilPdf.getPageCount()}` })).toBeVisible();
   await shot(page, 'r08-print-preview', false);
@@ -255,7 +255,6 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
   expect(printed.getPageCount()).toBe(soilPdf.getPageCount());
   await page.emulateMedia({ media: 'screen' });
   await back(page);
-  await dropbox.getByRole('button', { name: 'Print at office' }).click();
-  await expect(dropbox.getByText(new RegExp(`Sent to the office print queue: ${esc(project)} Soil Logs`))).toBeVisible({ timeout: 60_000 });
-  await shot(page, 'r09-print-at-office');
+  // Soil logs are only ever PDFs (Nathan, 2026-10-04): no Print at office button.
+  await expect(dropbox.getByRole('button', { name: 'Print at office' })).toHaveCount(0);
 });
