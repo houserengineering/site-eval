@@ -19,7 +19,7 @@ export default defineConfig({
         name: 'Site Evaluation — Houser Engineering',
         short_name: 'Site Eval',
         description: 'Log test pits, horizons and perc tests in the field; generate soil logs.',
-        theme_color: '#0b3d6e',
+        theme_color: '#0b2a4a',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',

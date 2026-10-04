@@ -94,8 +94,13 @@ async function settleAndCheck(page: Page, name: string, hole: boolean, keyboard 
   }
   expect(g.tip.top, `${name}: tip on the visible screen`).toBeGreaterThanOrEqual(g.vt);
   expect(g.tip.bottom, `${name}: tip above the keyboard`).toBeLessThanOrEqual(g.vb);
-  expect(g.tip.left).toBeGreaterThanOrEqual(15);
-  expect(g.tip.right).toBeLessThanOrEqual(g.vw - 15);
+  expect(g.tip.left).toBeGreaterThanOrEqual(7);
+  expect(g.tip.right).toBeLessThanOrEqual(g.vw - 7);
+  // A wide highlight and its tip share their left and right edges.
+  if (hole && g.hole!.right - g.hole!.left >= 280 && g.hole!.left >= 7 && g.hole!.right <= g.vw - 7) {
+    expect(Math.abs(g.tip.left - g.hole!.left), `${name}: tip lined up with the highlight`).toBeLessThan(1.5);
+    expect(Math.abs(g.tip.right - g.hole!.right), `${name}: tip lined up with the highlight`).toBeLessThan(1.5);
+  }
 }
 
 /** With the keyboard up, the field is the one being typed in, with its label. */
@@ -132,13 +137,11 @@ test('first launch: the demo coaches the whole field path and ends in Settings',
   await page.waitForFunction(() => !!(window as any).__fakeDropbox);
   await page.evaluate(() => (window as any).__fakeDropbox.mkdir('/Server/Office'));
 
-  // Required on first launch; no exit on the first run.
-  await arrive(page, 'Practice on a made-up job', 'welcome', { hole: false });
-  await expect(tip(page).getByRole('button', { name: 'Exit demo' })).toHaveCount(0);
-  await next(page, 'Start');
-
+  // Required on first launch, starting straight on the first field; no exit on the first run.
   // Header: placeholders from the field guide; a wrong entry gets a correction on the field.
   await arrive(page, 'Project #', 'project-number');
+  await expect(tip(page)).toContainText('Practice job');
+  await expect(tip(page).getByRole('button', { name: 'Exit demo' })).toHaveCount(0);
   const projectNo = page.getByLabel('Project #');
   await expect(projectNo).toHaveAttribute('placeholder', '0279.001');
   // Taps outside the highlight are blocked.
@@ -266,7 +269,7 @@ test('first launch: the demo coaches the whole field path and ends in Settings',
   // A replay from Settings can be exited.
   await page.getByRole('link', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'Replay the demo' }).click();
-  await arrive(page, 'Practice on a made-up job', 'replay-welcome', { hole: false });
+  await arrive(page, 'Project #', 'replay-start');
   await tip(page).getByRole('button', { name: 'Exit demo' }).click();
   await expect(page.getByRole('heading', { name: 'Site evaluations' })).toBeVisible();
   await expect(tip(page)).toHaveCount(0);

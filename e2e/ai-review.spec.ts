@@ -27,8 +27,8 @@ test('AI photo review: flags join the pit checks, queue without signal, re-revie
 
   // The device token goes in Settings.
   await page.getByRole('link', { name: 'Settings' }).click();
-  await page.getByLabel('AI photo review device token').fill('device-token-1');
-  await page.getByLabel('AI photo review device token').blur();
+  await page.getByLabel('AI photo review token').fill('device-token-1');
+  await page.getByLabel('AI photo review token').blur();
   if (shots) await page.screenshot({ path: `${shots}/94-review-token.png` });
   await page.getByRole('link', { name: 'All site evaluations' }).click();
 

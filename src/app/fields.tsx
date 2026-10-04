@@ -106,10 +106,12 @@ export function Chips(props: {
   const isOther = props.value !== '' && !options.some((o) => o.value === props.value);
   const [typing, setTyping] = useState(false);
   const showOther = props.other && (isOther || typing);
+  // Every chip in a group gets the width of the longest, so they line up in even columns.
+  const len = Math.max(props.other ? 6 : 1, ...options.map((o) => Math.max(o.label.length, (o.help?.length ?? 0) * 0.8)));
   return (
     <div class={`field${props.asTyped ? ' as-typed' : ''}`}>
       <span class="label" id={id}>{props.label}</span>
-      <div class="chips" role="radiogroup" aria-labelledby={id}>
+      <div class={`chips${len <= 4 ? ' short' : ''}`} style={{ '--chip-len': String(Math.ceil(len)) }} role="radiogroup" aria-labelledby={id}>
         {options.map((o) => {
           const on = props.value === o.value;
           return (
@@ -124,7 +126,7 @@ export function Chips(props: {
                 props.onChange(on ? '' : o.value);
               }}
             >
-              {o.label}
+              <span>{o.label}</span>
               {o.help && <small> {o.help}</small>}
             </button>
           );

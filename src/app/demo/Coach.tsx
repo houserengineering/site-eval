@@ -9,7 +9,8 @@ import { GAP, placeTip, scrollToFit, unionRect, type Box, type Side } from './pl
 import { demoState, markDemoDone, removeDemoRecords, setDemoState, useDemo } from './state';
 import { SCREEN_NAMES, STEPS, hashFor, screenOf, walls, type Ctx } from './steps';
 
-const PAD = 6;
+/** The highlight's margin around its field; the tip lines up with the highlight's edges. */
+const PAD = 8;
 const EDGE = 8;
 const ATTR = 'data-coach-target';
 
@@ -269,9 +270,10 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
     setBacks((n) => n + 1);
   };
 
-  if (ctx.screen === 'loading') return null;
+  // Off the step's screen because the step is done or Show me is moving on: no "Take me back" flash.
+  if (ctx.screen === 'loading' || (!onScreen && (phase !== 'ready' || valid))) return null;
   const offscreen = !!box && (box.top + box.height < view.top || box.top > view.top + view.height);
-  const hole = onScreen && box && !offscreen ? box : null;
+  const hole = onScreen && box && !offscreen ? onScreenBox(box) : null;
   const typedNext = step.typed && valid && phase === 'ready';
   const problem = onScreen ? step.problem?.(ctx) : undefined;
   const sample = typeof step.sample === 'function' ? step.sample(ctx) : step.sample;
@@ -368,7 +370,7 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
                 </button>
               )}
               {onScreen && !offscreen && step.showMe && !valid && (
-                <button type="button" class="btn small" onClick={showMe} disabled={phase !== 'ready'}>
+                <button type="button" class={`btn small${step.button || typedNext ? '' : ' primary'}`} onClick={showMe} disabled={phase !== 'ready'}>
                   Show me
                 </button>
               )}
@@ -394,5 +396,11 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
 }
 
 const pad = (b: Box): Box => ({ top: b.top - PAD, left: b.left - PAD, width: b.width + 2 * PAD, height: b.height + 2 * PAD });
+/** The drawn highlight kept on the screen, so its ring shows (the back link sits 4px from the corner). */
+const onScreenBox = (b: Box): Box => {
+  const top = Math.max(0, b.top);
+  const left = Math.max(0, b.left);
+  return { top, left, width: Math.min(innerWidth, b.left + b.width) - left, height: b.top + b.height - top };
+};
 const css = (b: Box) => ({ top: `${b.top}px`, left: `${b.left}px`, width: `${b.width}px`, height: `${b.height}px` });
 const stepKey = (step: (typeof STEPS)[number], ctx: Ctx) => `${step.id}:${step.part?.(ctx) ?? ''}`;

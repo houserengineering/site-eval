@@ -21,11 +21,18 @@ describe('coach tip placement (demo spec decision 9)', () => {
     expect(overlaps(p, target)).toBe(false);
   });
 
-  it('stays inside the screen with 16px gutters', () => {
+  it('stays inside the screen with 8px gutters (the edges of a full-width highlight)', () => {
     const target = { top: 300, left: 360, width: 40, height: 40 };
     const p = placeTip(target, { width: 500, height: 150 }, view);
-    expect(p.left).toBeGreaterThanOrEqual(16);
-    expect(p.left + p.width).toBeLessThanOrEqual(view.width - 16);
+    expect(p.left).toBeGreaterThanOrEqual(8);
+    expect(p.left + p.width).toBeLessThanOrEqual(view.width - 8);
+  });
+
+  it('takes the width of a wide highlight, so their edges line up', () => {
+    const target = { top: 120, left: 8, width: 396, height: 100 };
+    const p = placeTip(target, { width: 420, height: 150 }, view);
+    expect(p.left).toBe(8);
+    expect(p.width).toBe(396);
   });
 
   it('respects the visible part of the screen when the keyboard is up', () => {

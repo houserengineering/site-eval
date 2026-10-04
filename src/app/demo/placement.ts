@@ -20,8 +20,9 @@ export interface TipPlace extends Box {
 
 /** Room between the field and its tip (the arrow sits in it). */
 export const GAP = 14;
-/** Side gutters and the margin kept from the top and bottom of the screen. */
-const GUTTER = 16;
+/** Side gutters (the highlight's own, a full-width field's 16px less its 8px margin) and the margin kept
+ * from the top and bottom of the screen. */
+const GUTTER = 8;
 const EDGE = 8;
 /** The least room worth giving a tip that scrolls inside. */
 const MIN_TIP = 120;
@@ -39,7 +40,8 @@ export function unionRect(rects: Box[]): Box {
  * when the tip fits on both sides ('above' while the keyboard is up, the field sitting just over it).
  */
 export function placeTip(target: Box, tip: { width: number; height: number }, view: Box, prefer: Side = 'below'): TipPlace {
-  const width = Math.min(tip.width, view.width - 2 * GUTTER);
+  // A wide highlight: the tip takes its width, so their edges line up.
+  const width = Math.min(target.width >= 280 ? target.width : tip.width, view.width - 2 * GUTTER);
   const mid = target.left + target.width / 2;
   const left = clamp(mid - width / 2, view.left + GUTTER, view.left + view.width - GUTTER - width);
   const arrowLeft = clamp(mid - left, 20, width - 20);

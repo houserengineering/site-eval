@@ -31,13 +31,13 @@ export function SettingsView(props: { store: RecordStore }) {
       <Chips
         label="Motion"
         options={[
-          { value: 'device', label: 'Like this device' },
+          { value: 'device', label: 'Auto' },
           { value: 'on', label: 'On' },
           { value: 'off', label: 'Off' },
         ]}
         value={s.motion}
         onChange={(v) => changeSettings(props.store, { motion: (v || 'device') as typeof s.motion })}
-        hint={`Gliding highlights and "Show me" in the demo. This device ${matchMedia('(prefers-reduced-motion: reduce)').matches ? 'asks for reduced motion' : 'allows motion'}.`}
+        hint={`Gliding highlights and "Show me" in the demo. Auto follows this device, which ${matchMedia('(prefers-reduced-motion: reduce)').matches ? 'asks for reduced motion' : 'allows motion'}.`}
       />
       <div class="field">
         <label class="toggle">
@@ -49,10 +49,9 @@ export function SettingsView(props: { store: RecordStore }) {
         </p>
       </div>
       <div class="field">
-        <p class="field-label">
-          AI photo review <span class="badge warn">Beta</span> <span class="muted">optional</span>
-        </p>
-        <label for="review-token">AI photo review device token</label>
+        <label for="review-token" class="label-row">
+          AI photo review token <span class="badge warn">Beta</span>
+        </label>
         <input
           id="review-token"
           type="password"

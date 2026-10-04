@@ -127,8 +127,11 @@ interface Part {
   target: (card: HTMLElement) => (HTMLElement | null)[];
   done: (w: TestPit, i: number) => boolean;
   show: (card: HTMLElement, h: DemoHorizon) => Promise<void>;
+  /** A part taller than a phone screen with its tip is highlighted a piece at a time. */
+  piece?: (card: HTMLElement) => string;
 }
 const hz = (w: TestPit | undefined, i: number) => w?.horizons[i];
+const shapePicked = (card: HTMLElement) => !!field('Shape', card)?.querySelector('.chip.on');
 const PARTS: Part[] = [
   {
     name: 'horizon and depth',
@@ -169,7 +172,9 @@ const PARTS: Part[] = [
   },
   {
     name: 'structure',
-    target: (card) => [field('Structure', card)],
+    // Shape first, then grade and size: all three with the tip do not fit on a phone screen.
+    target: (card) => (shapePicked(card) ? [field('Grade', card), field('Size', card)] : [field('Shape', card)]),
+    piece: (card) => (shapePicked(card) ? 'grade' : 'shape'),
     done: (w, i) => !!structureText(hz(w, i)!),
     show: async (card, h) => {
       await pick(card, 'Shape', h.structure.shape);
@@ -213,6 +218,10 @@ function horizonStep(i: number, part: Part, title: string, text: string, sample:
     target: () => {
       const card = horizonCard(i + 1);
       return card ? shown(part.target(card)) : [];
+    },
+    part: () => {
+      const card = part.piece && horizonCard(i + 1);
+      return card ? part.piece!(card) : '';
     },
     typed: part === PARTS[ROCK],
     done: (c) => !!hz(c.wallA, i) && part.done(c.wallA!, i),
@@ -276,15 +285,7 @@ async function acceptOpen(c: Ctx) {
 // ---- The script -----------------------------------------------------------------------------------
 
 export const STEPS: Step[] = [
-  {
-    id: 'welcome',
-    screen: 'site',
-    title: 'Practice on a made-up job',
-    text: () =>
-      'A made-up job, about 5 minutes. Fill in each highlighted field; Show me does it for you.',
-    button: { label: 'Start' },
-  },
-  headerStep('project-number', 'Project #', 'projectNumber', 'Project #', 'Job and subproject.', (v) =>
+  headerStep('project-number', 'Project #', 'projectNumber', 'Project #', 'Practice job, about 5 minutes. Job and subproject.', (v) =>
     /^\d{4}\.\d{3}$/.test(v.trim()) ? undefined : 'Use 4 digits, a dot, then 3 digits, like 0999.001.',
   ),
   headerStep('project-name', 'Project name', 'projectName', 'Project name', 'As it prints on the log.'),
@@ -384,7 +385,12 @@ export const STEPS: Step[] = [
       const part = nextPart(c.wallA, 1);
       return card && part ? shown(part.target(card)) : [];
     },
-    part: (c) => (hz(c.wallA, 1) ? (nextPart(c.wallA, 1)?.name ?? 'done') : 'add'),
+    part: (c) => {
+      if (!hz(c.wallA, 1)) return 'add';
+      const part = nextPart(c.wallA, 1);
+      const card = part?.piece && horizonCard(2);
+      return part ? `${part.name}${card ? `:${part.piece!(card)}` : ''}` : 'done';
+    },
     done: (c) => horizonDone(c.wallA, 1),
     problem: (c) => depthProblem(c.wallA, 1),
     showMe: async (c) => {
@@ -418,7 +424,7 @@ export const STEPS: Step[] = [
     leaves: true,
     screen: 'pitA',
     title: 'On to wall B',
-    text: () => 'Tap ‹ for wall B.',
+    text: () => 'Tap the back arrow for wall B.',
     target: () => one(backLink()),
     done: (c) => c.screen !== 'pitA',
     showMe: () => tap(backLink()),
@@ -457,7 +463,7 @@ export const STEPS: Step[] = [
     leaves: true,
     screen: 'pitB',
     title: 'Back to the site evaluation',
-    text: () => 'Tap ‹.',
+    text: () => 'Tap the back arrow.',
     target: () => one(backLink()),
     done: (c) => c.screen !== 'pitB',
     showMe: () => tap(backLink()),
