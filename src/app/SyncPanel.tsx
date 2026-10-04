@@ -1,5 +1,5 @@
-// Dropbox UI: the sync status line, the per-site-evaluation Dropbox section (folder, sync, print
-// at office, backup), connecting Dropbox, and opening a site evaluation from Dropbox.
+// Dropbox UI: the sync status line, the per-site-evaluation Dropbox section (how it works, account,
+// destination folder, one main action, backup), connecting Dropbox, and opening a site evaluation from Dropbox.
 
 import { useEffect, useState } from 'preact/hooks';
 import { backupName, makeBackup } from '../domain/backup';
@@ -9,7 +9,7 @@ import { migrate } from '../domain/fieldRecord';
 import type { RecordStore } from '../storage/db';
 import type { RemoteEntry } from '../sync/adapter';
 import { APP_FOLDER, dropboxFolder, folderProblem, isFieldRecordName, projectFolder, SERVER_ROOT } from '../sync/naming';
-import { resolveProjectFolder } from '../sync/projectFolder';
+import { resolveProjectFolder, type FolderPlan } from '../sync/projectFolder';
 import { syncRecord, type FilingResult } from '../sync/engine';
 import { go } from './App';
 import { download } from './deliverables';
@@ -29,9 +29,9 @@ export function syncLine(s: SyncState, r: FieldRecord): { text: string; tone: 'o
   if (s.error) return { text: s.error, tone: 'bad' };
   if (!r.deliverableFolder) {
     const p = rs.plan;
-    if (p?.kind === 'missing') return { text: `Saved on this device. The project folder ${p.folder} is not in Dropbox yet.`, tone: 'warn' };
+    if (p?.kind === 'missing') return { text: `Waiting for your OK to create the project folder ${p.folder}. Saved on this device until then.`, tone: 'warn' };
     if (p?.kind === 'wrong-account') return { text: `Wrong Dropbox account: ${s.account || 'this account'} has no ${SERVER_ROOT}/Office folder. Nothing was created or filed. Connect the Houser Dropbox account.`, tone: 'bad' };
-    if (p?.kind === 'fallback') return { text: `Saved on this device. No project number, so it files to ${p.folder} once you add a test pit.`, tone: 'warn' };
+    if (p?.kind === 'fallback') return { text: `Saved on this device. No project number, so it saves to ${p.folder} once you add a test pit.`, tone: 'warn' };
     return { text: 'Saved on this device. Choose a Dropbox folder to sync.', tone: 'warn' };
   }
   if (rs.error) return { text: rs.error, tone: 'bad' };
@@ -80,51 +80,39 @@ export function DropboxSection(props: { record: FieldRecord; save: (r: FieldReco
         <p class="hint">On a real job, connect Dropbox here once. The soil logs, photos and field record are then saved to the project folder. It is turned off for this practice job.</p>
       </section>
     );
+  const folder = r.deliverableFolder ? dropboxFolder(r.deliverableFolder) : '';
+  const plan = folder ? undefined : rs.plan;
+  const wrongAccount = plan?.kind === 'wrong-account';
+  // One main action at a time: create the missing folder, fix the account, pick another folder, or sync.
+  const main = plan?.kind === 'missing' ? 'create' : wrongAccount ? 'account' : rs.folderMissing ? 'choose' : folder ? 'sync' : '';
   return (
     <section aria-labelledby="dbx">
       <h2 id="dbx">Dropbox</h2>
+      <p class="hint">Connect Dropbox once. Each site evaluation then saves to its project folder on the Server: the soil logs, photos and field record.</p>
       <SyncStatus record={r} />
       {!s.connected && <ConnectDropbox />}
-      {s.connected && <DropboxAccount account={s.account} fake={s.fake} />}
-      {s.connected && <TextField label="Your name" value={s.who} onInput={(v) => sync.setWho(v)} autoCapitalize="words" hint={'Shown on your edits as "edited by".'} />}
-      <p class="field-label">Deliverables folder</p>
-      <p class="path">{r.deliverableFolder ? dropboxFolder(r.deliverableFolder) : 'Not chosen'}</p>
-      {s.connected && !r.deliverableFolder && rs.plan?.kind === 'missing' && !choosing && (
-        <CreateProjectFolder folder={rs.plan.folder} create={() => sync.createProjectFolder(r.id, rs.plan!.folder)} />
+      {s.connected && (
+        <dl class="dbx-facts">
+          <div>
+            <dt>Account</dt>
+            <dd>
+              <DropboxAccount account={s.account} fake={s.fake} main={main === 'account'} />
+            </dd>
+          </div>
+          <div>
+            <dt>Saves to</dt>
+            <dd>
+              <p class="path">{folder || (plan && !wrongAccount ? plan.folder : '') || 'Not chosen'}</p>
+              <p class="hint">{folderState(r, plan, !!rs.folderMissing)}</p>
+            </dd>
+          </div>
+        </dl>
       )}
-      {s.connected && !choosing && (
-        <button class={`btn ${rs.folderMissing ? 'primary' : 'small'}`} onClick={() => setChoosing(true)}>
-          {rs.folderMissing ? 'Choose another folder' : r.deliverableFolder ? 'Change folder' : 'Choose folder'}
+      {s.connected && main === 'create' && !choosing && <CreateProjectFolder create={() => sync.createProjectFolder(r.id, plan!.folder)} />}
+      {s.connected && main === 'sync' && !choosing && (
+        <button class="btn primary block" onClick={() => sync.syncNow(r.id)} disabled={s.busy}>
+          Sync now
         </button>
-      )}
-      {choosing && (
-        <FolderBrowser
-          start={r.deliverableFolder ? dropboxFolder(r.deliverableFolder) : projectFolder(r.header.projectNumber) || SERVER_ROOT}
-          project={r.header.projectNumber}
-          action="Use this folder"
-          onCancel={() => setChoosing(false)}
-          onPick={(folder) => {
-            props.save({ ...r, deliverableFolder: folder, deliverableFolderSource: 'chosen' });
-            setChoosing(false);
-          }}
-        />
-      )}
-      {s.connected && r.deliverableFolder && (
-        <div class="btn-row">
-          {/* No "Print at office" button: soil logs are only ever PDFs (Nathan, 2026-10-04). The print queue
-              (sync.printAtOffice) is kept, unused. */}
-          <button class="btn" onClick={() => sync.syncNow(r.id)} disabled={s.busy}>
-            Sync now
-          </button>
-        </div>
-      )}
-      <button class="btn block" onClick={backup}>
-        Back up to a file
-      </button>
-      {note && (
-        <p class="status" role="status">
-          {note}
-        </p>
       )}
       {rs.filed && (
         <div class="filed">
@@ -144,24 +132,69 @@ export function DropboxSection(props: { record: FieldRecord; save: (r: FieldReco
         </p>
       )}
       {rs.printed && <p class="hint">Sent to the office print queue: {rs.printed.map((p) => p.slice(p.lastIndexOf('/') + 1)).join(', ')}</p>}
+      {/* No "Print at office" button: soil logs are only ever PDFs (Nathan, 2026-10-04). The print queue
+          (sync.printAtOffice) is kept, unused. */}
+      {s.connected && !choosing && (
+        <div class="dbx-option">
+          {main !== 'choose' && !wrongAccount && <p class="hint">The folder follows the project number. Change it only when this job files somewhere else, such as an older project number or another subproject.</p>}
+          <button class={`btn ${main === 'choose' ? 'primary' : 'small'}`} onClick={() => setChoosing(true)}>
+            {rs.folderMissing ? 'Choose another folder' : folder ? 'Change folder' : 'Choose folder'}
+          </button>
+        </div>
+      )}
+      {choosing && (
+        <FolderBrowser
+          start={folder || projectFolder(r.header.projectNumber) || SERVER_ROOT}
+          project={r.header.projectNumber}
+          action="Use this folder"
+          onCancel={() => setChoosing(false)}
+          onPick={(picked) => {
+            props.save({ ...r, deliverableFolder: picked, deliverableFolderSource: 'chosen' });
+            setChoosing(false);
+          }}
+        />
+      )}
+      {s.connected && <TextField label="Your name" value={s.who} onInput={(v) => sync.setWho(v)} autoCapitalize="words" hint={'Shown on your edits as "edited by".'} />}
+      <div class="dbx-option">
+        <p class="hint">A backup file is a full copy you can email when Dropbox is not an option.</p>
+        <button class="btn small" onClick={backup}>
+          Back up to a file
+        </button>
+      </div>
+      {note && (
+        <p class="status" role="status">
+          {note}
+        </p>
+      )}
     </section>
   );
 }
 
+/** What the destination folder is and why, in one sentence. */
+function folderState(r: FieldRecord, plan: FolderPlan | undefined, missing: boolean): string {
+  if (missing) return 'This folder is not in the connected account, so nothing is filed until you choose another.';
+  if (r.deliverableFolder)
+    return r.deliverableFolderSource === 'chosen' ? 'You chose this folder. It stays even if the project number changes.' : 'The project folder, found from the project number.';
+  if (plan?.kind === 'missing') return 'This project folder is not in Dropbox yet.';
+  if (plan?.kind === 'wrong-account') return 'Nothing is filed: this account has no Server/Office folder, so it is not the Houser account.';
+  if (plan?.kind === 'fallback') return 'No project number, so it gets its own folder under Office once you add a test pit.';
+  return 'Enter the project number at the top, or choose a folder.';
+}
+
 /** Which Dropbox account files go to. On 0271 the phone was signed in to another account and nothing reached the office. */
-function DropboxAccount({ account, fake }: { account: string; fake: boolean }) {
+function DropboxAccount({ account, fake, main }: { account: string; fake: boolean; main: boolean }) {
   return (
-    <div class="account">
+    <>
       <p>
         Connected to Dropbox as <strong>{account || 'an unnamed account'}</strong>.
       </p>
-      <p class="hint">Files go to this account's Server folder. If this is not the Houser account, disconnect and connect again.</p>
+      {main && <p class="hint">Disconnect, then connect again with your Houser Engineering login.</p>}
       {!fake && (
-        <button class="btn small" onClick={() => syncService().disconnect()}>
+        <button class={`btn ${main ? 'primary' : 'small'}`} onClick={() => syncService().disconnect()}>
           Disconnect Dropbox
         </button>
       )}
-    </div>
+    </>
   );
 }
 
@@ -182,12 +215,13 @@ export function ConnectDropbox() {
         Connect Dropbox
       </button>
       <p class="hint">
-        Sign in with your own Houser Engineering Dropbox login, the one that shows the Server folder. Justin's admin account cannot authorize individual apps. If Dropbox opens a
-        different account, sign out of it at dropbox.com first.
+        Dropbox opens. Sign in with your Houser Engineering login, the one that shows the Server folder, and tap Allow. You come back here connected. If Dropbox shows another
+        account, sign out of it at dropbox.com first. Justin's admin account cannot connect apps.
       </p>
       <details>
-        <summary>Use an access token instead</summary>
-        <TextField label="Access token" value={token} onInput={setToken} autoCapitalize="off" hint="Generated in the Dropbox app console; lasts about 4 hours." />
+        <summary>Sign-in not working?</summary>
+        <p class="hint">The office can make an access token in the Dropbox app console. Paste it here. It lasts about 4 hours, then you connect again.</p>
+        <TextField label="Access token" value={token} onInput={setToken} autoCapitalize="off" />
         <button class="btn small" onClick={use} disabled={!token.trim()}>
           Use token
         </button>
@@ -410,8 +444,8 @@ function AppFiles(props: { folder: string; entries: RemoteEntry[]; onOpen: (deli
   );
 }
 
-/** A readable project number without a folder: show the exact path, create it only when asked. */
-function CreateProjectFolder(props: { folder: string; create: () => Promise<void> }) {
+/** A readable project number without a folder: show the exact path, create it after one OK (Nathan, 2026-10-04). */
+function CreateProjectFolder(props: { create: () => Promise<void> }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const create = async () => {
@@ -427,8 +461,8 @@ function CreateProjectFolder(props: { folder: string; create: () => Promise<void
   };
   return (
     <div class="create-folder">
-      <p>This project has no folder in Dropbox yet. Create it here?</p>
-      <p class="path">{props.folder}</p>
+      <p>Create this folder and save this site evaluation there?</p>
+      <p class="hint">Wrong project number? Fix it at the top instead.</p>
       <button class="btn primary" onClick={create} disabled={busy}>
         {busy ? 'Creating…' : 'Create folder'}
       </button>

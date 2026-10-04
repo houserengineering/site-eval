@@ -174,7 +174,7 @@ test('Dropbox: a missing project folder is created only when asked, at the exact
     job.header.projectNumber = '999-12';
     job.deliverableFolder = '';
   });
-  await expect(section.getByRole('status').filter({ hasText: 'The project folder /Server/0999/012 is not in Dropbox yet.' })).toBeVisible({ timeout: 15_000 });
+  await expect(section.getByRole('status').filter({ hasText: 'Waiting for your OK to create the project folder /Server/0999/012.' })).toBeVisible({ timeout: 15_000 });
   await expect(section.getByText('/Server/0999/012', { exact: true })).toBeVisible();
   expect(await fakePaths(page)).toEqual([]);
   await shot(page, '75-create-project-folder');

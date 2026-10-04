@@ -530,8 +530,21 @@ button.row-link { width: 100%; text-align: left; font: inherit; color: var(--tex
 .connect summary::before, .page > details > summary::before { content: ''; flex: none; width: 8px; height: 8px; margin: 0 6px 0 2px; border: solid currentColor; border-width: 0 2.5px 2.5px 0; transform: rotate(-45deg); }
 .connect details[open] > summary::before, .page > details[open] > summary::before { transform: rotate(45deg); }
 .connect details[open] > summary { margin-bottom: var(--s3); }
-.account { margin: 0 0 var(--s4); }
-.account p { margin: 0 0 var(--s2); }
+.connect details > .hint { margin: 0 0 var(--s3); }
+/* Account and destination as two labelled facts, so "who" and "where" read at a glance. */
+.dbx-facts { margin: 0 0 var(--s4); border: 1px solid var(--rule); border-radius: var(--radius); }
+.dbx-facts > div { padding: var(--s3) var(--s4); }
+.dbx-facts > div + div { border-top: 1px solid var(--rule); }
+.dbx-facts dt { font-size: var(--fs-over); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin: 0 0 var(--s1); }
+.dbx-facts dd { margin: 0; }
+.dbx-facts dd p { margin: 0; }
+.dbx-facts dd .path { font-weight: 650; font-size: var(--fs-body); }
+.dbx-facts dd .hint, .dbx-facts dd .btn { margin-top: var(--s2); }
+.dbx-option { margin: var(--s4) 0 0; }
+.dbx-option > .hint { margin: 0 0 var(--s2); }
+.dbx-option + .field, .filed + .field { margin-top: var(--s4); }
+.create-folder p { margin: 0 0 var(--s3); }
+.filed { margin: 0 0 var(--s3); }
 
 /* ---- Print preview and printing: the sheets are the deliverable's own pages ------------------ */
 .sheets { padding: 0 var(--s2) var(--s5); }
