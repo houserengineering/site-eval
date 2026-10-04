@@ -37,7 +37,8 @@ export const DELIVERABLE_NAMES: Record<Exclude<DeliverableKind, 'field-record-js
 export function dropboxFolder(folder: string): string {
   let f = folder.trim().replace(/\\/g, '/');
   if (!f) return '';
-  if (/^[a-z]:\//i.test(f) && !/^s:\//i.test(f) && !/\/Dropbox(?: \([^/]+\))?\/Server(?:\/|$)/i.test(f)) return '';
+  const localPath = /^[a-z]:\//i.test(f) || f.startsWith('//');
+  if (localPath && !/^s:\//i.test(f) && !/\/Dropbox(?: \([^/]+\))?\/Server(?:\/|$)/i.test(f)) return '';
   const server = /(^|\/)server(?:\/|$)/i.exec(f);
   if (server) f = f.slice(server.index + server[0].length);
   else {
