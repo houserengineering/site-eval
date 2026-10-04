@@ -21,8 +21,8 @@ export function PitMedia(props: { record: FieldRecord; pit: TestPit; save: (r: F
   };
   return (
     <>
-      <PitPhotos {...props} patchPit={patchPit} />
       <PitLocation {...props} patchPit={patchPit} />
+      <PitPhotos {...props} patchPit={patchPit} />
     </>
   );
 }

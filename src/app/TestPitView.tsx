@@ -64,6 +64,8 @@ export function TestPitView(props: { record: FieldRecord; pitId: string; save: (
 
       <TextField label="Test pit #" value={pit.label} onInput={(v) => savePit({ label: v })} autoCapitalize="characters" />
 
+      <PitMedia record={r} pit={pit} save={props.save} store={props.store} />
+
       {pit.horizons.length === 0 && previous && (
         <button class={`btn block${otherWall ? ' primary' : ''}`} onClick={() => props.save(copyHorizons(r, previous.id, pit.id))}>
           {otherWall ? `Copy horizons from wall ${otherWall.label}` : `Copy horizons from test pit ${previous.label}`}
@@ -94,8 +96,6 @@ export function TestPitView(props: { record: FieldRecord; pitId: string; save: (
       <PitSummary pit={pit} missing={missing.pit} save={savePit} />
 
       <RuleWarnings warnings={pitWarnings(r, pit)} />
-
-      <PitMedia record={r} pit={pit} save={props.save} store={props.store} />
 
       <WallChecks record={r} wall={pit} save={props.save} />
       <AiReviewLine record={r} wall={pit} />

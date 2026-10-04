@@ -56,13 +56,15 @@ async function arrive(page: Page, title: string | RegExp, name: string, opts: { 
 }
 
 async function settleAndCheck(page: Page, name: string, hole: boolean, keyboard = false) {
+  // Still for 500 ms: the coach re-anchors up to 300 ms after its last scroll (the keyboard settling).
   let last = '';
+  let stillFor = 0;
   await expect
     .poll(async () => {
       const now = JSON.stringify(await geometry(page));
-      const still = now === last;
+      stillFor = now === last ? stillFor + 1 : 0;
       last = now;
-      return still;
+      return stillFor >= 2;
     }, { intervals: [250] })
     .toBe(true);
   const g = await geometry(page, keyboard);
