@@ -45,6 +45,7 @@ export const wait = async (ms: number) => {
 export async function touch(el: HTMLElement | null) {
   if (!el || !pace) return;
   el.scrollIntoView({ block: 'nearest' });
+  await wait(450);
   const r = el.getBoundingClientRect();
   const dot = document.createElement('span');
   dot.className = 'coach-touch';
@@ -52,7 +53,7 @@ export async function touch(el: HTMLElement | null) {
   dot.style.top = `${r.top + r.height / 2}px`;
   document.body.append(dot);
   setTimeout(() => dot.remove(), 600);
-  await wait(260);
+  await wait(500);
 }
 
 /** A tap: the ripple, then a click. */
@@ -60,13 +61,14 @@ export async function tap(el: HTMLElement | null) {
   if (!el) return;
   await touch(el);
   el.click();
-  await wait(120);
+  await wait(700);
 }
 
 /** Types into a text box as the user would (input events), then commits it (change). */
 export async function type(el: HTMLInputElement | null, text: string) {
   if (!el) return;
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+  await touch(el);
   if (el.type === 'date' || !pace) {
     setter.call(el, text);
     el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -74,10 +76,10 @@ export async function type(el: HTMLInputElement | null, text: string) {
     for (let i = 1; i <= text.length; i++) {
       setter.call(el, text.slice(0, i));
       el.dispatchEvent(new Event('input', { bubbles: true }));
-      await wait(35);
+      await wait(110);
     }
   el.dispatchEvent(new Event('change', { bubbles: true }));
-  await wait(150);
+  await wait(700);
 }
 
 /** Taps a chip in a chip group unless it is already picked. */
@@ -95,7 +97,7 @@ export async function giveFile(el: HTMLInputElement | null, file: File) {
   dt.items.add(file);
   el.files = dt.files;
   el.dispatchEvent(new Event('change', { bubbles: true }));
-  await wait(200);
+  await wait(800);
 }
 
 export async function fetchFile(url: string, name: string): Promise<File> {

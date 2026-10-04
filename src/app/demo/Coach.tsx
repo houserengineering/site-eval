@@ -5,11 +5,12 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { RecordStore } from '../../storage/db';
 import { useAnimate } from '../settings';
 import { setPace } from './dom';
-import { placeTip, scrollToFit, unionRect, type Box, type Side } from './placement';
+import { GAP, placeTip, scrollToFit, unionRect, type Box, type Side } from './placement';
 import { demoState, markDemoDone, removeDemoRecords, setDemoState, useDemo } from './state';
 import { SCREEN_NAMES, STEPS, hashFor, screenOf, walls, type Ctx } from './steps';
 
 const PAD = 6;
+const EDGE = 8;
 const ATTR = 'data-coach-target';
 
 export function Coach(props: { store: RecordStore }) {
@@ -35,8 +36,22 @@ const viewBox = (els: HTMLElement[] = []): Box => {
   const under = Math.max(box.top, bar.getBoundingClientRect().bottom);
   return { ...box, top: under, height: box.height - (under - box.top) };
 };
-/** The on-screen keyboard is up: the visual viewport is well short of the window. */
-const keyboardUp = () => !!visualViewport && visualViewport.height < innerHeight * 0.8;
+/**
+ * Typing in the step's field: the on-screen keyboard is up (or about to be). Not read from the visual
+ * viewport alone: some phone browsers report the keyboard late or not at all.
+ */
+const TYPED = new Set(['text', 'number', 'tel', 'search', 'email', 'url', 'password']);
+let typingIn: Element | null = null;
+let keyboardSeen = false;
+const typingInTarget = () => {
+  const a = document.activeElement;
+  if (!((a instanceof HTMLTextAreaElement || (a instanceof HTMLInputElement && TYPED.has(a.type))) && a.closest(`[${ATTR}]`))) return false;
+  if (a !== typingIn) [typingIn, keyboardSeen] = [a, false];
+  const up = !!visualViewport && visualViewport.height < innerHeight * 0.8;
+  if (up) keyboardSeen = true;
+  // The keyboard reported and then closed (Android's back button keeps the focus): not typing.
+  return up || !keyboardSeen;
+};
 const same = (a: Box | null, b: Box | null) =>
   a === b || (!!a && !!b && Math.abs(a.top - b.top) < 0.5 && Math.abs(a.left - b.left) < 0.5 && Math.abs(a.width - b.width) < 0.5 && Math.abs(a.height - b.height) < 0.5);
 const focusInTarget = () => !!document.activeElement?.closest(`[${ATTR}]`);
@@ -86,13 +101,15 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
       // Keyboard up in a group of fields: highlight just the one being typed in, with its label, so it
       // and its tip fit in the room over the keyboard.
       const active = document.activeElement;
-      const typing = keyboardUp() && active instanceof HTMLElement && els.some((e) => e.contains(active)) ? [active, ...((active as HTMLInputElement).labels ?? [])] : null;
+      const typing = typingInTarget() && active instanceof HTMLElement && els.some((e) => e.contains(active)) ? [active, ...((active as HTMLInputElement).labels ?? [])] : null;
       const next = els.length ? pad(unionRect((typing ?? els).map((e) => e.getBoundingClientRect()))) : null;
       const key = stepKey(step, ctx);
       setBox((b) => (same(b, next) && b?.step === key ? b : next && { ...next, step: key }));
       const v = viewBox(els);
+      // Typing with the keyboard not (yet) reported: assume it takes the bottom half.
+      if (typingInTarget() && visualViewport && visualViewport.height > innerHeight * 0.8) v.height = Math.min(v.height, innerHeight * 0.5 - (v.top - visualViewport.offsetTop));
       setView((o) => (same(o, v) ? o : v));
-      setPrefer(keyboardUp() ? 'above' : 'below');
+      setPrefer(typingInTarget() ? 'above' : 'below');
       // Its full height, even while it scrolls inside a short room.
       if (tipEl.current) setTipH(tipEl.current.scrollHeight);
     };
@@ -117,19 +134,58 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
   // the next part of horizon 2): scroll again if it no longer fits beside the field. Waits for the
   // screen to settle (the keyboard slides in over several frames).
   const scrolledTipH = useRef(0);
-  const scrollKey = `${key}|${Math.round(view.height)}`;
+  // Not on every change of the screen height: the address bar slides in and out as the user scrolls, and
+  // re-scrolling then fights them. Only while typing, when the keyboard settles.
+  // Re-anchored too when the user taps into the field.
+  const scrollKey = `${key}|${prefer}|${focusInTarget() ? 'focus' : ''}${prefer === 'above' ? `|${Math.round(view.height)}` : ''}`;
+  // One timer at a time, not reset by the box moving under it (it moves every frame while anything on
+  // the screen animates); it reads the latest box, room and key when it fires.
+  const latestFit = useRef({ box, tipH, view, prefer, scrollKey, key });
+  latestFit.current = { box, tipH, view, prefer, scrollKey, key };
+  const pending = useRef(false);
+  const lastScroll = useRef(0);
+  const userScroll = useRef(0);
+  // Show me scrolls to each control it taps: no re-anchoring meanwhile.
+  const busy = useRef(false);
+  busy.current = phase === 'busy';
+  useEffect(() => {
+    const on = () => (userScroll.current = Date.now());
+    const opts = { passive: true, capture: true };
+    for (const t of ['touchmove', 'wheel'] as const) addEventListener(t, on, opts);
+    return () => {
+      for (const t of ['touchmove', 'wheel'] as const) removeEventListener(t, on, opts);
+    };
+  }, []);
+  const needsScroll = () => {
+    const { box, tipH, view, prefer, scrollKey, key } = latestFit.current;
+    if (!box || box.step !== key) return false;
+    const short = placeTip(box, { width: 420, height: tipH }, view, prefer).height < tipH;
+    // Off the screen without the user scrolling it there (the page grew or shrank around it): back to it.
+    const gone = box.top + box.height < view.top || box.top > view.top + view.height;
+    const moved = gone && !busy.current && Date.now() - userScroll.current > 1500 && Date.now() - lastScroll.current > 600;
+    return moved || scrolledFor.current !== scrollKey || (short && tipH !== scrolledTipH.current);
+  };
   useEffect(() => {
     // The box lags a step change by a frame: wait for this step's.
-    if (!box || !onScreen || box.step !== key) return;
-    const short = placeTip(box, { width: 420, height: tipH }, view, prefer).height < tipH;
-    if (scrolledFor.current === scrollKey && !(short && tipH !== scrolledTipH.current)) return;
-    const t = setTimeout(() => {
+    if (!onScreen || pending.current || !needsScroll()) return;
+    pending.current = true;
+    // Just scrolled: let the box catch up with it before measuring again.
+    const wait = Math.max(150, 300 - (Date.now() - lastScroll.current));
+    setTimeout(() => {
+      pending.current = false;
+      if (!needsScroll()) return;
+      const { box, tipH, view, prefer, scrollKey } = latestFit.current;
       scrolledFor.current = scrollKey;
       scrolledTipH.current = tipH;
-      const d = scrollToFit(box, tipH, view, prefer);
-      if (d) scrollBy({ top: d, behavior: animate && prefer === 'below' ? 'smooth' : 'auto' });
-    }, 120);
-    return () => clearTimeout(t);
+      // Typing: the field near the top of the screen, its one-line tip just above it, so it stays clear
+      // of the keyboard whatever its height.
+      const d = prefer === 'above' ? Math.round(box!.top - (view.top + EDGE + tipH + GAP)) : scrollToFit(box!, tipH, view, prefer);
+      if (Math.abs(d) < 4) return;
+      const smooth = animate && prefer === 'below';
+      lastScroll.current = Date.now() + (smooth ? 400 : 0);
+      scrollBy({ top: d, behavior: smooth ? 'smooth' : 'auto' });
+      setTimeout(bump, smooth ? 700 : 300);
+    }, wait);
   }, [box, tipH, view, prefer, onScreen, scrollKey, backs]);
 
   // Typing, committing, focus moves: re-check the step. Enter on a highlighted field commits it.
@@ -218,11 +274,17 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
   const hole = onScreen && box && !offscreen ? box : null;
   const typedNext = step.typed && valid && phase === 'ready';
   const problem = onScreen ? step.problem?.(ctx) : undefined;
-  const showProblem = problem && (!focusInTarget() || Date.now() - lastInput.current > 1200);
+  const sample = typeof step.sample === 'function' ? step.sample(ctx) : step.sample;
+  // Keyboard up on this step's field: the tip shrinks to one line.
+  const compact = prefer === 'above' && !!hole;
+  const showProblem = problem && phase !== 'busy' && (!focusInTarget() || Date.now() - lastInput.current > 1200);
   const place = hole
     ? placeTip(hole, { width: 420, height: tipH }, view, prefer)
     : { side: 'none' as const, top: view.top + Math.max(8, (view.height - tipH) / 2), left: view.left + 16, width: Math.min(420, view.width - 32), height: Math.min(tipH, view.height - 16), arrowLeft: 0, maxHeight: view.height - 16 };
   if (!hole) place.left = view.left + (view.width - place.width) / 2;
+  // Scrolled away from the field: a one-line chip at the edge toward it, not a card in the way.
+  const away = onScreen && offscreen && phase !== 'busy' ? (box!.top < view.top ? 'above' : 'below') : null;
+  if (away) place.top = away === 'above' ? view.top + EDGE : view.top + view.height - EDGE - Math.min(tipH, 72);
 
   return (
     <div class={`coach${glide ? ' glide' : ''}${phase === 'done' ? ' is-done' : ''}`}>
@@ -246,73 +308,86 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
       )}
       <div
         ref={tipEl}
-        class={`coach-tip ${place.side}${prefer === 'above' ? ' compact' : ''}`}
+        class={`coach-tip ${place.side}${compact || away ? ' compact' : ''}`}
         data-coach-tip
         role="dialog"
         aria-label="Demo guide"
         style={{ top: `${place.top}px`, left: `${place.left}px`, width: `${place.width}px`, maxHeight: `${place.maxHeight}px` }}
       >
-        <p class="coach-count">
-          Demo · {index + 1} of {STEPS.length}
-        </p>
-        {onScreen ? (
-          <>
-            <h2>
-              {step.title} {phase === 'done' && <span class="coach-check">✓</span>}
-            </h2>
-            <p>{step.text(ctx)}</p>
-            {step.sample && (
-              <p class="coach-sample">
-                Example: <strong>{step.sample}</strong>
-              </p>
+        <h2 class="visually-hidden">{onScreen ? step.title : 'You left the demo step'}</h2>
+        {away ? (
+          <div class="coach-line">
+            <p>Field {away} {away === 'above' ? '↑' : '↓'}</p>
+            <button type="button" class="btn small primary" onClick={takeBack}>
+              Take me back
+            </button>
+          </div>
+        ) : compact ? (
+          // Keyboard up: one line, so the field and the keyboard keep the room.
+          <div class="coach-line">
+            <p class={showProblem ? 'coach-problem' : undefined} role={showProblem ? 'alert' : undefined}>
+              {showProblem ? problem : sample ? <>e.g. <strong>{sample}</strong></> : step.text(ctx)}
+            </p>
+            {typedNext && (
+              <button type="button" class="btn small primary" onClick={() => void complete()}>
+                Next
+              </button>
             )}
+          </div>
+        ) : (
+          <>
+            <p>
+              {onScreen ? step.text(ctx) : `This step is on ${SCREEN_NAMES[step.screen]}.`}
+              {onScreen && sample && (
+                <span class="coach-sample">
+                  {' '}
+                  e.g. <strong>{sample}</strong>
+                </span>
+              )}
+              {phase === 'done' && <span class="coach-check"> ✓</span>}
+            </p>
             {showProblem && (
               <p class="coach-problem" role="alert">
                 {problem}
               </p>
             )}
-            {offscreen && <p class="coach-sample">The highlighted field is off the screen.</p>}
-          </>
-        ) : (
-          <>
-            <h2>You left the demo step</h2>
-            <p>
-              This step is on {SCREEN_NAMES[step.screen]}: {step.title.toLowerCase()}.
-            </p>
+            <div class="coach-actions">
+              {(!onScreen || offscreen) && (
+                <button type="button" class="btn small primary" onClick={takeBack}>
+                  Take me back
+                </button>
+              )}
+              {onScreen && !offscreen && step.button && (
+                <button type="button" class="btn small primary" onClick={press} disabled={phase !== 'ready'}>
+                  {step.button.label}
+                </button>
+              )}
+              {onScreen && !offscreen && typedNext && (
+                <button type="button" class="btn small primary" onClick={() => void complete()}>
+                  Next
+                </button>
+              )}
+              {onScreen && !offscreen && step.showMe && !valid && (
+                <button type="button" class="btn small" onClick={showMe} disabled={phase !== 'ready'}>
+                  Show me
+                </button>
+              )}
+              {!step.button && (
+                <button type="button" class="link-btn" onClick={skip} disabled={phase !== 'ready'}>
+                  Skip
+                </button>
+              )}
+              {props.replay && (
+                <button type="button" class="link-btn" onClick={exit}>
+                  Exit demo
+                </button>
+              )}
+              <span class="coach-count">
+                {index + 1}/{STEPS.length}
+              </span>
+            </div>
           </>
         )}
-        <div class="coach-actions">
-          {(!onScreen || offscreen) && (
-            <button type="button" class="btn small primary" onClick={takeBack}>
-              Take me back
-            </button>
-          )}
-          {onScreen && !offscreen && step.button && (
-            <button type="button" class="btn small primary" onClick={press} disabled={phase !== 'ready'}>
-              {step.button.label}
-            </button>
-          )}
-          {onScreen && !offscreen && typedNext && (
-            <button type="button" class="btn small primary" onClick={() => void complete()}>
-              Next
-            </button>
-          )}
-          {onScreen && !offscreen && step.showMe && !valid && (
-            <button type="button" class="btn small" onClick={showMe} disabled={phase !== 'ready'}>
-              Show me
-            </button>
-          )}
-          {!step.button && (
-            <button type="button" class="link-btn" onClick={skip} disabled={phase !== 'ready'}>
-              Skip step
-            </button>
-          )}
-          {props.replay && (
-            <button type="button" class="link-btn" onClick={exit}>
-              Exit demo
-            </button>
-          )}
-        </div>
       </div>
     </div>
   );

@@ -215,7 +215,8 @@ test('first launch: the demo coaches the whole field path and ends in Settings',
   await arrive(page, 'Horizon 2 on your own', 'h2-color');
   await showMe(page);
 
-  await arrive(page, 'Test pit summary', 'summary', { timeout: 20_000 });
+  // Show me goes at a human pace: a whole horizon takes a while.
+  await arrive(page, 'Test pit summary', 'summary', { timeout: 60_000 });
   await next(page);
 
   // If the user wanders off, the tip offers to take them back.

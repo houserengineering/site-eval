@@ -41,7 +41,7 @@ export interface Step {
   title: string;
   text: (c: Ctx) => string;
   /** The answer key value the tip shows. */
-  sample?: string;
+  sample?: string | ((c: Ctx) => string | undefined);
   /** What to highlight; none: the tip sits in the middle of the screen. */
   target?: (c: Ctx) => HTMLElement[];
   /** Completed by the user's action (auto-advance). Steps without it advance on their button. */
@@ -225,6 +225,16 @@ function horizonStep(i: number, part: Part, title: string, text: string, sample:
 }
 
 const [A1, B2] = DEMO_KEY.horizons;
+/** The answer key for each part of a horizon, in PARTS order. */
+const partSamples = (h: DemoHorizon) => [
+  depthText(h),
+  colorKey(h),
+  h.texture.toLowerCase(),
+  `${h.rockPct}%`,
+  structureKey(h),
+  `${h.consistence}, ${h.plasticity}`.toLowerCase(),
+  `roots ${h.roots === 'Y' ? 'yes' : 'no'}, mottling ${h.mottling === 'Y' ? 'yes' : 'no'}`,
+];
 
 const addHorizon = () => byText<HTMLButtonElement>('button', 'Add horizon');
 const horizonDone = (w: TestPit | undefined, i: number) => !!hz(w, i) && missingItems(w!).horizons[i].length === 0;
@@ -271,19 +281,19 @@ export const STEPS: Step[] = [
     screen: 'site',
     title: 'Practice on a made-up job',
     text: () =>
-      'About 5 minutes. Each step highlights one field: fill it in and the demo moves on with you. Tap "Show me" to watch it done. Nothing goes to Dropbox, and the demo job deletes itself at the end.',
+      'A made-up job, about 5 minutes. Fill in each highlighted field; Show me does it for you.',
     button: { label: 'Start' },
   },
-  headerStep('project-number', 'Project #', 'projectNumber', 'Project #', 'The job number, a dot, then the subproject.', (v) =>
+  headerStep('project-number', 'Project #', 'projectNumber', 'Project #', 'Job and subproject.', (v) =>
     /^\d{4}\.\d{3}$/.test(v.trim()) ? undefined : 'Use 4 digits, a dot, then 3 digits, like 0999.001.',
   ),
-  headerStep('project-name', 'Project name', 'projectName', 'Project name', 'As it should print on the soil log.'),
-  headerStep('location', 'Location', 'location', 'Location', 'Street address or a short description of the site.'),
+  headerStep('project-name', 'Project name', 'projectName', 'Project name', 'As it prints on the log.'),
+  headerStep('location', 'Location', 'location', 'Location', 'Address or site description.'),
   {
     id: 'eval-by',
     screen: 'site',
     title: 'Who and when',
-    text: () => 'Your name and the day you dug the pits.',
+    text: () => 'Your name and the dig date.',
     sample: `${H.evalBy}, today`,
     target: () => shown([field('Eval. by'), field('Date')]),
     typed: true,
@@ -298,7 +308,7 @@ export const STEPS: Step[] = [
     'Confirmation number',
     'confirmationNumber',
     'Confirmation number',
-    "From GCCHD on Gallatin County site evaluations. Leave it blank on other counties' jobs.",
+    'GCCHD number; blank outside Gallatin County.',
   ),
   {
     id: 'add-pit',
@@ -306,8 +316,7 @@ export const STEPS: Step[] = [
     screen: 'site',
     title: 'Add a test pit: only when you are standing at it',
     text: () =>
-      'Adding a test pit starts the GPS right there, so do not add one until you are physically at the pit. Type its number (blank uses the next one) and tap Add test pit. Wall A (north) opens.',
-    sample: DEMO_KEY.pit,
+      "Add the pit once you're standing at it; GPS starts on add.",
     target: () => one(field('New test pit #')?.closest('form') as HTMLElement),
     done: (c) => !!c.wallA,
     showMe: async () => {
@@ -322,8 +331,8 @@ export const STEPS: Step[] = [
     title: 'GPS starts by itself',
     text: (c) =>
       c.wallA?.location
-        ? 'Got it. The fix is saved with the wall.'
-        : 'It started when you added the pit and saves the fix once it is within ±10 ft. Indoors, or without location permission, there is no fix: tap "Show me" for a made-up one.',
+        ? 'Fix saved with the wall.'
+        : 'Saves the fix at ±10 ft. No fix indoors: Show me fakes one.',
     target: () => one(gpsCard()),
     done: (c) => !!c.wallA?.location,
     showMe: async (c) => {
@@ -336,7 +345,7 @@ export const STEPS: Step[] = [
     id: 'gps-retake',
     screen: 'pitA',
     title: 'Recalibrate if it looks wrong',
-    text: () => 'If the fix is off, or the accuracy is worse than ±10 ft, stand at the pit and tap Retake GPS. No need now.',
+    text: () => 'Fix looks off? Stand at the pit and tap Retake GPS.',
     target: () => one(byText<HTMLElement>('button', 'Retake GPS') ?? gpsCard()),
     button: { label: 'Next' },
   },
@@ -344,27 +353,31 @@ export const STEPS: Step[] = [
     id: 'add-horizon',
     screen: 'pitA',
     title: 'Log the first horizon',
-    text: () => 'Tap Add horizon. Each horizon is one layer of the wall, top down.',
+    text: () => 'Add horizon 1.',
     target: () => one(addHorizon()),
     done: (c) => (c.wallA?.horizons.length ?? 0) > 0,
     showMe: () => tap(addHorizon()),
   },
-  horizonStep(0, PARTS[0], 'Horizon and depth', 'Pick the horizon, then tap its bottom depth (the top follows the horizon above).', depthText(A1)),
-  horizonStep(0, PARTS[1], 'Munsell color', 'Hue, then value, then chroma, as read off the chart.', colorKey(A1)),
-  horizonStep(0, PARTS[2], 'Texture', 'The USDA class by feel. "Texture by feel" below walks you through it.', A1.texture.toLowerCase()),
-  horizonStep(0, PARTS[3], 'Rock fragments', 'Percent by volume. Over 15% adds a rock word to the texture.', `${A1.rockPct}%`),
-  horizonStep(0, PARTS[4], 'Structure', 'Shape, then grade and size.', structureKey(A1)),
-  horizonStep(0, PARTS[5], 'Consistence and plasticity', 'Moist consistence, and the 3 mm wire for plasticity.', `${A1.consistence}, ${A1.plasticity}`.toLowerCase()),
-  horizonStep(0, PARTS[6], 'Roots and mottling', 'Yes or no for each. Mottling yes asks for the mottles.', `roots ${A1.roots === 'Y' ? 'yes' : 'no'}, mottling no`),
+  horizonStep(0, PARTS[0], 'Horizon and depth', 'Horizon, then bottom depth.', depthText(A1)),
+  horizonStep(0, PARTS[1], 'Munsell color', 'Hue, value, chroma.', colorKey(A1)),
+  horizonStep(0, PARTS[2], 'Texture', 'USDA class.', A1.texture.toLowerCase()),
+  horizonStep(0, PARTS[3], 'Rock fragments', 'Percent by volume.', `${A1.rockPct}%`),
+  horizonStep(0, PARTS[4], 'Structure', 'Shape, grade, size.', structureKey(A1)),
+  horizonStep(0, PARTS[5], 'Consistence and plasticity', 'Moist consistence and plasticity.', `${A1.consistence}, ${A1.plasticity}`.toLowerCase()),
+  horizonStep(0, PARTS[6], 'Roots and mottling', 'Roots and mottling.', `roots ${A1.roots === 'Y' ? 'yes' : 'no'}, mottling no`),
   {
     id: 'h2',
     screen: 'pitA',
     title: 'Horizon 2 on your own',
     text: (c) => {
       const part = nextPart(c.wallA, 1);
-      return `Add horizon and log it the same way. ${part ? `Now: ${part.name}.` : (c.wallA?.horizons.length ?? 0) < 2 ? 'Now: Add horizon.' : ''}`;
+      return `Same way. ${part ? `Now: ${part.name}.` : (c.wallA?.horizons.length ?? 0) < 2 ? 'Now: Add horizon.' : ''}`;
     },
-    sample: `${depthText(B2)}, ${colorKey(B2)}, ${B2.texture.toLowerCase()}, ${B2.rockPct}% rock, ${structureKey(B2)}, friable, non-plastic, no roots, no mottling`,
+    sample: (c) => {
+      if (!hz(c.wallA, 1)) return undefined;
+      const part = nextPart(c.wallA, 1);
+      return part && partSamples(B2)[PARTS.indexOf(part)];
+    },
     target: (c) => {
       if (!hz(c.wallA, 1)) return one(addHorizon());
       const card = horizonCard(2);
@@ -386,8 +399,8 @@ export const STEPS: Step[] = [
     title: 'Test pit summary',
     text: (c) =>
       c.wallA && missingItems(c.wallA).pit.length
-        ? `Still needed: ${missingItems(c.wallA).pit.join(', ')}. Tap the row to open it.`
-        : 'This row is what prints for the pit: no water seen, no limiting layer, the slope. A normal pit needs nothing here; tap the row to change any of it.',
+        ? `Still needed: ${missingItems(c.wallA).pit.join(', ')}.`
+        : 'Defaults fit a normal pit; tap the row to change.',
     target: () => one(document.querySelector<HTMLElement>('section[aria-label="Test pit summary"] summary')),
     button: { label: 'Next' },
   },
@@ -395,7 +408,7 @@ export const STEPS: Step[] = [
     id: 'photo',
     screen: 'pitA',
     title: 'Photo of the wall',
-    text: () => 'Tap Take photo: the camera opens. Square to the wall, surface at the top. "Show me" uses a sample photo.',
+    text: () => 'Photo of the wall, surface at the top.',
     target: () => one(document.querySelector<HTMLElement>('section[aria-labelledby^="photos-"] > .btn-row:last-of-type')),
     done: (c) => (c.wallA?.photos.length ?? 0) > 0,
     showMe: async () => giveFile(photoInput(), await goodPhoto()),
@@ -405,7 +418,7 @@ export const STEPS: Step[] = [
     leaves: true,
     screen: 'pitA',
     title: 'On to wall B',
-    text: () => 'Tap ‹ to go back to the site evaluation.',
+    text: () => 'Tap ‹ for wall B.',
     target: () => one(backLink()),
     done: (c) => c.screen !== 'pitA',
     showMe: () => tap(backLink()),
@@ -415,7 +428,7 @@ export const STEPS: Step[] = [
     leaves: true,
     screen: 'site',
     title: 'Open wall 1B',
-    text: () => 'The south wall of the same pit.',
+    text: () => 'South wall of the same pit.',
     target: (c) => one(c.wallB ? document.querySelector<HTMLElement>(`a[href$="/pit/${c.wallB.id}"]`) : null),
     done: (c) => c.screen === 'pitB',
     showMe: async (c) => tap(document.querySelector<HTMLElement>(`a[href$="/pit/${c.wallB!.id}"]`)),
@@ -424,7 +437,7 @@ export const STEPS: Step[] = [
     id: 'copy-a',
     screen: 'pitB',
     title: 'Start from wall A',
-    text: () => 'Same hole, other side: copy wall A, then change only what differs (usually the depths).',
+    text: () => 'Copy wall A, then change what differs.',
     target: () => one(byText<HTMLElement>('button', /^Start from wall/)),
     done: (c) => (c.wallB?.horizons.length ?? 0) > 0,
     showMe: () => tap(byText<HTMLElement>('button', /^Start from wall/)),
@@ -434,7 +447,7 @@ export const STEPS: Step[] = [
     screen: 'pitB',
     title: 'A pit check: retake this photo',
     text: () =>
-      'The app checks every photo. This one is too dark and blurry, so it holds the soil log. Tap Retake and photograph the wall again. "Show me" swaps in a good one.',
+      'Too dark and blurry; it holds the log. Retake it.',
     target: (c) => shown([plantedItem(c)?.querySelector<HTMLElement>('.alert'), plantedItem(c)?.querySelector<HTMLElement>('.btn-row')]),
     done: (c) => !!demoState()?.planted && !plantedPhoto(c),
     showMe: async (c) => giveFile(plantedItem(c)?.querySelector<HTMLInputElement>('input[type="file"]') ?? null, await goodPhoto()),
@@ -454,7 +467,7 @@ export const STEPS: Step[] = [
     screen: 'site',
     title: 'Dropbox: off in the demo',
     text: () =>
-      'On a real job you connect Dropbox here once. Then the soil logs, photos and field record file themselves into the project folder, and Print sends them to the office copier. The demo never connects.',
+      'Connect once on a real job; logs and photos then file themselves. Off in the demo.',
     target: () => one(document.querySelector<HTMLElement>('section[aria-labelledby="dbx"]')),
     button: { label: 'Next' },
   },
@@ -465,8 +478,8 @@ export const STEPS: Step[] = [
     title: 'Generate the soil log',
     text: (c) =>
       c.r && openFlags(c.r).length
-        ? `${openFlags(c.r).length} pit check(s) are still open and hold the soil log: fix or accept them on the wall. "Show me" accepts them.`
-        : 'Under Deliverables, tap Soil logs.',
+        ? `${openFlags(c.r).length} open pit check(s) hold the log; Show me accepts them.`
+        : 'Tap Soil logs.',
     target: () => one(document.querySelector<HTMLElement>('a[href$="/print/soil-logs"]')),
     done: (c) => c.screen === 'print',
     showMe: async (c) => {
@@ -478,7 +491,7 @@ export const STEPS: Step[] = [
     id: 'finished',
     screen: 'print',
     title: 'Your finished soil log',
-    text: () => 'Both walls on one page, with the photo and GPS. Print or Save PDF from here. Tap Finish: the demo job is deleted.',
+    text: () => 'Both walls, photo and GPS on one page. Finish deletes the demo job.',
     target: () => one(document.querySelector<HTMLElement>('.sheets .sheet')),
     button: {
       label: 'Finish',
@@ -493,7 +506,7 @@ export const STEPS: Step[] = [
     leaves: true,
     screen: 'home',
     title: 'The demo lives in Settings',
-    text: () => 'To run it again later, tap Settings.',
+    text: () => 'Replay lives in Settings.',
     target: () => one(document.querySelector<HTMLElement>('.bar a[href="#/settings"]')),
     done: (c) => c.screen === 'settings',
     showMe: () => tap(document.querySelector<HTMLElement>('.bar a[href="#/settings"]')),
@@ -502,7 +515,7 @@ export const STEPS: Step[] = [
     id: 'replay',
     screen: 'settings',
     title: 'Replay the demo',
-    text: () => 'Here, any time. That is the demo done.',
+    text: () => 'Any time. Demo done.',
     target: () => one(byText<HTMLElement>('button', 'Replay the demo')?.closest<HTMLElement>('.field') ?? null),
     button: { label: 'Done' },
   },
