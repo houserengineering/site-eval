@@ -4,7 +4,8 @@ import { openStore, type RecordStore } from '../storage/db';
 import type { PrintKind } from '../generator';
 import { CertifierSetup } from './Certify';
 import { PercTestView } from './PercTestView';
-import { PRINT_KINDS, PrintView } from './PrintView';
+import { PRINT_KINDS, PrintView, printKindOn } from './PrintView';
+import { FEATURES } from './features';
 import { PercTimers } from './PercTimers';
 import { SiteEvaluationView } from './SiteEvaluationView';
 import { GroundwaterView, WellView } from './GroundwaterView';
@@ -124,14 +125,16 @@ export function App() {
 function page(route: Route, store: RecordStore, percTests: boolean) {
   if (route.name === 'pit') return <RecordLoader store={store} id={route.id} render={(r, save) => <TestPitView record={r} pitId={route.pitId} save={save} store={store} />} />;
   if (route.name === 'perc' && percTests) return <RecordLoader store={store} id={route.id} render={(r, save) => <PercTestView record={r} testId={route.testId} save={save} />} />;
-  if (route.name === 'print') return <RecordLoader store={store} id={route.id} render={(r, save) => <PrintView record={r} kind={route.kind} store={store} save={save} />} />;
+  // A switched-off module's old links (features.ts) open the site evaluation instead.
+  if (route.name === 'print' && printKindOn(route.kind, percTests)) return <RecordLoader store={store} id={route.id} render={(r, save) => <PrintView record={r} kind={route.kind} store={store} save={save} />} />;
   if (route.name === 'map') return <RecordLoader store={store} id={route.id} render={(r, save) => <SiteMapView record={r} save={save} store={store} />} />;
-  if (route.name === 'gw') return <RecordLoader store={store} id={route.id} render={(r, save) => <GroundwaterView record={r} save={save} />} />;
-  if (route.name === 'well') return <RecordLoader store={store} id={route.id} render={(r, save) => <WellView record={r} wellId={route.wellId} save={save} />} />;
-  if (route.name === 'certifier') return <CertifierSetup store={store} />;
+  if (route.name === 'gw' && FEATURES.GROUNDWATER) return <RecordLoader store={store} id={route.id} render={(r, save) => <GroundwaterView record={r} save={save} />} />;
+  if (route.name === 'well' && FEATURES.GROUNDWATER) return <RecordLoader store={store} id={route.id} render={(r, save) => <WellView record={r} wellId={route.wellId} save={save} />} />;
+  if (route.name === 'certifier' && FEATURES.PERC) return <CertifierSetup store={store} />;
+  if (route.name === 'certifier') return <SettingsView store={store} />;
   if (route.name === 'settings') return <SettingsView store={store} />;
   if (route.name === 'dropbox') return <DropboxOpenView store={store} />;
-  if (route.name === 'site' || route.name === 'perc') return <RecordLoader store={store} id={route.id} render={(r, save) => <SiteEvaluationView record={r} save={save} store={store} />} />;
+  if (route.name === 'site' || route.name === 'perc' || route.name === 'print' || route.name === 'gw' || route.name === 'well') return <RecordLoader store={store} id={route.id} render={(r, save) => <SiteEvaluationView record={r} save={save} store={store} />} />;
   return <Home store={store} />;
 }
 
@@ -262,7 +265,7 @@ function Home({ store }: { store: RecordStore }) {
               <span class="row-sub">
                 {r.testPits.length} test pit{r.testPits.length === 1 ? '' : 's'}
                 {percTests && r.percTests.length > 0 && ` · ${r.percTests.length} perc test${r.percTests.length === 1 ? '' : 's'}`}
-                {r.wells?.length > 0 && ` · ${r.wells.length} observation well${r.wells.length === 1 ? '' : 's'}`}
+                {FEATURES.GROUNDWATER && r.wells?.length > 0 && ` · ${r.wells.length} observation well${r.wells.length === 1 ? '' : 's'}`}
                 {r.header.date && ` · ${r.header.date}`}
               </span>
             </a>

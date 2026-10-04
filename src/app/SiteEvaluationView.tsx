@@ -11,7 +11,8 @@ import { startFix } from './gps';
 import type { PrintKind } from '../generator';
 import { CertifyPanel } from './Certify';
 import { download, photoSource } from './deliverables';
-import { PRINT_KINDS } from './PrintView';
+import { PRINT_KINDS, printKindOn } from './PrintView';
+import { FEATURES } from './features';
 import { loadTemplates } from './templates';
 import { STATUS_TEXT } from './SiteMapView';
 import { UnconfirmedNotice } from './Unconfirmed';
@@ -61,7 +62,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
     setStatus(`Generating ${what}…`);
     try {
       const { generate } = await import('../generator');
-      const files = await generate(r, await loadTemplates(), { photo: photoSource(props.store), percTests });
+      const files = await generate(r, await loadTemplates(), { photo: photoSource(props.store), percTests, groundwater: FEATURES.GROUNDWATER });
       const f = files.find((x) => x.kind === kind)!;
       const name = [r.header.projectNumber, f.path].filter(Boolean).join(' ');
       download(new Blob([f.bytes as BlobPart], { type: f.mimeType }), name);
@@ -191,6 +192,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
       </section>
       )}
 
+      {FEATURES.GROUNDWATER && (
       <section aria-labelledby="gw">
         <h2 id="gw">Groundwater monitoring</h2>
         <p class="hint">Separate module: observation wells read weekly through the seasonal high, with their own results form.</p>
@@ -199,15 +201,16 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
           <span class="row-sub">{r.wells.length ? r.wells.map((w) => `Well # ${w.label}: ${wellSummary(w)}`).join(' · ') : 'Register wells and enter readings'}</span>
         </a>
       </section>
+      )}
 
       <section aria-labelledby="out">
         <h2 id="out">Deliverables</h2>
         <SoilLogHold record={r} />
-        <RuleWarnings warnings={allWarnings(r, now, { percTests })} title="Rule checks before export" showSubject />
+        {FEATURES.RULE_WARNINGS && <RuleWarnings warnings={allWarnings(r, now, { percTests })} title="Rule checks before export" showSubject />}
         <p class="hint">{percTests && r.percTests.length > 0 ? 'PDFs:' : 'Soil log PDFs:'}</p>
         <ul class="list">
           {(Object.keys(PRINT_KINDS) as PrintKind[])
-            .filter((k) => k !== 'groundwater' && (k !== 'perc-tests' || (percTests && r.percTests.length > 0)))
+            .filter((k) => k !== 'groundwater' && printKindOn(k, percTests) && (k !== 'perc-tests' || r.percTests.length > 0))
             .map((k) => (
               <li key={k}>
                 <a class="row-link" href={`#/se/${r.id}/print/${k}`}>

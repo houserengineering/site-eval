@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { PDFDocument } from 'pdf-lib';
 import { turnOnPercTests } from './settings';
+import { FEATURES } from '../src/app/features';
 
 const shots = process.env.SHOTS_DIR;
 const shot = async (page: Page, name: string, fullPage = true) => {
@@ -46,29 +47,32 @@ test('photo, GPS, certify on the certifier device, print preview and PDFs', asyn
   await expect(page.getByText('±8 ft', { exact: false }).first()).toBeVisible();
 
   await page.getByRole('link', { name: 'Back to site evaluation' }).click();
-  await page.getByRole('button', { name: 'Add perc test' }).click();
-  await page.getByRole('link', { name: 'Back to site evaluation' }).click();
+  // Perc tests and certification are off on live main (src/app/features.ts); this runs on the beta branch.
+  if (FEATURES.PERC) {
+    await page.getByRole('button', { name: 'Add perc test' }).click();
+    await page.getByRole('link', { name: 'Back to site evaluation' }).click();
 
-  // No signature on this device: Certify is not offered.
-  await expect(page.getByText('Perc test 1: not certified')).toBeVisible();
-  await expect(page.getByRole('button', { name: /^Certify/ })).toHaveCount(0);
-  await page.getByRole('link', { name: 'Set up this device as the certifier' }).click();
-  await page.getByLabel('Printed name').fill('Justin Houser, PE');
-  const pad = page.getByRole('img', { name: 'Signature' });
-  const box = (await pad.boundingBox())!;
-  await page.mouse.move(box.x + 20, box.y + box.height * 0.7);
-  await page.mouse.down();
-  for (let i = 1; i <= 20; i++) await page.mouse.move(box.x + 20 + i * 14, box.y + box.height * (0.5 + 0.25 * Math.sin(i / 2)));
-  await page.mouse.up();
-  await shot(page, '42-certifier-setup');
-  await page.getByRole('button', { name: 'Save on this device' }).click();
-  await expect(page.getByText('Saved on this device.')).toBeVisible();
-  await page.getByRole('link', { name: 'Back' }).click();
+    // No signature on this device: Certify is not offered.
+    await expect(page.getByText('Perc test 1: not certified')).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Certify/ })).toHaveCount(0);
+    await page.getByRole('link', { name: 'Set up this device as the certifier' }).click();
+    await page.getByLabel('Printed name').fill('Justin Houser, PE');
+    const pad = page.getByRole('img', { name: 'Signature' });
+    const box = (await pad.boundingBox())!;
+    await page.mouse.move(box.x + 20, box.y + box.height * 0.7);
+    await page.mouse.down();
+    for (let i = 1; i <= 20; i++) await page.mouse.move(box.x + 20 + i * 14, box.y + box.height * (0.5 + 0.25 * Math.sin(i / 2)));
+    await page.mouse.up();
+    await shot(page, '42-certifier-setup');
+    await page.getByRole('button', { name: 'Save on this device' }).click();
+    await expect(page.getByText('Saved on this device.')).toBeVisible();
+    await page.getByRole('link', { name: 'Back' }).click();
 
-  page.once('dialog', (d) => d.accept());
-  await page.getByRole('button', { name: 'Certify as Justin Houser, PE' }).click();
-  await expect(page.getByText(/Perc test 1: certified by Justin Houser, PE/)).toBeVisible();
-  await shot(page, '43-certified');
+    page.once('dialog', (d) => d.accept());
+    await page.getByRole('button', { name: 'Certify as Justin Houser, PE' }).click();
+    await expect(page.getByText(/Perc test 1: certified by Justin Houser, PE/)).toBeVisible();
+    await shot(page, '43-certified');
+  }
 
   // Print preview of the soil logs: letter sheets drawn from the PDF's pages.
   await page.getByRole('link', { name: /^Soil logs/ }).click();
@@ -88,29 +92,34 @@ test('photo, GPS, certify on the certifier device, print preview and PDFs', asyn
   }
   await page.emulateMedia({ media: 'screen' });
 
-  // The perc test PDF carries the applied signature.
-  await page.getByRole('link', { name: 'Back to site evaluation' }).click();
-  await page.getByRole('link', { name: /^Perc tests/ }).click();
-  await expect(page.getByRole('img', { name: 'Perc tests page 1 of 1' }).locator('image')).toHaveCount(1);
-  await shot(page, '46-print-perc');
-  const dl = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Save PDF' }).click();
-  const file = await dl;
-  expect(file.suggestedFilename()).toBe('0999.005 Percolation Tests.pdf');
-  expect((await PDFDocument.load(readFileSync((await file.path())!))).getPageCount()).toBe(1);
+  // Perc tests and certification are off on live main (src/app/features.ts); this runs on the beta branch.
+  if (FEATURES.PERC) {
+    // The perc test PDF carries the applied signature.
+    await page.getByRole('link', { name: 'Back to site evaluation' }).click();
+    await page.getByRole('link', { name: /^Perc tests/ }).click();
+    await expect(page.getByRole('img', { name: 'Perc tests page 1 of 1' }).locator('image')).toHaveCount(1);
+    await shot(page, '46-print-perc');
+    const dl = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Save PDF' }).click();
+    const file = await dl;
+    expect(file.suggestedFilename()).toBe('0999.005 Percolation Tests.pdf');
+    expect((await PDFDocument.load(readFileSync((await file.path())!))).getPageCount()).toBe(1);
+  }
 
   await page.getByRole('link', { name: 'Back to site evaluation' }).click();
   await page.getByRole('link', { name: /^Soil logs/ }).click();
   await expect(page.getByRole('img', { name: /^Soil logs page 1 of / }).locator('text', { hasText: 'LOCATION OF TEST PIT WITHIN PROPERTY' })).not.toHaveCount(0);
   await shot(page, '47-print-soil-logs');
 
-  // Editing a certified perc test removes the signature until certified again.
-  await page.getByRole('link', { name: 'Back to site evaluation' }).click();
-  await page.getByRole('link', { name: /^Perc test 1/ }).click();
-  await page.getByLabel('Hole depth').fill('30');
-  await page.getByRole('link', { name: 'Back to site evaluation' }).click();
-  await expect(page.getByText(/changed after Justin Houser, PE certified it/)).toBeVisible();
-  await page.getByRole('link', { name: /^Perc tests/ }).click();
-  await expect(page.getByRole('img', { name: 'Perc tests page 1 of 1' })).toBeVisible();
-  await expect(page.getByRole('img', { name: 'Perc tests page 1 of 1' }).locator('image')).toHaveCount(0);
+  if (FEATURES.PERC) {
+    // Editing a certified perc test removes the signature until certified again.
+    await page.getByRole('link', { name: 'Back to site evaluation' }).click();
+    await page.getByRole('link', { name: /^Perc test 1/ }).click();
+    await page.getByLabel('Hole depth').fill('30');
+    await page.getByRole('link', { name: 'Back to site evaluation' }).click();
+    await expect(page.getByText(/changed after Justin Houser, PE certified it/)).toBeVisible();
+    await page.getByRole('link', { name: /^Perc tests/ }).click();
+    await expect(page.getByRole('img', { name: 'Perc tests page 1 of 1' })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'Perc tests page 1 of 1' }).locator('image')).toHaveCount(0);
+  }
 });

@@ -5,6 +5,7 @@ import ExcelJS from 'exceljs';
 import { readFileSync } from 'node:fs';
 import { PDFDocument } from 'pdf-lib';
 import { turnOnPercTests } from './settings';
+import { FEATURES } from '../src/app/features';
 import { acceptOpenChecks } from './checks';
 
 const shots = process.env.SHOTS_DIR;
@@ -136,72 +137,77 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
   await expect(page.getByText(`${PITS} complete · 0 in progress · 0 not started`)).toBeVisible();
   await shot(page, 'r03-all-pits-complete');
 
-  // Perc tests: a sandy-soil test at pit 1 and a standard test at pit 2 running side by side.
-  await page.getByLabel('New perc test #').fill('1');
-  await page.getByRole('button', { name: 'Add perc test' }).click();
-  await pick(page, 'At test pit', `${labels[0]}A`);
-  await page.getByLabel('Hole depth').fill('24');
-  await page.getByLabel('Reference point above hole bottom').fill('22');
-  let soak = page.getByRole('region', { name: 'Soak' });
-  await soak.getByRole('button', { name: 'Start first 12" filling' }).click();
-  await page.clock.fastForward('40:00');
-  await soak.getByRole('button', { name: 'Drained (hole empty)' }).click();
-  await soak.getByRole('button', { name: 'Start second 12" filling' }).click();
-  await back(page);
+  // Perc tests are off on live main (src/app/features.ts); this part runs on the beta branch.
+  if (FEATURES.PERC) {
+    // Perc tests: a sandy-soil test at pit 1 and a standard test at pit 2 running side by side.
+    await page.getByLabel('New perc test #').fill('1');
+    await page.getByRole('button', { name: 'Add perc test' }).click();
+    await pick(page, 'At test pit', `${labels[0]}A`);
+    await page.getByLabel('Hole depth').fill('24');
+    await page.getByLabel('Reference point above hole bottom').fill('22');
+    let soak = page.getByRole('region', { name: 'Soak' });
+    await soak.getByRole('button', { name: 'Start first 12" filling' }).click();
+    await page.clock.fastForward('40:00');
+    await soak.getByRole('button', { name: 'Drained (hole empty)' }).click();
+    await soak.getByRole('button', { name: 'Start second 12" filling' }).click();
+    await back(page);
 
-  await page.getByLabel('New perc test #').fill('2');
-  await page.getByRole('button', { name: 'Add perc test' }).click();
-  await pick(page, 'At test pit', `${labels[1]}A`);
-  await page.getByLabel('Hole depth').fill('24');
-  await page.getByLabel('Reference point above hole bottom').fill('22');
-  await pick(page, 'Soil at test depth is sandy clay loam or finer', 'Yes');
-  await page.getByRole('region', { name: 'Soak' }).getByRole('button', { name: 'Start 4-h presoak' }).click();
-  await expect(page.getByRole('navigation', { name: 'Perc timers' }).getByRole('link')).toHaveCount(2);
-  await back(page);
+    await page.getByLabel('New perc test #').fill('2');
+    await page.getByRole('button', { name: 'Add perc test' }).click();
+    await pick(page, 'At test pit', `${labels[1]}A`);
+    await page.getByLabel('Hole depth').fill('24');
+    await page.getByLabel('Reference point above hole bottom').fill('22');
+    await pick(page, 'Soil at test depth is sandy clay loam or finer', 'Yes');
+    await page.getByRole('region', { name: 'Soak' }).getByRole('button', { name: 'Start 4-h presoak' }).click();
+    await expect(page.getByRole('navigation', { name: 'Perc timers' }).getByRole('link')).toHaveCount(2);
+    await back(page);
 
-  // Back to perc 1: second filling drains → sandy test, four 15-min readings of 2".
-  await page.clock.fastForward('40:00');
-  await page.getByRole('link', { name: /^Perc test 1/ }).click();
-  soak = page.getByRole('region', { name: 'Soak' });
-  await soak.getByRole('button', { name: 'Drained (hole empty)' }).click();
-  await soak.getByRole('button', { name: 'Use the sandy-soil test' }).click();
-  const readings = page.getByRole('region', { name: 'Readings' });
-  await readings.getByRole('button', { name: 'Start reading 1 now' }).click();
-  for (let n = 1; n <= 4; n++) {
-    const card = page.getByRole('region', { name: `Reading ${n}`, exact: true });
-    await tape(card, 'Initial distance below reference point', '16');
-    await tape(card, 'Final distance below reference point', '18');
-    await page.clock.fastForward('15:00');
-    await expect(readings.getByLabel('Reading due')).toBeVisible();
-    await readings.getByRole('button', { name: n < 4 ? 'Record & start next' : 'Record & finish' }).click();
+    // Back to perc 1: second filling drains → sandy test, four 15-min readings of 2".
+    await page.clock.fastForward('40:00');
+    await page.getByRole('link', { name: /^Perc test 1/ }).click();
+    soak = page.getByRole('region', { name: 'Soak' });
+    await soak.getByRole('button', { name: 'Drained (hole empty)' }).click();
+    await soak.getByRole('button', { name: 'Use the sandy-soil test' }).click();
+    const readings = page.getByRole('region', { name: 'Readings' });
+    await readings.getByRole('button', { name: 'Start reading 1 now' }).click();
+    for (let n = 1; n <= 4; n++) {
+      const card = page.getByRole('region', { name: `Reading ${n}`, exact: true });
+      await tape(card, 'Initial distance below reference point', '16');
+      await tape(card, 'Final distance below reference point', '18');
+      await page.clock.fastForward('15:00');
+      await expect(readings.getByLabel('Reading due')).toBeVisible();
+      await readings.getByRole('button', { name: n < 4 ? 'Record & start next' : 'Record & finish' }).click();
+    }
+    await expect(page.getByRole('status').filter({ hasText: 'Stop rule met' })).toContainText('Final rate 7.5 mpi');
+    await shot(page, 'r04-perc-1-sandy');
+    await back(page);
+
+    // Perc 2: presoak ends, then standard readings with the tape carried forward until the stop rule is met.
+    await page.clock.fastForward('03:00:00');
+    await page.getByRole('link', { name: /^Perc test 2/ }).click();
+    await page.getByRole('region', { name: 'Soak' }).getByRole('button', { name: 'End presoak' }).click();
+    const r2 = page.getByRole('region', { name: 'Readings' });
+    const interval = Number(await page.getByLabel('Reading interval').inputValue());
+    expect(interval).toBeGreaterThan(0);
+    await r2.getByRole('button', { name: 'Start reading 1 now' }).click();
+    await tape(page.getByRole('region', { name: 'Reading 1', exact: true }), 'Initial distance below reference point', '10');
+    for (let n = 1; n <= 4; n++) {
+      const card = page.getByRole('region', { name: `Reading ${n}`, exact: true });
+      await tape(card, 'Final distance below reference point', String(10 + n));
+      await page.clock.fastForward(`${interval}:00`);
+      await r2.getByRole('button', { name: n < 4 ? 'Record & start next' : 'Record & finish' }).click();
+    }
+    await expect(page.getByRole('status').filter({ hasText: 'Stop rule met' })).toContainText(`Final rate ${interval.toFixed(1)} mpi (reading 4)`);
+    await shot(page, 'r05-perc-2-standard');
+    await back(page);
   }
-  await expect(page.getByRole('status').filter({ hasText: 'Stop rule met' })).toContainText('Final rate 7.5 mpi');
-  await shot(page, 'r04-perc-1-sandy');
-  await back(page);
-
-  // Perc 2: presoak ends, then standard readings with the tape carried forward until the stop rule is met.
-  await page.clock.fastForward('03:00:00');
-  await page.getByRole('link', { name: /^Perc test 2/ }).click();
-  await page.getByRole('region', { name: 'Soak' }).getByRole('button', { name: 'End presoak' }).click();
-  const r2 = page.getByRole('region', { name: 'Readings' });
-  const interval = Number(await page.getByLabel('Reading interval').inputValue());
-  expect(interval).toBeGreaterThan(0);
-  await r2.getByRole('button', { name: 'Start reading 1 now' }).click();
-  await tape(page.getByRole('region', { name: 'Reading 1', exact: true }), 'Initial distance below reference point', '10');
-  for (let n = 1; n <= 4; n++) {
-    const card = page.getByRole('region', { name: `Reading ${n}`, exact: true });
-    await tape(card, 'Final distance below reference point', String(10 + n));
-    await page.clock.fastForward(`${interval}:00`);
-    await r2.getByRole('button', { name: n < 4 ? 'Record & start next' : 'Record & finish' }).click();
-  }
-  await expect(page.getByRole('status').filter({ hasText: 'Stop rule met' })).toContainText(`Final rate ${interval.toFixed(1)} mpi (reading 4)`);
-  await shot(page, 'r05-perc-2-standard');
-  await back(page);
 
   // Offline at the pit, back online at the truck.
   await context.setOffline(true);
-  await page.getByLabel('Owner name').fill(`${job.header.ownerName ?? 'Owner'} `);
-  await page.getByLabel('Owner name').fill(job.header.ownerName ?? 'Owner');
+  // Owner name shows only with perc tests on; project name is on every build.
+  const [edited, value] = FEATURES.PERC ? ['Owner name', job.header.ownerName ?? 'Owner'] : ['Project name', job.header.projectName];
+  await page.getByLabel(edited).fill(`${value} `);
+  await page.getByLabel(edited).fill(value);
   await expect(page.getByText('Saved on this device. Will sync when there is signal.').first()).toBeVisible({ timeout: 15_000 });
   await shot(page, 'r06-offline', false);
   await context.setOffline(false);
@@ -224,8 +230,7 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
     expect.arrayContaining([
       `${folder}/Soil Logs.xlsx`,
       `${folder}/Soil Logs.pdf`,
-      `${folder}/Percolation Tests.xlsx`,
-      `${folder}/Percolation Tests.pdf`,
+      ...(FEATURES.PERC ? [`${folder}/Percolation Tests.xlsx`, `${folder}/Percolation Tests.pdf`] : []),
       expect.stringMatching(new RegExp(`^${esc(folder)}/Site Eval App/Field Record [0-9a-f]{8}\\.json$`)),
     ]),
   );
@@ -235,15 +240,17 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
   expect(soil.worksheets).toHaveLength(PITS);
   expect(soil.worksheets[0].getCell('B4').value).toBe(project);
   expect(soil.worksheets[0].getCell('F9').value ?? null).toBe(job.header.confirmationNumber || null); // confirmed: no (UNCONFIRMED)
-  const perc = new ExcelJS.Workbook();
-  await perc.xlsx.load((await read(`${folder}/Percolation Tests.xlsx`)) as any);
-  expect(perc.worksheets.map((w) => w.name)).toEqual(['Perc Test 1', 'Perc Test 2']);
+  if (FEATURES.PERC) {
+    const perc = new ExcelJS.Workbook();
+    await perc.xlsx.load((await read(`${folder}/Percolation Tests.xlsx`)) as any);
+    expect(perc.worksheets.map((w) => w.name)).toEqual(['Perc Test 1', 'Perc Test 2']);
+  } else expect(paths.filter((p) => /Percolation|Groundwater/.test(p))).toEqual([]);
   const soilPdf = await PDFDocument.load(await read(`${folder}/Soil Logs.pdf`));
   expect(soilPdf.getPageCount()).toBe(PITS); // one page per pit, walls A and B
   expect(paths).not.toContain(`${folder}/Site Evaluation.pdf`);
   const record = JSON.parse(new TextDecoder().decode(await read(paths.find((p) => /Field Record/.test(p))!)));
   expect(record.testPits).toHaveLength(2 * PITS);
-  expect(record.unconfirmed ?? {}).toEqual({});
+  if (FEATURES.UNCONFIRMED_MARKS) expect(record.unconfirmed ?? {}).toEqual({});
   await shot(page, 'r07-filed');
 
   // The soil log PDF preview; Chromium's print-to-PDF of it keeps the page count.

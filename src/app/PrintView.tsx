@@ -7,6 +7,7 @@ import type { FontKey } from '../generator/page';
 import type { RecordStore } from '../storage/db';
 import { download, photoSource } from './deliverables';
 import { settings } from './settings';
+import { FEATURES } from './features';
 import { loadTemplates } from './templates';
 import { UnconfirmedNotice } from './Unconfirmed';
 import { SoilLogHold } from './PitChecks';
@@ -17,6 +18,13 @@ export const PRINT_KINDS: Record<PrintKind, { title: string; file: DeliverableKi
   'perc-tests': { title: 'Perc tests', file: 'perc-test-pdf' },
   groundwater: { title: 'Groundwater observation results', file: 'groundwater-pdf' },
 };
+
+/** Whether a PDF deliverable is offered: perc tests need the module and the device setting (features.ts). */
+export function printKindOn(kind: PrintKind, percTests: boolean): boolean {
+  if (kind === 'perc-tests') return FEATURES.PERC && percTests;
+  if (kind === 'groundwater') return FEATURES.GROUNDWATER;
+  return true;
+}
 
 const FAMILY: Record<FontKey, [string, string]> = {
   serif: ["'Times New Roman', Tinos, 'Liberation Serif', 'Noto Serif', serif", 'normal'],
@@ -38,7 +46,7 @@ export function PrintView(props: { record: FieldRecord; kind: PrintKind; store: 
     let live = true;
     (async () => {
       const [{ printPages, forDeliverables }, templates] = await Promise.all([import('../generator'), loadTemplates()]);
-      const all = await printPages(forDeliverables(r), templates, { photo: photoSource(props.store), percTests: settings().percTests });
+      const all = await printPages(forDeliverables(r), templates, { photo: photoSource(props.store), percTests: settings().percTests, groundwater: FEATURES.GROUNDWATER });
       if (live) setPages(all[props.kind]);
     })().catch((e) => live && setStatus(`Could not build the pages: ${e.message}`));
     return () => void (live = false);
@@ -48,7 +56,7 @@ export function PrintView(props: { record: FieldRecord; kind: PrintKind; store: 
     setStatus('Writing PDF…');
     try {
       const { generate } = await import('../generator');
-      const f = (await generate(r, await loadTemplates(), { photo: photoSource(props.store), percTests: settings().percTests })).find((x) => x.kind === meta.file);
+      const f = (await generate(r, await loadTemplates(), { photo: photoSource(props.store), percTests: settings().percTests, groundwater: FEATURES.GROUNDWATER })).find((x) => x.kind === meta.file);
       if (!f) return setStatus('Nothing to save yet.');
       const name = [r.header.projectNumber, f.path].filter(Boolean).join(' ');
       download(new Blob([f.bytes as BlobPart], { type: f.mimeType }), name);

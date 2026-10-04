@@ -20,6 +20,7 @@ import type { RecordStore } from '../storage/db';
 import { MunsellPicker } from './MunsellPicker';
 import { PitMedia } from './PitMedia';
 import { TextureGuide } from './TextureGuide';
+import { FEATURES } from './features';
 import { pitWarnings } from '../domain/rules';
 import { hueWarning } from '../domain/hueCheck';
 import { wallOf } from '../domain/pitWalls';
@@ -95,7 +96,7 @@ export function TestPitView(props: { record: FieldRecord; pitId: string; save: (
 
       <PitSummary pit={pit} missing={missing.pit} save={savePit} />
 
-      <RuleWarnings warnings={pitWarnings(r, pit)} />
+      {FEATURES.RULE_WARNINGS && <RuleWarnings warnings={pitWarnings(r, pit)} />}
 
       <WallChecks record={r} wall={pit} save={props.save} />
       <AiReviewLine record={r} wall={pit} />
@@ -173,7 +174,7 @@ function HorizonCard(props: {
           <legend>Texture</legend>
           <Chips label="USDA class" options={V.TEXTURES} value={hz.texture.cls} onChange={(v) => set({ texture: { ...hz.texture, cls: v } })} other />
           {suggest('texture')}
-          <TextureGuide current={hz.texture.cls} onUse={(cls) => set({ texture: { ...hz.texture, cls } })} />
+          {FEATURES.TEXTURE_GUIDE && <TextureGuide current={hz.texture.cls} onUse={(cls) => set({ texture: { ...hz.texture, cls } })} />}
           {sandy && <Chips label="Sand size" options={V.SAND_SIZES} value={hz.texture.sandSize} onChange={(v) => set({ texture: { ...hz.texture, sandSize: v } })} />}
           <NumberField
             label="Rock fragments (by volume)"

@@ -7,6 +7,7 @@ import { readJob } from '../src/domain/job';
 import { generate } from '../src/generator';
 import { locationPanel } from '../src/generator/locationPanel';
 import { loadTemplatesFromDisk } from './templates';
+import { FEATURES } from '../src/app/features';
 
 const templates = loadTemplatesFromDisk();
 
@@ -122,7 +123,8 @@ describe('confirm-on-site flags', () => {
     expect(JSON.parse(new TextDecoder().decode(json.bytes)).header.confirmationNumber).toBe('SE CONFIRM 00001');
   });
 
-  it('marks an unconfirmed value on deliverables until it is confirmed, and blocks nothing', async () => {
+  // Off on live main (src/app/features.ts); runs on the beta branch.
+  it.skipIf(!FEATURES.UNCONFIRMED_MARKS)('marks an unconfirmed value on deliverables until it is confirmed, and blocks nothing', async () => {
     let { record } = readJob(JSON.stringify(job()));
     record = addHorizon(record, record.testPits[0].id, { designation: 'A', bottomIn: 12 });
     expect(await soilLogCell(record)).toBe('SE 00001 (UNCONFIRMED)');
@@ -131,6 +133,13 @@ describe('confirm-on-site flags', () => {
     const confirmed = confirmHeaderField(record, 'confirmationNumber');
     expect(confirmed.unconfirmed).toEqual({});
     expect(await soilLogCell(confirmed)).toBe('SE 00001');
+  });
+
+  it.skipIf(FEATURES.UNCONFIRMED_MARKS)('prints office-prefilled values plainly while the marks are off', async () => {
+    let { record } = readJob(JSON.stringify(job()));
+    record = addHorizon(record, record.testPits[0].id, { designation: 'A', bottomIn: 12 });
+    expect(Object.keys(record.unconfirmed)).toContain('confirmationNumber');
+    expect(await soilLogCell(record)).toBe('SE 00001');
   });
 
   it('keeps an unconfirmed date a date on the forms (the on-screen notice still flags it)', async () => {

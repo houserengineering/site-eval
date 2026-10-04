@@ -2,6 +2,7 @@
 // the AI photo review device token.
 import { useEffect, useState } from 'preact/hooks';
 import type { RecordStore } from '../storage/db';
+import { FEATURES } from './features';
 
 export interface DeviceSettings {
   /** The perc test module. Off by default (Justin never runs perc tests); off hides it, records stay. */
@@ -15,6 +16,8 @@ export interface DeviceSettings {
 const DEFAULTS: DeviceSettings = { percTests: false, reviewToken: '', motion: 'device' };
 const KEY = 'settings';
 
+/** As stored on this device; `current` is what the app uses. */
+let stored: DeviceSettings = DEFAULTS;
 let current: DeviceSettings = DEFAULTS;
 const listeners = new Set<(s: DeviceSettings) => void>();
 
@@ -27,12 +30,14 @@ export async function loadSettings(store: RecordStore): Promise<DeviceSettings> 
 export const settings = () => current;
 
 export async function changeSettings(store: RecordStore, change: Partial<DeviceSettings>) {
-  set({ ...current, ...change });
-  await store.setSetting(KEY, current);
+  set({ ...stored, ...change });
+  await store.setSetting(KEY, stored);
 }
 
 function set(next: DeviceSettings) {
-  current = next;
+  stored = next;
+  // With the perc module off (features.ts) a stored "on" is kept but never shows perc tests.
+  current = FEATURES.PERC ? next : { ...next, percTests: false };
   for (const l of listeners) l(current);
 }
 

@@ -1,4 +1,8 @@
 import { expect, test, type Locator } from '@playwright/test';
+import { FEATURES } from '../src/app/features';
+
+// The texture-by-feel guide is off on live main (src/app/features.ts). These tests run on the beta branch, which keeps the full app.
+test.skip(!FEATURES.TEXTURE_GUIDE, 'The texture-by-feel guide is off on live main; run on beta');
 
 const shots = process.env.SHOTS_DIR;
 const shot = async (el: Locator, name: string) => {

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { FEATURES } from '../src/app/features';
 
 const shots = process.env.SHOTS_DIR;
 const shot = async (page: Page, name: string, fullPage = true) => {
@@ -18,15 +19,22 @@ test('job file: pre-filled header, confirm-on-site flag, offline map with live d
   await expect(page.getByLabel('Project name')).toHaveValue('Example Subdivision');
   await expect(page.getByLabel('Confirmation number')).toHaveValue('SE 00001');
   const confirmBox = page.getByRole('region', { name: 'Confirm on site' });
-  await expect(confirmBox).toContainText('Confirmation number: SE 00001');
+  // Confirm-on-site marks are off on live main (src/app/features.ts); the full check runs on beta.
+  if (FEATURES.UNCONFIRMED_MARKS) await expect(confirmBox).toContainText('Confirmation number: SE 00001');
+  else await expect(confirmBox).toHaveCount(0);
   await expect(page.getByText('0 complete · 0 in progress · 3 not started')).toBeVisible();
   await shot(page, '50-job-loaded');
 
   // The flag blocks nothing and shows on the deliverable preview.
   await page.getByRole('link', { name: /^Soil logs/ }).click();
-  await expect(page.getByRole('region', { name: 'Confirm on site' })).toContainText('print marked (UNCONFIRMED)');
   const sheet = page.getByRole('img', { name: /Soil logs page 1 of/ });
-  await expect(sheet.locator('text', { hasText: 'SE 00001 (UNCONFIRMED)' }).first()).toBeVisible();
+  if (FEATURES.UNCONFIRMED_MARKS) {
+    await expect(page.getByRole('region', { name: 'Confirm on site' })).toContainText('print marked (UNCONFIRMED)');
+    await expect(sheet.locator('text', { hasText: 'SE 00001 (UNCONFIRMED)' }).first()).toBeVisible();
+  } else {
+    await expect(sheet.locator('text', { hasText: 'SE 00001' }).first()).toBeVisible();
+    await expect(sheet.locator('text', { hasText: 'UNCONFIRMED' })).toHaveCount(0);
+  }
   await shot(page, '51-preview-unconfirmed', false);
   await page.getByRole('link', { name: 'Back to site evaluation' }).click();
 
@@ -62,7 +70,7 @@ test('job file: pre-filled header, confirm-on-site flag, offline map with live d
   await context.setOffline(false);
 
   // Confirming clears the flag.
-  await page.getByRole('button', { name: 'Confirm SE 00001' }).click();
+  if (FEATURES.UNCONFIRMED_MARKS) await page.getByRole('button', { name: 'Confirm SE 00001' }).click();
   await expect(page.getByRole('region', { name: 'Confirm on site' })).toHaveCount(0);
   // Opening pit 1 started its GPS fix (ticket 05), so it is under way too.
   await expect(page.getByText('0 complete · 2 in progress · 3 not started')).toBeVisible();

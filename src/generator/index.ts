@@ -37,6 +37,8 @@ export interface GenerateOptions {
   photo?: PhotoSource;
   /** The perc test module (a device setting); off leaves perc tests out of every deliverable. Default on. */
   percTests?: boolean;
+  /** Groundwater monitoring (app/features.ts); off leaves the groundwater results out. Default on. */
+  groundwater?: boolean;
 }
 
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -54,7 +56,7 @@ export async function generate(fieldRecord: FieldRecord, templates: TemplateSet,
   const { pits, fills } = fillRecord(record);
   const soilWb = soilLogWorkbook({ ...record, testPits: pits }, templates, photos);
   const percWb = withPerc(record, opts) ? percTestWorkbook(record, templates) : null;
-  const gwWb = record.wells.length ? groundwaterWorkbook(record) : null;
+  const gwWb = withWells(record, opts) ? groundwaterWorkbook(record) : null;
   // Workbook bytes first: rendering pages only reads the workbooks.
   const soilXlsx = new Uint8Array(await soilWb.xlsx.writeBuffer());
   const percXlsx = percWb && new Uint8Array(await percWb.xlsx.writeBuffer());
@@ -107,6 +109,7 @@ export function fillsCsv(fills: Fill[]): string {
 }
 
 const withPerc = (record: FieldRecord, opts: GenerateOptions) => opts.percTests !== false && record.percTests.length > 0;
+const withWells = (record: FieldRecord, opts: GenerateOptions) => opts.groundwater !== false && record.wells.length > 0;
 
 /** The printed pages of each PDF deliverable (the print view draws these same pages). */
 export async function printPages(
@@ -116,7 +119,7 @@ export async function printPages(
   books = {
     soilWb: soilLogWorkbook(filledLogs(record), templates),
     percWb: withPerc(record, opts) ? percTestWorkbook(record, templates) : null,
-    gwWb: record.wells.length ? groundwaterWorkbook(record) : null,
+    gwWb: withWells(record, opts) ? groundwaterWorkbook(record) : null,
   },
 ): Promise<Record<PrintKind, Page[]>> {
   const measure = await pdfMeasure();

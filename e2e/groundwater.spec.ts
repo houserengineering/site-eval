@@ -2,6 +2,10 @@ import { expect, test, type Page } from '@playwright/test';
 import ExcelJS from 'exceljs';
 import { readFileSync } from 'node:fs';
 import { PDFDocument } from 'pdf-lib';
+import { FEATURES } from '../src/app/features';
+
+// Groundwater monitoring are off on live main (src/app/features.ts). These tests run on the beta branch, which keeps the full app.
+test.skip(!FEATURES.GROUNDWATER, 'Groundwater monitoring are off on live main; run on beta');
 
 const shots = process.env.SHOTS_DIR;
 const shot = async (page: Page, name: string) => {

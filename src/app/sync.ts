@@ -10,6 +10,7 @@ import { fileDeliverables, MissingFolderError, NoFolderError, sendToPrintQueue, 
 import { photoSource } from './deliverables';
 import { loadTemplates } from './templates';
 import { settings } from './settings';
+import { FEATURES } from './features';
 import { openFlags } from '../domain/pitChecks';
 import { updateTestPit } from '../domain/fieldRecord';
 import type { AiReview } from '../domain/aiReview';
@@ -356,7 +357,7 @@ export class SyncService {
       // Open pit checks hold the soil log files and its printing; the field record, perc tests and
       // groundwater results still file. Fixing or accepting a check is an edit, which files again.
       const open = openFlags(record).length;
-      const files = (await generate(record, templates, { photo: photoSource(this.store), percTests: settings().percTests })).filter((f) => !open || !f.kind.startsWith('soil-log'));
+      const files = (await generate(record, templates, { photo: photoSource(this.store), percTests: settings().percTests, groundwater: FEATURES.GROUNDWATER })).filter((f) => !open || !f.kind.startsWith('soil-log'));
       const out = await fileDeliverables(record, files, ctx);
       await this.saveMerged(out.record); // keep which files are the app's even if the next sync fails
       record = (await syncRecord(out.record, ctx)).record;

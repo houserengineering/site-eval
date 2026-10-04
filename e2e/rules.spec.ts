@@ -1,6 +1,10 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { turnOnPercTests } from './settings';
 import { acceptOpenChecks } from './checks';
+import { FEATURES } from '../src/app/features';
+
+// DEQ-4 rule warnings are off on live main (src/app/features.ts). These tests run on the beta branch, which keeps the full app.
+test.skip(!FEATURES.RULE_WARNINGS, 'DEQ-4 rule warnings are off on live main; run on beta');
 
 const shots = process.env.SHOTS_DIR;
 const shot = async (page: Page, name: string, el?: Locator) => {

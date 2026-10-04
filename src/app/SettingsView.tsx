@@ -5,6 +5,7 @@ import { useState } from 'preact/hooks';
 import { takeEnrolledNotice } from './enroll';
 import { Chips } from './fields';
 import { changeSettings, useSettings } from './settings';
+import { FEATURES } from './features';
 
 export function SettingsView(props: { store: RecordStore }) {
   const s = useSettings();
@@ -42,6 +43,7 @@ export function SettingsView(props: { store: RecordStore }) {
         onChange={(v) => changeSettings(props.store, { motion: (v || 'device') as typeof s.motion })}
         hint={`Gliding highlights and "Show me" in the demo. Auto follows this device, which ${matchMedia('(prefers-reduced-motion: reduce)').matches ? 'asks for reduced motion' : 'allows motion'}.`}
       />
+      {FEATURES.PERC && (
       <div class="field">
         <label class="toggle">
           <input type="checkbox" checked={s.percTests} aria-describedby="perc-hint" onChange={(e) => changeSettings(props.store, { percTests: e.currentTarget.checked })} />
@@ -51,6 +53,7 @@ export function SettingsView(props: { store: RecordStore }) {
           Shows perc tests in site evaluations and their forms in the deliverables. Turning this off only hides them; perc tests already recorded stay saved.
         </p>
       </div>
+      )}
       <div class="field">
         {s.reviewToken ? (
           <>
