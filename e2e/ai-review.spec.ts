@@ -11,7 +11,7 @@ test('AI photo review: flags join the pit checks, queue without signal, re-revie
   // The fake office review service (ticket 11), found through Review Service.json in Dropbox.
   const requests: any[] = [];
   let offline = false;
-  let answer = '{"flags":[{"check":"rock","horizon":1,"say":"The photo shows far more rock than 10%."}]}';
+  let answer = '{"flags":[{"check":"horizons","horizon":1,"say":"A second layer shows below about 40 inches."},{"check":"rock","horizon":1,"say":"Far more rock than 10%."}]}';
   await page.route('https://review.test/**', async (route: Route) => {
     const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, content-type', 'access-control-allow-methods': 'POST' };
     if (offline) return route.abort('internetdisconnected');
@@ -49,7 +49,7 @@ test('AI photo review: flags join the pit checks, queue without signal, re-revie
 
   // The review comes back as a pit check within seconds.
   const checks = page.getByRole('region', { name: 'Pit checks' });
-  await expect(checks.getByRole('listitem')).toHaveText([/^AI review: Horizon A: the photo shows far more rock than 10%\./], { timeout: 20_000 });
+  await expect(checks.getByRole('listitem')).toHaveText([/^AI review: Horizon A: a second layer shows below about 40 inches\./], { timeout: 20_000 });
   await expect(page.getByRole('status', { name: 'AI review' })).toContainText('1 check in Pit checks');
   expect(requests).toHaveLength(1);
   expect(requests[0].auth).toBe('Bearer device-token-1');
@@ -63,7 +63,7 @@ test('AI photo review: flags join the pit checks, queue without signal, re-revie
   await expect(page.getByRole('region', { name: 'Soil log held' })).toContainText('1 pit check open');
   await page.getByRole('link', { name: /^Wall 1A/ }).first().click();
 
-  // No signal: fixing the rock retires the flag and the review waits.
+  // No signal: an edit to the log retires the flag and the review waits. (The rock % flag stays hidden.)
   offline = true;
   await context.setOffline(true);
   answer = '{"flags":[]}';

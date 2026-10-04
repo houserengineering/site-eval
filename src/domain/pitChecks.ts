@@ -11,7 +11,7 @@ import { hueWarning } from './hueCheck';
 import { wallOf } from './pitWalls';
 import { bandColor, colorMismatch } from './photoColor';
 import { munsellNotation } from './vocabulary';
-import { reviewKey } from './aiReview';
+import { HIDDEN_CHECKS, reviewKey } from './aiReview';
 
 /** Measured once when the photo is taken (on a downscaled copy); see `measurePhoto`. */
 export interface PhotoQuality {
@@ -179,6 +179,7 @@ export function wallFlags(r: FieldRecord, wall: TestPit): Flag[] {
   const review = wall.aiReview;
   if (review && review.key === reviewKey(wall))
     review.findings.forEach((f, i) => {
+      if (HIDDEN_CHECKS.includes(f.check)) return; // stored before the check was hidden
       const h = f.horizonId ? hs.find((x) => x.id === f.horizonId) : undefined;
       const say = h ? `${name(h)}: ${lower(f.message)}` : lower(f.message);
       add('ai', `ai:${review.key}:${i}:${f.check}`, `AI review: ${say}`, h ? { horizonId: h.id } : {});

@@ -7,6 +7,9 @@ import { munsellNotation } from './vocabulary';
 
 export type AiCheck = 'horizons' | 'rock' | 'water' | 'mottling' | 'photo';
 const CHECKS: AiCheck[] = ['horizons', 'rock', 'water', 'mottling', 'photo'];
+/** Checks not asked for and not shown until calibrated: rock % misjudged rock volume on most 0271 walls (Nathan, 2026-10-04). */
+export const HIDDEN_CHECKS: readonly AiCheck[] = ['rock'];
+const ASKED = CHECKS.filter((c) => !HIDDEN_CHECKS.includes(c));
 
 export interface AiFinding {
   check: AiCheck;
@@ -89,12 +92,11 @@ export function reviewRequest(wall: TestPit, images: ReviewImage[]): { system: s
     '',
     'Check:',
     '- "horizons": the number of horizons and their boundary depths against the layers visible.',
-    '- "rock": whether each rock percent is plausible for what is visible.',
     '- "water": standing water or seepage visible but not logged, or logged but not visible.',
     '- "mottling": mottles or redox colors visible but not logged.',
     '- "photo": a photo that does not show the pit wall at all (backdirt, sky, equipment).',
     '',
-    'Answer exactly: {"flags":[{"check":"horizons|rock|water|mottling|photo","horizon":<horizon number or null>,"say":"<one short sentence for the crew>"}]}',
+    `Answer exactly: {"flags":[{"check":"${ASKED.join('|')}","horizon":<horizon number or null>,"say":"<one short sentence for the crew>"}]}`,
     'At most 6 flags. {"flags":[]} when the log agrees with the photos.',
   ].join('\n');
   return { system: SYSTEM, prompt, images };
@@ -115,7 +117,7 @@ export function parseReview(text: string, wall: TestPit): AiFinding[] | null {
   const hs = byDepth(wall);
   const out: AiFinding[] = [];
   for (const f of parsed.flags) {
-    if (!f || !CHECKS.includes(f.check)) continue;
+    if (!f || !ASKED.includes(f.check)) continue;
     const say = typeof f.say === 'string' ? f.say.trim() : typeof f.message === 'string' ? f.message.trim() : '';
     if (!say) continue;
     const h = Number.isInteger(f.horizon) ? hs[f.horizon - 1] : undefined;

@@ -59,14 +59,16 @@ describe('AI photo review (ticket 12)', () => {
     expect(req.prompt).toContain('20% GRAVEL');
     expect(req.prompt).toContain('3. C 40-96"');
     expect(req.prompt).toContain('SANDY LOAM');
-    for (const check of ['horizons', 'rock', 'water', 'mottling', 'photo']) expect(req.prompt).toContain(`"${check}"`);
+    for (const check of ['horizons', 'water', 'mottling', 'photo']) expect(req.prompt).toContain(`"${check}"`);
+    // Rock % is not asked for until it is calibrated (Nathan, 2026-10-04); the logged percent still goes in the log lines.
+    expect(req.prompt).not.toContain('"rock"');
+    expect(req.prompt).not.toContain('|rock|');
   });
 
   it('parses flags defensively: fences and prose around the JSON are fine; anything unreadable is no flag', () => {
     const w = wall(logged(), [photo('p1')]);
     const text = 'Here is my review:\n```json\n{"flags":[{"check":"rock","horizon":2,"say":"The photo shows far more than 20% rock."},{"check":"photo","horizon":null,"say":"Photo 2 shows the backdirt pile, not the pit."},{"check":"weather","say":"Nice day."},{"check":"water","horizon":9,"say":"Seepage near the bottom."},{"check":"mottling","say":""}]}\n```';
     expect(parseReview(text, w)).toEqual([
-      { check: 'rock', horizonId: w.horizons[1].id, message: 'The photo shows far more than 20% rock.' },
       { check: 'photo', message: 'Photo 2 shows the backdirt pile, not the pit.' },
       { check: 'water', message: 'Seepage near the bottom.' },
     ]);
@@ -76,12 +78,21 @@ describe('AI photo review (ticket 12)', () => {
     expect(parseReview('{"flags":[{"check":"rock"', w)).toBeNull();
   });
 
+  it('rock % flags are hidden until calibrated, including ones stored by an earlier review', () => {
+    const w = wall(logged(), [photo('p1')]);
+    expect(parseReview('{"flags":[{"check":"rock","horizon":2,"say":"Far more rock than 20%."},{"check":"horizons","horizon":null,"say":"A fourth layer shows below 80 inches."}]}', w)).toEqual([
+      { check: 'horizons', message: 'A fourth layer shows below 80 inches.' },
+    ]);
+    const r = site(reviewed(w, [{ check: 'rock', horizonId: w.horizons[1].id, message: 'Far more rock than 20%.' }, { check: 'water', message: 'Seepage near the bottom.' }]));
+    expect(wallFlags(r, r.testPits[0]).map((f) => f.message)).toEqual(['AI review: seepage near the bottom.']);
+  });
+
   it('a current review shows its findings as pit checks that hold the soil log until accepted', () => {
     const w = wall(logged(), [photo('p1')]);
-    const r = site(reviewed(w, [{ check: 'rock', horizonId: w.horizons[1].id, message: 'The photo shows far more than 20% rock.' }, { check: 'water', message: 'Seepage near the bottom.' }]));
+    const r = site(reviewed(w, [{ check: 'horizons', horizonId: w.horizons[1].id, message: 'The photo shows its bottom boundary near 30 inches, not 40.' }, { check: 'water', message: 'Seepage near the bottom.' }]));
     const flags = wallFlags(r, r.testPits[0]);
     expect(flags.map((f) => [f.kind, f.message])).toEqual([
-      ['ai', 'AI review: Horizon B: the photo shows far more than 20% rock.'],
+      ['ai', 'AI review: Horizon B: the photo shows its bottom boundary near 30 inches, not 40.'],
       ['ai', 'AI review: seepage near the bottom.'],
     ]);
     expect(flags[0].horizonId).toBe(w.horizons[1].id);
@@ -92,7 +103,7 @@ describe('AI photo review (ticket 12)', () => {
 
   it('an edit to what was judged retires the old findings (the wall is reviewed again), so an acceptance covers only that review', () => {
     const w = wall(logged(), [photo('p1')]);
-    const r = site(reviewed(w, [{ check: 'rock', horizonId: w.horizons[1].id, message: 'Too little rock.' }]));
+    const r = site(reviewed(w, [{ check: 'horizons', horizonId: w.horizons[1].id, message: 'Boundary looks deeper.' }]));
     const id = wallFlags(r, r.testPits[0])[0].id;
     expect(id).toContain(reviewKey(w)!);
     const edited = { ...r.testPits[0], horizons: [w.horizons[0], { ...w.horizons[1], rock: { pct: 45, kind: 'GRAVEL' } }, w.horizons[2]] };

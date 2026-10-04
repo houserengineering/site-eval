@@ -40,7 +40,7 @@ const wallOf = async (store: RecordStore, r: FieldRecord) => (await store.get(r.
 
 describe('AI review queue (ticket 12)', () => {
   it('sends the wall photo and log with the device token and stores the review', async () => {
-    const { store, r, wallId, queue, sent } = await setup(answer('{"flags":[{"check":"rock","horizon":1,"say":"Far more rock than logged."}]}'));
+    const { store, r, wallId, queue, sent } = await setup(answer('{"flags":[{"check":"horizons","horizon":1,"say":"A second layer shows below 40 inches."}]}'));
     await queue.request(r.id, wallId);
     await queue.run();
     expect(sent).toHaveLength(1);
@@ -48,7 +48,7 @@ describe('AI review queue (ticket 12)', () => {
     expect(sent[0].headers.authorization).toBe('Bearer tok');
     expect(sent[0].body.images).toEqual([{ mediaType: 'image/jpeg', data: 'AQID' }]);
     const w = await wallOf(store, r);
-    expect(w.aiReview).toMatchObject({ key: reviewKey(w), findings: [{ check: 'rock', horizonId: 'h1', message: 'Far more rock than logged.' }] });
+    expect(w.aiReview).toMatchObject({ key: reviewKey(w), findings: [{ check: 'horizons', horizonId: 'h1', message: 'A second layer shows below 40 inches.' }] });
     expect(queue.status[wallId].state).toBe('done');
     expect(await queue.pendingCount()).toBe(0);
   });
