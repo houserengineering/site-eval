@@ -1,11 +1,14 @@
 // Device settings: optional modules shown on this device, and the AI photo review token.
 import type { RecordStore } from '../storage/db';
 import { startDemo } from './demo/state';
+import { useState } from 'preact/hooks';
+import { takeEnrolledNotice } from './enroll';
 import { Chips } from './fields';
 import { changeSettings, useSettings } from './settings';
 
 export function SettingsView(props: { store: RecordStore }) {
   const s = useSettings();
+  const [enrolled] = useState(takeEnrolledNotice);
   return (
     <main class="page">
       <header class="bar">
@@ -49,20 +52,42 @@ export function SettingsView(props: { store: RecordStore }) {
         </p>
       </div>
       <div class="field">
-        <label for="review-token" class="label-row">
-          AI photo review token <span class="badge warn">Beta</span>
-        </label>
-        <input
-          id="review-token"
-          type="password"
-          autoComplete="off"
-          value={s.reviewToken}
-          aria-describedby="review-hint"
-          onChange={(e) => changeSettings(props.store, { reviewToken: e.currentTarget.value.trim() })}
-        />
+        {s.reviewToken ? (
+          <>
+            <p class="label-row label" id="review-label">
+              AI photo review <span class="badge warn">Beta</span>
+            </p>
+            {enrolled && (
+              <p class="ok-box" role="status">
+                AI photo review is on for this device.
+              </p>
+            )}
+            <div class="token-row">
+              <span aria-describedby="review-label">Token saved on this device ••••{s.reviewToken.slice(-4)}</span>
+              <button type="button" class="btn" onClick={() => changeSettings(props.store, { reviewToken: '' })}>
+                Remove
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <label for="review-token" class="label-row">
+              AI photo review token <span class="badge warn">Beta</span>
+            </label>
+            <input
+              id="review-token"
+              type="password"
+              autoComplete="off"
+              value=""
+              aria-describedby="review-hint"
+              onChange={(e) => changeSettings(props.store, { reviewToken: e.currentTarget.value.trim() })}
+            />
+          </>
+        )}
         <p class="hint" id="review-hint">
-          From the office PC (<code>node service.mjs enroll "phone name"</code>). With a token, each wall's photos and log go to the office review service and what it
-          finds joins the pit checks. It is still being tuned: treat its flags as suggestions and accept any that do not apply. Leave it empty to turn the review off.
+          {s.reviewToken
+            ? "Each wall's photos and log go to the office review service, and what it finds joins the pit checks. It is still being tuned: treat its flags as suggestions and accept any that do not apply. Remove turns the review off on this device."
+            : "Paste the token from the office PC, or open the enrollment link it gives you on this phone. Leave it empty to keep the review off."}
         </p>
       </div>
       {s.percTests && (

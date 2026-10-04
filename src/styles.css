@@ -623,7 +623,9 @@ body:has(.coach) { padding-bottom: 70vh; }
 .coach-line .btn { flex: none; min-height: 44px; padding: 0 var(--s4); }
 
 /* A label with a badge beside it. */
-.field label.label-row { display: flex; align-items: center; gap: var(--s2); }
+/* The saved review token, masked, with Remove. */
+.token-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
+.field label.label-row, .field p.label-row { display: flex; align-items: center; gap: var(--s2); }
 /* The back control: a drawn chevron, centred in its 48px target (the ‹ glyph sits low). */
 .back { font-size: 0; padding: 0; }
 .back::before { content: ''; width: 13px; height: 13px; margin-left: 6px; border: solid currentColor; border-width: 0 0 3px 3px; transform: rotate(45deg); }

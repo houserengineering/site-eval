@@ -14,7 +14,8 @@ import { TestPitView } from './TestPitView';
 import { setSyncService, SyncService, syncService } from './sync';
 import { DropboxOpenView } from './SyncPanel';
 import { readBackup, isBackup } from '../domain/backup';
-import { loadSettings, settings, useSettings } from './settings';
+import { changeSettings, loadSettings, settings, useSettings } from './settings';
+import { markEnrolled, takeEnrollment, type Enrollment } from './enroll';
 import { ReviewQueue, setReviewQueue } from './reviewQueue';
 import { SettingsView } from './SettingsView';
 import { Coach } from './demo/Coach';
@@ -53,6 +54,12 @@ function parseRoute(hash: string): Route {
 /** Steps from here on run on Home and Settings, after the demo evaluation is deleted. */
 const FINALE = STEPS.findIndex((x) => x.id === 'home-settings');
 
+async function saveEnrollment(store: RecordStore, e: Enrollment) {
+  await changeSettings(store, { reviewToken: e.token });
+  if (e.serviceUrl) await store.setSetting('reviewServiceUrl', e.serviceUrl);
+  markEnrolled();
+}
+
 export const go = (hash: string) => {
   location.hash = hash;
 };
@@ -60,13 +67,17 @@ export const go = (hash: string) => {
 export function App() {
   const [store, setStore] = useState<RecordStore>();
   const [error, setError] = useState<string>();
+  // Taken before the first route is read, so the token never shows in the address bar.
+  const [enrollment] = useState(takeEnrollment);
   const [route, setRoute] = useState(() => parseRoute(location.hash));
   const { percTests } = useSettings();
 
   useEffect(() => {
+    let opened: RecordStore | undefined;
     openStore().then(
       async (s) => {
         await loadSettings(s);
+        if (enrollment) await saveEnrollment(s, enrollment);
         const sync = new SyncService(s);
         setSyncService(sync);
         const returnTo = await sync.init();
@@ -84,12 +95,18 @@ export function App() {
         // The demo: resumed where it was left; required on a device's first launch (spec decision 6).
         const demo = demoState();
         if (demo && demo.step < FINALE && !(await s.get(demo.recordId))) setDemoState(null);
-        if (!returnTo && !demoDone() && !demoState()) await startDemo(s, false);
+        if (!returnTo && !enrollment && !demoDone() && !demoState()) await startDemo(s, false);
         setStore(s);
+        opened = s;
       },
       (e) => setError(`Storage unavailable on this device: ${e.message}`),
     );
-    const onHash = () => setRoute(parseRoute(location.hash));
+    const onHash = async () => {
+      // An enrollment link opened while the app is already running.
+      const e = takeEnrollment();
+      if (e && opened) await saveEnrollment(opened, e);
+      setRoute(parseRoute(location.hash));
+    };
     addEventListener('hashchange', onHash);
     return () => removeEventListener('hashchange', onHash);
   }, []);
