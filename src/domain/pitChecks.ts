@@ -105,6 +105,8 @@ export function photoProblems(q: PhotoQuality): string[] {
 
 const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 const join = (xs: string[]) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}`);
+/** What is wrong with a photo, as words: `blurry and too dark`. */
+export const photoProblemText = (q: PhotoQuality) => join(photoProblems(q));
 const name = (h: Horizon) => `Horizon ${h.designation.trim() || `${h.topIn ?? '?'}"–${h.bottomIn ?? '?'}"`}`;
 
 /** Every check on a wall, accepted ones included (with who and when). A wall with no horizons has none. */
@@ -170,7 +172,7 @@ export function wallFlags(r: FieldRecord, wall: TestPit): Flag[] {
 
   wall.photos.forEach((p, i) => {
     const problems = p.quality ? photoProblems(p.quality) : [];
-    if (problems.length) add('photo', `photo:${p.id}`, `Photo ${i + 1} is ${join(problems)}: retake it.`, { photoId: p.id });
+    if (problems.length) add('photo', `photo:${p.id}`, `Photo ${i + 1} is ${join(problems)}. Retake it.`, { photoId: p.id });
   });
 
   // AI photo review, only while it matches the wall as it is now.

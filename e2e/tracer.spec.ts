@@ -17,7 +17,7 @@ test('create a site evaluation, log a test pit, export the soil log, work offlin
   await page.getByLabel('Project #').fill('0999.001');
   await page.getByLabel('Project name').fill('Example Subdivision');
   await page.getByLabel('Location').fill('100 Example Road, Bozeman');
-  await page.getByLabel('Eval. by').fill('Test Evaluator');
+  await page.getByLabel('Evaluated by').fill('Test Evaluator');
   await page.getByLabel('Date').fill('2026-10-02');
   await page.getByLabel('Confirmation number').fill('SE 00001');
   await shot(page, '02-header');
@@ -49,7 +49,7 @@ test('create a site evaluation, log a test pit, export the soil log, work offlin
   await page.reload();
   await expect(page.getByRole('region', { name: 'Horizon 1' }).getByRole('radio', { name: 'SILT LOAM' })).toHaveAttribute('aria-checked', 'true');
   await page.getByRole('link', { name: 'Back to site evaluation' }).click();
-  await expect(page.getByRole('link', { name: /^Wall 3B, south/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /^Wall 3B / })).toBeVisible();
   await acceptOpenChecks(page);
 
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export soil logs (Excel)' }).click()]);

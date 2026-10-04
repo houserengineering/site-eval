@@ -35,7 +35,7 @@ const where = (i: number) => {
 };
 
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const wallLink = (page: Page, label: string) => page.getByRole('link', { name: new RegExp(`^Wall ${esc(label)},`) });
+const wallLink = (page: Page, label: string) => page.getByRole('link', { name: new RegExp(`^Wall ${esc(label)} `) });
 const back = (page: Page) => page.getByRole('link', { name: 'Back to site evaluation' }).click();
 
 /** The pit summary: the new-wall defaults are right for a normal pit; only the slope varies. */
@@ -127,7 +127,7 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
       await back(page);
     }
     await wallLink(page, `${label}B`).click();
-    await page.getByRole('button', { name: `Start from wall ${label}A (same hole: change the depths)` }).click();
+    await page.getByRole('button', { name: `Copy horizons from wall ${label}A` }).click();
     await expect(page.getByRole('region', { name: 'Horizon 2' })).toBeVisible();
     await summary(page, i);
     await expect(page.getByRole('button', { name: 'Retake GPS' })).toBeVisible();

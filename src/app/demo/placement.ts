@@ -11,7 +11,8 @@ export interface Box {
 export type Side = 'above' | 'below';
 
 export interface TipPlace extends Box {
-  side: Side;
+  /** over: a target taller than the screen (a printed page), the tip at the screen's bottom over it. */
+  side: Side | 'over';
   /** Arrow position from the tip's left edge, pointing at the field's middle. */
   arrowLeft: number;
   /** The room on that side: a taller tip scrolls inside it rather than cover the field. */
@@ -39,7 +40,7 @@ export function unionRect(rects: Box[]): Box {
  * `view` is the visible screen (the visual viewport: smaller while the keyboard is up). `prefer` wins
  * when the tip fits on both sides ('above' while the keyboard is up, the field sitting just over it).
  */
-export function placeTip(target: Box, tip: { width: number; height: number }, view: Box, prefer: Side = 'below'): TipPlace {
+export function placeTip(target: Box, tip: { width: number; height: number }, view: Box, prefer: Side = 'below', over = false): TipPlace {
   // A wide highlight: the tip takes its width, so their edges line up.
   const width = Math.min(target.width >= 280 ? target.width : tip.width, view.width - 2 * GUTTER);
   const mid = target.left + target.width / 2;
@@ -50,6 +51,13 @@ export function placeTip(target: Box, tip: { width: number; height: number }, vi
     above: target.top - view.top - GAP - EDGE,
   };
   const other: Side = prefer === 'below' ? 'above' : 'below';
+  // A target the tip may cover (a printed page): with no room on either side, the tip goes over its
+  // lower part at the bottom of the screen rather than squeezed into a strip it cannot be read in.
+  if (over && room.above < tip.height && room.below < tip.height) {
+    const maxHeight = view.height - 2 * EDGE;
+    const height = Math.min(tip.height, maxHeight);
+    return { side: 'over', top: view.top + view.height - EDGE - height, left, width, height, arrowLeft, maxHeight };
+  }
   const side = room[prefer] >= tip.height ? prefer : room[other] >= tip.height ? other : room[prefer] >= room[other] ? prefer : other;
   const maxHeight = Math.max(0, Math.floor(room[side]));
   const height = Math.min(tip.height, maxHeight);

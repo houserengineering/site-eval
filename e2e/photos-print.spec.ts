@@ -16,7 +16,7 @@ test('photo, GPS, certify on the certifier device, print preview and PDFs', asyn
   await page.getByRole('button', { name: 'New site evaluation' }).click();
   await page.getByLabel('Project #').fill('0999.005');
   await page.getByLabel('Project name').fill('Example Subdivision');
-  await page.getByLabel('Eval. by').fill('Nathan Hart');
+  await page.getByLabel('Evaluated by').fill('Nathan Hart');
   await page.getByLabel('Date').fill('2026-10-02');
   await page.getByRole('button', { name: 'Add test pit' }).click();
   await page.getByRole('button', { name: 'Add horizon' }).click();

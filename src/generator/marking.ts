@@ -10,7 +10,7 @@ const entered = new WeakMap<FieldRecord, FieldRecord>();
  * silently. The date is left a date (the forms format it); the on-screen notice flags it.
  */
 export function forDeliverables(record: FieldRecord): FieldRecord {
-  const keys = (Object.keys(record.unconfirmed ?? {}) as (keyof FieldRecord['header'])[]).filter((k) => k !== 'date');
+  const keys = (Object.keys(record.unconfirmed ?? {}) as (keyof FieldRecord['header'])[]).filter((k) => k !== 'date' && k !== 'county' && k !== 'gallatin');
   if (!keys.length) return record;
   const header = { ...record.header };
   for (const k of keys) if (header[k]) header[k] = `${header[k]} (UNCONFIRMED)`;

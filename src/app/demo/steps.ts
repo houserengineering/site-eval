@@ -1,12 +1,17 @@
 // The demo script (spec 2026-10-03): one step per field group along the field path. Each step names
 // the screen it happens on, what to highlight, when the user's own action completes it, a short
 // correction for a wrong entry, and "Show me" (the step done through the real controls).
+// Tips are one or two plain sentences (Nathan, 2026-10-04): what to do, and why only where it is not
+// obvious.
 import { updateTestPit, type FieldRecord, type TestPit } from '../../domain/fieldRecord';
 import { acceptFlag, openFlags } from '../../domain/pitChecks';
 import { pitGroups, wallOf } from '../../domain/pitWalls';
-import { missingItems, structureText } from '../../domain/soilLogText';
+import { missingItems } from '../../domain/soilLogText';
+import { STRUCTURELESS } from '../../domain/vocabulary';
 import type { RecordStore } from '../../storage/db';
+import { lastCountyLookup } from '../county';
 import { DEMO_KEY, type DemoHorizon } from '../fieldGuide';
+import { stopFix } from '../gps';
 import { storePhoto } from '../PitMedia';
 import { byText, fetchFile, field, giveFile, horizonCard, input, pick, shown, tap, type, wait } from './dom';
 import { demoState, liveRecord, setDemoState, type Live } from './state';
@@ -38,7 +43,10 @@ export interface Ctx {
 export interface Step {
   id: string;
   screen: Screen;
+  /** Other screens the step continues on (a step that walks from one screen to the next). */
+  also?: Screen[];
   title: string;
+  /** One or two plain sentences. With a sample, it ends without a full stop: the tip adds ", e.g. …". */
   text: (c: Ctx) => string;
   /** The answer key value the tip shows. */
   sample?: string | ((c: Ctx) => string | undefined);
@@ -55,6 +63,8 @@ export interface Step {
   showMe?: (c: Ctx) => Promise<void>;
   /** The tip's own button on steps the user reads (Next, Finish, Done). */
   button?: { label: string; run?: (c: Ctx) => Promise<void> | void };
+  /** The tip may cover the highlight's lower part when neither side has room (a printed page). */
+  tipOver?: boolean;
   /** Changes when the highlight moves within the step (it scrolls again). */
   part?: (c: Ctx) => string;
   /** Runs once when the step completes, before the next one. */
@@ -81,6 +91,9 @@ export function walls(r?: FieldRecord): { wallA?: TestPit; wallB?: TestPit } {
   return { wallA: g?.walls.find((w) => wallOf(w.label).wall !== 'B'), wallB: g?.walls.find((w) => wallOf(w.label).wall === 'B') };
 }
 
+/** Whether the screen is one the step happens on. */
+export const onStepScreen = (step: Step, screen: Screen) => screen === step.screen || !!step.also?.includes(screen);
+
 /** Where "Take me back" goes for a step's screen. */
 export function hashFor(screen: Screen, c: Ctx): string | undefined {
   const id = c.r?.id ?? demoState()?.recordId;
@@ -100,6 +113,10 @@ const one = (el: HTMLElement | null) => shown([el]);
 /** Always the record as saved last, for edits made after an await. */
 const latest = (c: Ctx) => liveRecord()?.record ?? c.r!;
 const save = (c: Ctx, r: FieldRecord) => (liveRecord() ?? c.live)!.save(r);
+/** Waits until `ok`, up to `ms`. */
+async function until(ok: () => boolean, ms: number) {
+  for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await wait(200);
+}
 
 function headerStep(id: string, label: string, key: keyof typeof H, title: string, text: string, problem?: (v: string) => string | undefined): Step {
   return {
@@ -118,23 +135,30 @@ function headerStep(id: string, label: string, key: keyof typeof H, title: strin
 
 // ---- Horizons -------------------------------------------------------------------------------------
 
-const depthText = (h: DemoHorizon) => `${h.designation}, ${h.topIn}–${h.bottomIn}"`;
-const colorKey = (h: DemoHorizon) => `${h.color.hue} ${h.color.value}/${h.color.chroma}`;
-const structureKey = (h: DemoHorizon) => [h.structure.grade, h.structure.size, h.structure.shape].join(' ').toLowerCase();
+const lower = (s: string) => s.toLowerCase();
+const structureless = (shape: string) => STRUCTURELESS.includes(shape);
 
 interface Part {
   name: string;
+  title: string;
+  /** The tip, in the order the user taps; `h` is this horizon's answer key, `card` its card on the screen. */
+  text: (h: DemoHorizon, card?: HTMLElement | null) => string;
+  sample: (h: DemoHorizon) => string;
   target: (card: HTMLElement) => (HTMLElement | null)[];
   done: (w: TestPit, i: number) => boolean;
   show: (card: HTMLElement, h: DemoHorizon) => Promise<void>;
   /** A part taller than a phone screen with its tip is highlighted a piece at a time. */
   piece?: (card: HTMLElement) => string;
+  typed?: boolean;
 }
 const hz = (w: TestPit | undefined, i: number) => w?.horizons[i];
 const shapePicked = (card: HTMLElement) => !!field('Shape', card)?.querySelector('.chip.on');
 const PARTS: Part[] = [
   {
-    name: 'horizon and depth',
+    name: 'depth',
+    title: 'Horizon and depth',
+    text: (h) => (h.topIn === 0 ? 'Pick the horizon, then its bottom depth' : 'The top is already the bottom of the horizon above. Pick the horizon, then its bottom depth'),
+    sample: (h) => `${h.designation}, ${h.topIn}–${h.bottomIn}"`,
     target: (card) => [field('Horizon', card), field('Top', card)?.closest('.pair') as HTMLElement, field('Quick bottom', card)],
     done: (w, i) => {
       const h = hz(w, i)!;
@@ -147,6 +171,9 @@ const PARTS: Part[] = [
   },
   {
     name: 'color',
+    title: 'Munsell color',
+    text: () => 'Pick the Munsell hue, value and chroma',
+    sample: (h) => `${h.color.hue} ${h.color.value}/${h.color.chroma}`,
     target: (card) => [field('Color (Munsell)', card)],
     done: (w, i) => {
       const c = hz(w, i)!.color;
@@ -160,30 +187,55 @@ const PARTS: Part[] = [
   },
   {
     name: 'texture',
+    title: 'Texture',
+    text: () => 'Pick the USDA texture class',
+    sample: (h) => lower(h.texture),
     target: (card) => [field('USDA class', card)],
     done: (w, i) => !!hz(w, i)!.texture.cls.trim(),
     show: (card, h) => pick(card, 'USDA class', h.texture),
   },
   {
-    name: 'rock fragments',
-    target: (card) => [field('Rock fragments (by volume)', card)],
+    name: 'rock',
+    title: 'Rock fragments',
+    text: (h) => (h.rockKind ? 'Enter the rock fragments as a percent by volume. From 15% up, also pick the rock size' : 'Enter the rock fragments as a percent by volume'),
+    sample: (h) => (h.rockKind ? `${h.rockPct}%, ${lower(h.rockKind)}` : `${h.rockPct}%`),
+    target: (card) => [field('Rock fragments (by volume)', card), field('Rock size', card)],
+    typed: true,
     done: (w, i) => hz(w, i)!.rock.pct != null && !missingItems(w).horizons[i].some((m) => m.startsWith('rock')),
-    show: (card, h) => type(input('Rock fragments (by volume)', card), String(h.rockPct)),
-  },
-  {
-    name: 'structure',
-    // Shape first, then grade and size: all three with the tip do not fit on a phone screen.
-    target: (card) => (shapePicked(card) ? [field('Grade', card), field('Size', card)] : [field('Shape', card)]),
-    piece: (card) => (shapePicked(card) ? 'grade' : 'shape'),
-    done: (w, i) => !!structureText(hz(w, i)!),
     show: async (card, h) => {
-      await pick(card, 'Shape', h.structure.shape);
-      await pick(card, 'Grade', h.structure.grade);
-      await pick(card, 'Size', h.structure.size);
+      await type(input('Rock fragments (by volume)', card), String(h.rockPct));
+      if (h.rockKind) await pick(card, 'Rock size', h.rockKind);
     },
   },
   {
-    name: 'consistence and plasticity',
+    name: 'structure',
+    title: 'Structure',
+    text: (h, card) =>
+      structureless(h.structure.shape)
+        ? 'Pick the shape. Massive and single grain have no grade or size'
+        : card && shapePicked(card)
+          ? 'Now pick the grade and size'
+          : 'Pick the shape, then the grade and size',
+    sample: (h) => lower([h.structure.shape, h.structure.grade, h.structure.size].filter(Boolean).join(', ')),
+    // Shape first, then grade and size: all three with the tip do not fit on a phone screen.
+    target: (card) => (shapePicked(card) ? [field('Grade', card), field('Size', card)] : [field('Shape', card)]),
+    piece: (card) => (shapePicked(card) ? 'grade' : 'shape'),
+    // Shape, grade and size all picked; a structureless shape has no grade or size.
+    done: (w, i) => {
+      const s = hz(w, i)!.structure;
+      return !!s.other || (!!s.shape && (structureless(s.shape) || (!!s.grade && !!s.size)));
+    },
+    show: async (card, h) => {
+      await pick(card, 'Shape', h.structure.shape);
+      if (h.structure.grade) await pick(card, 'Grade', h.structure.grade);
+      if (h.structure.size) await pick(card, 'Size', h.structure.size);
+    },
+  },
+  {
+    name: 'consistence',
+    title: 'Consistence and plasticity',
+    text: () => 'Pick the moist consistence and the plasticity',
+    sample: (h) => lower(`${h.consistence}, ${h.plasticity}`),
     target: (card) => [field('Consistence', card), field('Plasticity', card)],
     done: (w, i) => !!hz(w, i)!.consistence && !!hz(w, i)!.plasticity,
     show: async (card, h) => {
@@ -192,7 +244,10 @@ const PARTS: Part[] = [
     },
   },
   {
-    name: 'roots and mottling',
+    name: 'roots',
+    title: 'Roots and mottling',
+    text: () => 'Tap Yes or No for roots and for mottling',
+    sample: (h) => `roots ${h.roots === 'Y' ? 'yes' : 'no'}, mottling ${h.mottling === 'Y' ? 'yes' : 'no'}`,
     target: (card) => [field('Roots', card)?.closest('.pair') as HTMLElement],
     done: (w, i) => !missingItems(w).horizons[i].some((m) => m === 'roots' || m.startsWith('mottl')),
     show: async (card, h) => {
@@ -201,20 +256,20 @@ const PARTS: Part[] = [
     },
   },
 ];
-const ROCK = 3;
 
 const depthProblem = (w: TestPit | undefined, i: number) => {
   const h = hz(w, i);
-  return h && h.bottomIn != null && h.topIn != null && h.bottomIn <= h.topIn ? 'Bottom must be below the top.' : undefined;
+  return h && h.bottomIn != null && h.topIn != null && h.bottomIn <= h.topIn ? 'The bottom must be below the top.' : undefined;
 };
 
-function horizonStep(i: number, part: Part, title: string, text: string, sample: string): Step {
+function horizonStep(i: number, part: Part): Step {
+  const h = DEMO_KEY.horizons[i];
   return {
-    id: `h${i + 1}-${part.name.split(' ')[0]}`,
+    id: `h${i + 1}-${part.name}`,
     screen: 'pitA',
-    title,
-    text: () => text,
-    sample,
+    title: part.title,
+    text: () => part.text(h, horizonCard(i + 1)),
+    sample: part.sample(h),
     target: () => {
       const card = horizonCard(i + 1);
       return card ? shown(part.target(card)) : [];
@@ -223,28 +278,17 @@ function horizonStep(i: number, part: Part, title: string, text: string, sample:
       const card = part.piece && horizonCard(i + 1);
       return card ? part.piece!(card) : '';
     },
-    typed: part === PARTS[ROCK],
+    typed: part.typed,
     done: (c) => !!hz(c.wallA, i) && part.done(c.wallA!, i),
     problem: (c) => depthProblem(c.wallA, i),
     showMe: async () => {
       const card = horizonCard(i + 1);
-      if (card) await part.show(card, DEMO_KEY.horizons[i]);
+      if (card) await part.show(card, h);
     },
   };
 }
 
-const [A1, B2] = DEMO_KEY.horizons;
-/** The answer key for each part of a horizon, in PARTS order. */
-const partSamples = (h: DemoHorizon) => [
-  depthText(h),
-  colorKey(h),
-  h.texture.toLowerCase(),
-  `${h.rockPct}%`,
-  structureKey(h),
-  `${h.consistence}, ${h.plasticity}`.toLowerCase(),
-  `roots ${h.roots === 'Y' ? 'yes' : 'no'}, mottling ${h.mottling === 'Y' ? 'yes' : 'no'}`,
-];
-
+const B2 = DEMO_KEY.horizons[1];
 const addHorizon = () => byText<HTMLButtonElement>('button', 'Add horizon');
 const horizonDone = (w: TestPit | undefined, i: number) => !!hz(w, i) && missingItems(w!).horizons[i].length === 0;
 const nextPart = (w: TestPit | undefined, i: number) => (hz(w, i) ? PARTS.find((p) => !p.done(w!, i)) : undefined);
@@ -273,7 +317,10 @@ const plantedItem = (c: Ctx) => {
 };
 
 const gpsCard = () => document.querySelector<HTMLElement>('section[aria-labelledby^="gps-"]');
+const gpsWaiting = () => !!gpsCard()?.querySelector('.gps-live');
 const backLink = () => document.querySelector<HTMLElement>('.bar a.back');
+const wallBLink = (c: Ctx) => (c.wallB ? document.querySelector<HTMLElement>(`a[href$="/pit/${c.wallB.id}"]`) : null);
+const soilLogsLink = () => document.querySelector<HTMLElement>('a[href$="/print/soil-logs"]');
 
 async function acceptOpen(c: Ctx) {
   let r = latest(c);
@@ -282,42 +329,74 @@ async function acceptOpen(c: Ctx) {
   await wait(200);
 }
 
+const checksText = (n: number) =>
+  n === 1
+    ? "One pit check is still open, and the soil log can't be printed until it is cleared. Tap Show me to accept it for this practice job."
+    : `${n} pit checks are still open, and the soil log can't be printed until they are cleared. Tap Show me to accept them for this practice job.`;
+
 // ---- The script -----------------------------------------------------------------------------------
 
 export const STEPS: Step[] = [
-  headerStep('project-number', 'Project #', 'projectNumber', 'Project #', 'Practice job, about 5 minutes. Job and subproject.', (v) =>
-    /^\d{4}\.\d{3}$/.test(v.trim()) ? undefined : 'Use 4 digits, a dot, then 3 digits, like 0999.001.',
+  headerStep('project-number', 'Project #', 'projectNumber', 'Project #', 'This practice job takes about five minutes. Enter the project number', (v) =>
+    /^\d{4}\.\d{3}$/.test(v.trim()) ? undefined : 'Use four digits, a dot, then three digits, like 0271.001.',
   ),
-  headerStep('project-name', 'Project name', 'projectName', 'Project name', 'As it prints on the log.'),
-  headerStep('location', 'Location', 'location', 'Location', 'Address or site description.'),
+  headerStep('project-name', 'Project name', 'projectName', 'Project name', 'Enter the project name'),
+  {
+    id: 'location',
+    screen: 'site',
+    title: 'Location',
+    text: (c) => (c.r?.header.county ? `The address is in ${c.r.header.county}.` : 'The app finds the county from the address. Enter the street address, city, state and ZIP'),
+    sample: (c) => (c.r?.header.county ? undefined : H.location),
+    target: () => one(field('Location')),
+    typed: true,
+    // Done once the county is found, or the lookup for this address came back without one.
+    done: (c) => {
+      const loc = c.r?.header.location.trim() ?? '';
+      return filled(loc) && (!!c.r?.header.county || lastCountyLookup()?.address === loc);
+    },
+    showMe: async (c) => {
+      await type(input('Location'), H.location);
+      (document.activeElement as HTMLElement | null)?.blur?.();
+      await until(() => lastCountyLookup()?.address === latest(c).header.location.trim(), 12_000);
+      await wait(600);
+    },
+  },
   {
     id: 'eval-by',
     screen: 'site',
-    title: 'Who and when',
-    text: () => 'Your name and the dig date.',
-    sample: `${H.evalBy}, today`,
-    target: () => shown([field('Eval. by'), field('Date')]),
+    title: 'Evaluated by and date',
+    text: () => "Today's date is already filled in; change it if you dug on another day. Enter your name",
+    sample: H.evalBy,
+    target: () => shown([field('Evaluated by'), field('Date')]),
     typed: true,
     done: (c) => filled(c.r?.header.evalBy) && !!c.r?.header.date,
+    showMe: async () => type(input('Evaluated by'), H.evalBy),
+  },
+  {
+    id: 'confirmation',
+    screen: 'site',
+    title: 'Gallatin County and the confirmation number',
+    text: (c) =>
+      c.r?.header.gallatin === 'Y'
+        ? 'The address is in Gallatin County, so this is set to Yes. Enter the confirmation number from the GCCHD'
+        : c.r?.header.gallatin === 'N'
+          ? 'Outside Gallatin County there is no confirmation number, and the soil log leaves the field off. Tap Yes if the site is in Gallatin County after all.'
+          : 'Tap Yes if the site is in Gallatin County, then enter the confirmation number from the GCCHD',
+    sample: (c) => (c.r?.header.gallatin === 'N' ? undefined : H.confirmationNumber),
+    target: () => shown([field('Gallatin County site evaluation'), field('Confirmation number')]),
+    typed: true,
+    done: (c) => c.r?.header.gallatin === 'Y' && filled(c.r.header.confirmationNumber),
     showMe: async () => {
-      await type(input('Eval. by'), 'Demo Evaluator');
-      await type(input('Date'), new Date().toLocaleDateString('en-CA'));
+      await pick(document, 'Gallatin County site evaluation', 'Yes');
+      await type(input('Confirmation number'), H.confirmationNumber);
     },
   },
-  headerStep(
-    'confirmation',
-    'Confirmation number',
-    'confirmationNumber',
-    'Confirmation number',
-    'GCCHD number; blank outside Gallatin County.',
-  ),
   {
     id: 'add-pit',
     leaves: true,
     screen: 'site',
-    title: 'Add a test pit: only when you are standing at it',
-    text: () =>
-      "Add the pit once you're standing at it; GPS starts on add.",
+    title: 'Add a test pit only when you are standing at it',
+    text: () => 'Add a test pit only when you are standing at it. GPS starts recording its location the moment you add it.',
     target: () => one(field('New test pit #')?.closest('form') as HTMLElement),
     done: (c) => !!c.wallA,
     showMe: async () => {
@@ -329,14 +408,17 @@ export const STEPS: Step[] = [
   {
     id: 'gps',
     screen: 'pitA',
-    title: 'GPS starts by itself',
+    title: 'GPS started when you added the pit',
     text: (c) =>
       c.wallA?.location
-        ? 'Fix saved with the wall.'
-        : 'Saves the fix at ±10 ft. No fix indoors: Show me fakes one.',
+        ? 'GPS saved the location of this pit.'
+        : gpsWaiting()
+          ? 'GPS started when you added the pit, and it saves the location by itself once it is within 10 ft. Indoors, tap Show me to use a practice location.'
+          : 'There is no GPS fix yet. Tap Capture GPS, or tap Show me to use a practice location.',
     target: () => one(gpsCard()),
     done: (c) => !!c.wallA?.location,
     showMe: async (c) => {
+      stopFix(c.wallA!.id);
       const { lat, lon, accuracyM } = DEMO_KEY.fix;
       save(c, updateTestPit(latest(c), c.wallA!.id, { location: { lat, lon, accuracyM, at: new Date().toISOString() } }));
       await wait(300);
@@ -345,39 +427,42 @@ export const STEPS: Step[] = [
   {
     id: 'gps-retake',
     screen: 'pitA',
-    title: 'Recalibrate if it looks wrong',
-    text: () => 'Fix looks off? Stand at the pit and tap Retake GPS.',
+    title: 'Retake GPS if it looks wrong',
+    text: () => 'If the location ever looks wrong, stand at the pit and tap Retake GPS.',
     target: () => one(byText<HTMLElement>('button', 'Retake GPS') ?? gpsCard()),
     button: { label: 'Next' },
+  },
+  {
+    id: 'photo',
+    screen: 'pitA',
+    title: 'Photo of the wall',
+    text: () => 'Take a photo of the wall before you log it, with the ground surface at the top of the frame.',
+    target: () => one(document.querySelector<HTMLElement>('section[aria-labelledby^="photos-"] > .btn-row:last-of-type')),
+    done: (c) => (c.wallA?.photos.length ?? 0) > 0,
+    showMe: async () => giveFile(photoInput(), await goodPhoto()),
   },
   {
     id: 'add-horizon',
     screen: 'pitA',
     title: 'Log the first horizon',
-    text: () => 'Add horizon 1.',
+    text: () => 'Now log the wall from the top down. Add your first horizon.',
     target: () => one(addHorizon()),
     done: (c) => (c.wallA?.horizons.length ?? 0) > 0,
     showMe: () => tap(addHorizon()),
   },
-  horizonStep(0, PARTS[0], 'Horizon and depth', 'Horizon, then bottom depth.', depthText(A1)),
-  horizonStep(0, PARTS[1], 'Munsell color', 'Hue, value, chroma.', colorKey(A1)),
-  horizonStep(0, PARTS[2], 'Texture', 'USDA class.', A1.texture.toLowerCase()),
-  horizonStep(0, PARTS[3], 'Rock fragments', 'Percent by volume.', `${A1.rockPct}%`),
-  horizonStep(0, PARTS[4], 'Structure', 'Shape, grade, size.', structureKey(A1)),
-  horizonStep(0, PARTS[5], 'Consistence and plasticity', 'Moist consistence and plasticity.', `${A1.consistence}, ${A1.plasticity}`.toLowerCase()),
-  horizonStep(0, PARTS[6], 'Roots and mottling', 'Roots and mottling.', `roots ${A1.roots === 'Y' ? 'yes' : 'no'}, mottling no`),
+  ...PARTS.map((p) => horizonStep(0, p)),
   {
     id: 'h2',
     screen: 'pitA',
-    title: 'Horizon 2 on your own',
+    title: 'The next horizon',
     text: (c) => {
+      if (!hz(c.wallA, 1)) return 'Add your next horizon.';
       const part = nextPart(c.wallA, 1);
-      return `Same way. ${part ? `Now: ${part.name}.` : (c.wallA?.horizons.length ?? 0) < 2 ? 'Now: Add horizon.' : ''}`;
+      return part ? part.text(B2, horizonCard(2)) : 'Horizon 2 is logged.';
     },
     sample: (c) => {
-      if (!hz(c.wallA, 1)) return undefined;
-      const part = nextPart(c.wallA, 1);
-      return part && partSamples(B2)[PARTS.indexOf(part)];
+      const part = hz(c.wallA, 1) && nextPart(c.wallA, 1);
+      return part ? part.sample(B2) : undefined;
     },
     target: (c) => {
       if (!hz(c.wallA, 1)) return one(addHorizon());
@@ -391,12 +476,14 @@ export const STEPS: Step[] = [
       const card = part?.piece && horizonCard(2);
       return part ? `${part.name}${card ? `:${part.piece!(card)}` : ''}` : 'done';
     },
+    // The rock percent is typed: the step waits for it to be committed like the other typed fields.
+    typed: true,
     done: (c) => horizonDone(c.wallA, 1),
     problem: (c) => depthProblem(c.wallA, 1),
     showMe: async (c) => {
       if (!hz(walls(latest(c)).wallA, 1)) await tap(addHorizon());
       const card = horizonCard(2);
-      for (const p of PARTS) if (card) await p.show(card, B2);
+      for (const p of PARTS) if (card && !p.done(walls(latest(c)).wallA!, 1)) await p.show(card, B2);
     },
   },
   {
@@ -405,55 +492,44 @@ export const STEPS: Step[] = [
     title: 'Test pit summary',
     text: (c) =>
       c.wallA && missingItems(c.wallA).pit.length
-        ? `Still needed: ${missingItems(c.wallA).pit.join(', ')}.`
-        : 'Defaults fit a normal pit; tap the row to change.',
+        ? `The pit summary still needs the ${missingItems(c.wallA).pit.join(', ')}.`
+        : 'The pit summary fills in from your horizons. Open it only if this pit had groundwater, a limiting layer or a different slope.',
     target: () => one(document.querySelector<HTMLElement>('section[aria-label="Test pit summary"] summary')),
     button: { label: 'Next' },
   },
   {
-    id: 'photo',
-    screen: 'pitA',
-    title: 'Photo of the wall',
-    text: () => 'Photo of the wall, surface at the top.',
-    target: () => one(document.querySelector<HTMLElement>('section[aria-labelledby^="photos-"] > .btn-row:last-of-type')),
-    done: (c) => (c.wallA?.photos.length ?? 0) > 0,
-    showMe: async () => giveFile(photoInput(), await goodPhoto()),
-  },
-  {
-    id: 'to-site',
+    id: 'to-b',
     leaves: true,
     screen: 'pitA',
+    also: ['site'],
     title: 'On to wall B',
-    text: () => 'Tap the back arrow for wall B.',
-    target: () => one(backLink()),
-    done: (c) => c.screen !== 'pitA',
-    showMe: () => tap(backLink()),
-  },
-  {
-    id: 'open-b',
-    leaves: true,
-    screen: 'site',
-    title: 'Open wall 1B',
-    text: () => 'South wall of the same pit.',
-    target: (c) => one(c.wallB ? document.querySelector<HTMLElement>(`a[href$="/pit/${c.wallB.id}"]`) : null),
+    text: (c) =>
+      c.screen === 'site' ? 'Open wall 1B, the opposite wall of the same pit.' : 'Wall A is logged. Go back and open wall B, the opposite wall of the same pit.',
+    target: (c) => one(c.screen === 'site' ? wallBLink(c) : backLink()),
+    part: (c) => c.screen,
     done: (c) => c.screen === 'pitB',
-    showMe: async (c) => tap(document.querySelector<HTMLElement>(`a[href$="/pit/${c.wallB!.id}"]`)),
+    showMe: async (c) => {
+      if (!wallBLink(c)) {
+        await tap(backLink());
+        await until(() => !!wallBLink(c), 3000);
+      }
+      await tap(wallBLink(c));
+    },
   },
   {
     id: 'copy-a',
     screen: 'pitB',
     title: 'Start from wall A',
-    text: () => 'Copy wall A, then change what differs.',
-    target: () => one(byText<HTMLElement>('button', /^Start from wall/)),
+    text: () => "Wall B is the same hole, so start from wall A's horizons. Then change only the depths that differ.",
+    target: () => one(byText<HTMLElement>('button', /^Copy horizons from wall/)),
     done: (c) => (c.wallB?.horizons.length ?? 0) > 0,
-    showMe: () => tap(byText<HTMLElement>('button', /^Start from wall/)),
+    showMe: () => tap(byText<HTMLElement>('button', /^Copy horizons from wall/)),
   },
   {
     id: 'retake',
     screen: 'pitB',
-    title: 'A pit check: retake this photo',
-    text: () =>
-      'Too dark and blurry; it holds the log. Retake it.',
+    title: 'Retake a bad photo',
+    text: () => "This practice photo is too dark and blurry to check soil colours. Retake it; the soil log can't be printed until you do.",
     target: (c) => shown([plantedItem(c)?.querySelector<HTMLElement>('.alert'), plantedItem(c)?.querySelector<HTMLElement>('.btn-row')]),
     done: (c) => !!demoState()?.planted && !plantedPhoto(c),
     showMe: async (c) => giveFile(plantedItem(c)?.querySelector<HTMLInputElement>('input[type="file"]') ?? null, await goodPhoto()),
@@ -463,7 +539,7 @@ export const STEPS: Step[] = [
     leaves: true,
     screen: 'pitB',
     title: 'Back to the site evaluation',
-    text: () => 'Tap the back arrow.',
+    text: () => 'Both walls are logged. Tap the back arrow to return to the site evaluation.',
     target: () => one(backLink()),
     done: (c) => c.screen !== 'pitB',
     showMe: () => tap(backLink()),
@@ -471,9 +547,8 @@ export const STEPS: Step[] = [
   {
     id: 'dropbox',
     screen: 'site',
-    title: 'Dropbox: off in the demo',
-    text: () =>
-      'Connect once on a real job; logs and photos then file themselves. Off in the demo.',
+    title: 'Dropbox',
+    text: () => 'On a real job, connect Dropbox here once, and the soil logs and photos are saved to the project folder automatically. It is turned off for this practice job.',
     target: () => one(document.querySelector<HTMLElement>('section[aria-labelledby="dbx"]')),
     button: { label: 'Next' },
   },
@@ -481,24 +556,25 @@ export const STEPS: Step[] = [
     id: 'soil-log',
     leaves: true,
     screen: 'site',
-    title: 'Generate the soil log',
-    text: (c) =>
-      c.r && openFlags(c.r).length
-        ? `${openFlags(c.r).length} open pit check(s) hold the log; Show me accepts them.`
-        : 'Tap Soil logs.',
-    target: () => one(document.querySelector<HTMLElement>('a[href$="/print/soil-logs"]')),
+    title: 'Open the soil log',
+    text: (c) => {
+      const n = c.r ? openFlags(c.r).length : 0;
+      return n ? checksText(n) : 'Tap Soil logs to see the finished log.';
+    },
+    target: () => one(soilLogsLink()),
     done: (c) => c.screen === 'print',
     showMe: async (c) => {
       await acceptOpen(c);
-      await tap(document.querySelector<HTMLElement>('a[href$="/print/soil-logs"]'));
+      await tap(soilLogsLink());
     },
   },
   {
     id: 'finished',
     screen: 'print',
-    title: 'Your finished soil log',
-    text: () => 'Both walls, photo and GPS on one page. Finish deletes the demo job.',
+    title: 'The finished soil log',
+    text: () => 'This is the soil log as it prints. Tap Finish to delete this practice job.',
     target: () => one(document.querySelector<HTMLElement>('.sheets .sheet')),
+    tipOver: true,
     button: {
       label: 'Finish',
       run: async (c) => {
@@ -509,20 +585,10 @@ export const STEPS: Step[] = [
   },
   {
     id: 'home-settings',
-    leaves: true,
     screen: 'home',
-    title: 'The demo lives in Settings',
-    text: () => 'Replay lives in Settings.',
+    title: 'Replay the demo from Settings',
+    text: () => "That's the demo. You can replay it any time from Settings.",
     target: () => one(document.querySelector<HTMLElement>('.bar a[href="#/settings"]')),
-    done: (c) => c.screen === 'settings',
-    showMe: () => tap(document.querySelector<HTMLElement>('.bar a[href="#/settings"]')),
-  },
-  {
-    id: 'replay',
-    screen: 'settings',
-    title: 'Replay the demo',
-    text: () => 'Any time. Demo done.',
-    target: () => one(byText<HTMLElement>('button', 'Replay the demo')?.closest<HTMLElement>('.field') ?? null),
     button: { label: 'Done' },
   },
 ];

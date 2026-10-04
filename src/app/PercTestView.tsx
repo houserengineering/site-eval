@@ -71,7 +71,7 @@ export function PercTestView(props: { record: FieldRecord; testId: string; save:
           onInput={(v) => saveTest({ referenceHeightIn: v })}
           hint={t.referenceHeightIn != null ? `Prints as ${tapeText(t.referenceHeightIn)}` : undefined}
         />
-        <TextField label="Tester (printed name)" value={t.tester} onInput={(v) => saveTest({ tester: v })} autoCapitalize="words" hint={`Blank prints Eval. by${r.header.evalBy ? ` (${r.header.evalBy})` : ''}.`} />
+        <TextField label="Tester (printed name)" value={t.tester} onInput={(v) => saveTest({ tester: v })} autoCapitalize="words" hint={`Blank prints Evaluated by${r.header.evalBy ? ` (${r.header.evalBy})` : ''}.`} />
       </section>
 
       <Soak test={t} now={now} saveTest={saveTest} />

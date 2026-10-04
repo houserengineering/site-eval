@@ -130,9 +130,19 @@ const next = (page: Page, name = 'Next') => tip(page).getByRole('button', { name
 const pick = (page: Page, group: string, name: string) =>
   page.locator('[data-coach-target]').getByRole('radiogroup', { name: group, exact: true }).getByRole('radio', { name, exact: true }).click();
 
+/** The Census geocoder, answered here (JSONP): the demo's address is in Gallatin County, MT. */
+async function stubGeocoder(page: Page) {
+  await page.route('https://geocoding.geo.census.gov/**', (route) => {
+    const cb = new URL(route.request().url()).searchParams.get('callback');
+    const match = { geographies: { Counties: [{ NAME: 'Gallatin County', STATE: '30', COUNTY: '031' }] }, addressComponents: { state: 'MT' } };
+    return route.fulfill({ contentType: 'application/javascript', body: `${cb}(${JSON.stringify({ result: { addressMatches: [match] } })})` });
+  });
+}
+
 test('first launch: the demo coaches the whole field path and ends in Settings', async ({ page }) => {
   test.setTimeout(300_000);
   await page.addInitScript(fakeKeyboard);
+  await stubGeocoder(page);
   await page.goto('./?fake-dropbox');
   await page.waitForFunction(() => !!(window as any).__fakeDropbox);
   await page.evaluate(() => (window as any).__fakeDropbox.mkdir('/Server/Office'));
@@ -140,7 +150,7 @@ test('first launch: the demo coaches the whole field path and ends in Settings',
   // Required on first launch, starting straight on the first field; no exit on the first run.
   // Header: placeholders from the field guide; a wrong entry gets a correction on the field.
   await arrive(page, 'Project #', 'project-number');
-  await expect(tip(page)).toContainText('Practice job');
+  await expect(tip(page)).toContainText('This practice job takes about five minutes. Enter the project number, e.g. 0271.001.');
   await expect(tip(page).getByRole('button', { name: 'Exit demo' })).toHaveCount(0);
   const projectNo = page.getByLabel('Project #');
   await expect(projectNo).toHaveAttribute('placeholder', '0279.001');
@@ -150,55 +160,82 @@ test('first launch: the demo coaches the whole field path and ends in Settings',
   expect(page.url()).toContain('#/se/');
   await projectNo.fill('999');
   await projectNo.press('Enter');
-  await expect(tip(page).getByRole('alert')).toHaveText('Use 4 digits, a dot, then 3 digits, like 0999.001.');
+  await expect(tip(page).getByRole('alert')).toHaveText('Use four digits, a dot, then three digits, like 0271.001.');
   await expect(tip(page).getByRole('heading')).toContainText('Project #');
-  await projectNo.fill('0999.001');
+  await projectNo.fill('0271.001');
   await projectNo.press('Enter');
 
   await arrive(page, 'Project name', 'project-name');
-  await page.getByLabel('Project name').fill('Demo Ranch Minor Subdivision');
+  await expect(tip(page)).toContainText('Enter the project name, e.g. Stillwater Subdivision.');
+  await page.getByLabel('Project name').fill('Stillwater Subdivision');
   await next(page);
+
+  // The address finds its county, which sets the Gallatin County answer.
   await arrive(page, 'Location', 'location');
   await showMe(page);
-  await expect(page.getByLabel('Location')).toHaveValue('1 Sample Road, Belgrade');
-  await arrive(page, 'Who and when', 'eval-by-date');
-  await page.getByLabel('Eval. by').fill('Nathan');
-  await page.getByLabel('Date').fill('2026-10-03');
+  await expect(page.getByLabel('Location')).toHaveValue('6133 Bigelow Road, Bozeman MT 59718');
+  await expect(page.getByText('Gallatin County, MT', { exact: true })).toBeVisible();
+
+  // Today's date is filled in already.
+  await arrive(page, 'Evaluated by and date', 'eval-by-date');
+  await expect(page.getByLabel('Date')).toHaveValue(new Date().toLocaleDateString('en-CA'));
+  await page.getByLabel('Evaluated by').fill('Justin Houser');
   await next(page);
-  await arrive(page, 'Confirmation number', 'confirmation');
-  await page.getByLabel('Confirmation number').fill('se confirm 00999');
+
+  // Gallatin County: Yes from the address. No greys out the confirmation number.
+  await arrive(page, 'Gallatin County and the confirmation number', 'confirmation');
+  const gallatin = page.getByRole('radiogroup', { name: 'Gallatin County site evaluation' });
+  await expect(gallatin.getByRole('radio', { name: 'Yes' })).toHaveAttribute('aria-checked', 'true');
+  await gallatin.getByRole('radio', { name: 'No' }).click();
+  await expect(page.getByLabel('Confirmation number')).toBeDisabled();
+  await expect(tip(page)).toContainText('the soil log leaves the field off');
+  await gallatin.getByRole('radio', { name: 'Yes' }).click();
+  await page.getByLabel('Confirmation number').fill('se confirm 00278');
   await page.getByLabel('Confirmation number').press('Enter');
 
-  // Add the pit (GPS warning), then the GPS fix: none indoors, so Show me fills a made-up one.
+  // Add the pit; GPS starts at once. None indoors here, so Show me fills a practice fix.
   await arrive(page, 'only when you are standing at it', 'add-pit');
   await page.getByLabel('New test pit #').fill('1');
   await page.getByRole('button', { name: 'Add test pit' }).click();
-  await arrive(page, 'GPS starts by itself', 'gps');
+  await arrive(page, 'GPS started when you added the pit', 'gps');
   await showMe(page);
-  await arrive(page, 'Recalibrate', 'gps-retake');
+  await arrive(page, 'Retake GPS if it looks wrong', 'gps-retake');
   await next(page);
+
+  // The photo comes before the horizons. If the user wanders off, the tip offers to take them back.
+  await arrive(page, 'Photo of the wall', 'photo');
+  await page.evaluate(() => (location.hash = '#/'));
+  await arrive(page, 'You left the demo step', 'left-step', { hole: false });
+  await tip(page).getByRole('button', { name: 'Take me back' }).click();
+  await arrive(page, 'Photo of the wall', 'photo-back');
+  await page.locator('[data-coach-target] input[type="file"][capture]').setInputFiles('src/app/demo/demo-wall-good.jpg');
 
   // Wall A, horizon 1 by the user's own taps.
   await arrive(page, 'Log the first horizon', 'add-horizon');
   await page.getByRole('button', { name: 'Add horizon' }).click();
   await arrive(page, 'Horizon and depth', 'h1-depth');
-  await pick(page, 'Horizon', 'A');
+  await pick(page, 'Horizon', 'O');
   await page.getByRole('region', { name: 'Horizon 1' }).getByRole('textbox', { name: 'Bottom', exact: true }).fill('0');
   await page.getByRole('region', { name: 'Horizon 1' }).getByRole('textbox', { name: 'Bottom', exact: true }).blur();
-  await expect(tip(page).getByRole('alert')).toHaveText('Bottom must be below the top.');
+  await expect(tip(page).getByRole('alert')).toHaveText('The bottom must be below the top.');
   await pick(page, 'Quick bottom', '12"');
   await arrive(page, 'Munsell color', 'h1-color');
   await pick(page, 'Hue', '10YR');
   await pick(page, 'Value', '3');
   await pick(page, 'Chroma', '2');
   await arrive(page, 'Texture', 'h1-texture');
-  await pick(page, 'USDA class', 'LOAM');
+  await pick(page, 'USDA class', 'CLAY LOAM');
   await arrive(page, 'Rock fragments', 'h1-rock');
-  await page.getByRole('region', { name: 'Horizon 1' }).getByLabel('Rock fragments (by volume)').fill('5');
+  await page.getByRole('region', { name: 'Horizon 1' }).getByLabel('Rock fragments (by volume)').fill('10');
   await next(page);
+  // Structure: the shape alone does not finish the step; grade and size are asked for next.
   await arrive(page, 'Structure', 'h1-structure');
-  await pick(page, 'Shape', 'GRANULAR');
-  await pick(page, 'Grade', 'WEAK');
+  await expect(tip(page)).toContainText('Pick the shape, then the grade and size, e.g. blocky, moderate, fine.');
+  await pick(page, 'Shape', 'BLOCKY');
+  await arrive(page, 'Structure', 'h1-structure-grade');
+  await expect(tip(page)).toContainText('Now pick the grade and size, e.g. blocky, moderate, fine.');
+  await pick(page, 'Grade', 'MODERATE');
+  await expect(tip(page).getByRole('heading')).toContainText('Structure');
   await pick(page, 'Size', 'FINE');
   await arrive(page, 'Consistence and plasticity', 'h1-consistence');
   await pick(page, 'Consistence', 'FRIABLE');
@@ -207,57 +244,51 @@ test('first launch: the demo coaches the whole field path and ends in Settings',
   await pick(page, 'Roots', 'Yes');
   await pick(page, 'Mottling', 'No');
 
-  // Horizon 2: the highlight walks the next blank group; Show me finishes it.
-  await arrive(page, 'Horizon 2 on your own', 'h2-add');
+  // Horizon 2: one sentence per group as the highlight moves on; Show me finishes it.
+  await arrive(page, 'The next horizon', 'h2-add');
+  await expect(tip(page)).toContainText('Add your next horizon.');
   await page.getByRole('button', { name: 'Add horizon' }).click();
-  await expect(tip(page)).toContainText('Now: horizon and depth');
-  await arrive(page, 'Horizon 2 on your own', 'h2-depth');
+  await expect(tip(page)).toContainText('The top is already the bottom of the horizon above. Pick the horizon, then its bottom depth, e.g. B, 12–96".');
+  await arrive(page, 'The next horizon', 'h2-depth');
   await pick(page, 'Horizon', 'B');
   await pick(page, 'Quick bottom', '96"');
-  await expect(tip(page)).toContainText('Now: color');
-  await arrive(page, 'Horizon 2 on your own', 'h2-color');
+  await expect(tip(page)).toContainText('Pick the Munsell hue, value and chroma, e.g. 10YR 5/3.');
+  await arrive(page, 'The next horizon', 'h2-color');
   await showMe(page);
 
   // Show me goes at a human pace: a whole horizon takes a while.
-  await arrive(page, 'Test pit summary', 'summary', { timeout: 60_000 });
+  await arrive(page, 'Test pit summary', 'summary', { timeout: 90_000 });
   await next(page);
 
-  // If the user wanders off, the tip offers to take them back.
-  await arrive(page, 'Photo of the wall', 'photo');
-  await page.evaluate(() => (location.hash = '#/'));
-  await arrive(page, 'You left the demo step', 'left-step', { hole: false });
-  await tip(page).getByRole('button', { name: 'Take me back' }).click();
-  await arrive(page, 'Photo of the wall', 'photo-back');
-  await page.locator('[data-coach-target] input[type="file"][capture]').setInputFiles('src/app/demo/demo-wall-good.jpg');
-
-  await arrive(page, 'On to wall B', 'to-site');
+  // Wall B: back to the list and into wall 1B, one step.
+  await arrive(page, 'On to wall B', 'to-b');
   await page.getByRole('link', { name: 'Back to site evaluation' }).click();
-  await arrive(page, 'Open wall 1B', 'open-b');
-  await page.getByRole('link', { name: /Wall 1B, south/ }).click();
+  await expect(tip(page)).toContainText('Open wall 1B, the opposite wall of the same pit.');
+  await arrive(page, 'On to wall B', 'to-b-site');
+  await page.getByRole('link', { name: /^Wall 1B / }).click();
   await arrive(page, 'Start from wall A', 'copy-a');
-  await page.getByRole('button', { name: /Start from wall 1A/ }).click();
+  await page.getByRole('button', { name: 'Copy horizons from wall 1A' }).click();
 
   // The planted pit check: a dark, blurred photo to retake.
-  await arrive(page, 'retake this photo', 'retake');
-  await expect(page.locator('[data-coach-target].alert')).toHaveText('Blurry, too dark: retake it.');
+  await arrive(page, 'Retake a bad photo', 'retake');
+  await expect(page.locator('[data-coach-target].alert')).toHaveText('This photo is blurry and too dark. Retake it.');
   await page.getByLabel('Retake photo 1').setInputFiles('src/app/demo/demo-wall-good.jpg');
   await arrive(page, 'Back to the site evaluation', 'to-site-2');
   await page.getByRole('link', { name: 'Back to site evaluation' }).click();
 
-  await arrive(page, 'Dropbox: off in the demo', 'dropbox');
+  await arrive(page, 'Dropbox', 'dropbox');
   await next(page);
-  await arrive(page, 'Generate the soil log', 'soil-log');
+  await arrive(page, 'Open the soil log', 'soil-log');
   await showMe(page);
-  await arrive(page, 'Your finished soil log', 'finished', { timeout: 15_000 });
+  await arrive(page, 'The finished soil log', 'finished', { timeout: 15_000 });
 
   // Nothing reached Dropbox.
   expect(await page.evaluate(() => [...(window as any).__fakeDropbox.files.keys()])).toEqual([]);
   await next(page, 'Finish');
 
-  await arrive(page, 'The demo lives in Settings', 'home-settings');
-  await expect(page.getByText('Demo Ranch')).toHaveCount(0);
-  await page.getByRole('link', { name: 'Settings' }).click();
-  await arrive(page, 'Replay the demo', 'replay');
+  await arrive(page, 'Replay the demo from Settings', 'home-settings');
+  await expect(tip(page)).toContainText("That's the demo. You can replay it any time from Settings.");
+  await expect(page.getByRole('link', { name: /0271\.001/ })).toHaveCount(0);
   await next(page, 'Done');
   await expect(tip(page)).toHaveCount(0);
 
@@ -273,5 +304,5 @@ test('first launch: the demo coaches the whole field path and ends in Settings',
   await tip(page).getByRole('button', { name: 'Exit demo' }).click();
   await expect(page.getByRole('heading', { name: 'Site evaluations' })).toBeVisible();
   await expect(tip(page)).toHaveCount(0);
-  await expect(page.getByRole('link', { name: /Demo|No project #/ })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /0271|No project #/ })).toHaveCount(0);
 });

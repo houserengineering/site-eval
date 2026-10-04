@@ -1,5 +1,6 @@
 // One field guide for the grey examples on every text and number field and for the demo's answer
-// key (demo spec 2026-10-03, decision 4). Examples are made up; nothing here is client data.
+// key (demo spec 2026-10-03, decision 4). Placeholder examples are made up; the demo's answer key is
+// a real job (see DEMO_KEY).
 
 export interface GuideEntry {
   /** Grey placeholder shown while the field is empty. */
@@ -12,7 +13,7 @@ export const FIELD_GUIDE: Record<string, GuideEntry> = {
   'Project #': { example: '0279.001' },
   'Project name': { example: 'Smith Minor Subdivision' },
   Location: { example: '1234 Example Road, Belgrade' },
-  'Eval. by': { example: 'J. Smith' },
+  'Evaluated by': { example: 'J. Smith' },
   'Confirmation number': { example: 'SE CONFIRM 00123' },
   'Owner name': { example: 'John and Jane Smith' },
   'New test pit #': { example: '1' },
@@ -73,6 +74,8 @@ export interface DemoHorizon {
   color: { hue: string; value: string; chroma: string };
   texture: string;
   rockPct: number;
+  /** Rock size, needed from 15% up. */
+  rockKind?: string;
   structure: { shape: string; grade: string; size: string };
   consistence: string;
   plasticity: string;
@@ -80,25 +83,30 @@ export interface DemoHorizon {
   mottling: 'Y' | 'N';
 }
 
-/** The demo's made-up job. Tips show these values; any valid entry is accepted. */
+/**
+ * The demo's answer key: a real Houser job so the practice run looks like the real thing (Nathan,
+ * 2026-10-04). 0271.001 Stillwater Subdivision, evaluated by Justin Houser; the horizons are from its
+ * test pit 1 logs (O from pit 1B, B from the same pits). Tips show these values; any valid entry is
+ * accepted.
+ */
 export const DEMO_KEY = {
   header: {
-    projectNumber: '0999.001',
-    projectName: 'Demo Ranch Minor Subdivision',
-    location: '1 Sample Road, Belgrade',
-    evalBy: 'Your name',
-    confirmationNumber: 'SE CONFIRM 00999',
+    projectNumber: '0271.001',
+    projectName: 'Stillwater Subdivision',
+    location: '6133 Bigelow Road, Bozeman MT 59718',
+    evalBy: 'Justin Houser',
+    confirmationNumber: 'SE CONFIRM 00278',
   },
   pit: '1',
   horizons: [
     {
-      designation: 'A',
+      designation: 'O',
       topIn: 0,
       bottomIn: 12,
       color: { hue: '10YR', value: '3', chroma: '2' },
-      texture: 'LOAM',
-      rockPct: 5,
-      structure: { shape: 'GRANULAR', grade: 'WEAK', size: 'FINE' },
+      texture: 'CLAY LOAM',
+      rockPct: 10,
+      structure: { shape: 'BLOCKY', grade: 'MODERATE', size: 'FINE' },
       consistence: 'FRIABLE',
       plasticity: 'SLIGHTLY PLASTIC',
       roots: 'Y',
@@ -108,16 +116,17 @@ export const DEMO_KEY = {
       designation: 'B',
       topIn: 12,
       bottomIn: 96,
-      color: { hue: '10YR', value: '5', chroma: '4' },
-      texture: 'SANDY LOAM',
-      rockPct: 10,
-      structure: { shape: 'SUBANGULAR BLOCKY', grade: 'WEAK', size: 'MEDIUM' },
+      color: { hue: '10YR', value: '5', chroma: '3' },
+      texture: 'SILT LOAM',
+      rockPct: 40,
+      rockKind: 'GRAVEL',
+      structure: { shape: 'MASSIVE', grade: '', size: '' },
       consistence: 'FRIABLE',
-      plasticity: 'NON-PLASTIC',
+      plasticity: 'SLIGHTLY PLASTIC',
       roots: 'N',
       mottling: 'N',
     },
   ] as DemoHorizon[],
-  /** Made-up fix for "Show me" when there is no GPS indoors. */
-  fix: { lat: 45.7769, lon: -111.1772, accuracyM: 1.5 },
+  /** Test pit 1's fix on the job, for "Show me" when there is no GPS indoors. */
+  fix: { lat: 45.61352, lon: -111.07212, accuracyM: 2.5 },
 };

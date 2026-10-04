@@ -1,11 +1,13 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { addPercTest, addPitWalls, updateHeader, type FieldRecord, type Header, type TestPit } from '../domain/fieldRecord';
-import { groupStatus, nextPitNumber, pitGroups, wallSide } from '../domain/pitWalls';
+import { groupStatus, nextPitNumber, pitGroups } from '../domain/pitWalls';
 import { percSummary } from '../domain/perc';
 import type { RecordStore } from '../storage/db';
 import { go } from './App';
-import { TextField } from './fields';
+import { TextField, YesNoChips } from './fields';
+import { findCounty } from './county';
 import { useNow } from './PercTimers';
+import { startFix } from './gps';
 import type { PrintKind } from '../generator';
 import { CertifyPanel } from './Certify';
 import { download, photoSource } from './deliverables';
@@ -31,6 +33,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
   const { percTests } = useSettings();
   const [status, setStatus] = useState<string>();
   const h = (k: keyof Header) => (v: string) => props.save(updateHeader(r, { [k]: v }));
+  const county = useCountyLookup(r, props.save);
   const held = openFlags(r).length > 0;
 
   const addPit = (e: Event) => {
@@ -39,7 +42,10 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
     const next = addPitWalls(r, label);
     props.save(next);
     setPitLabel('');
-    go(`#/se/${r.id}/pit/${next.testPits[r.testPits.length].id}`); // wall A
+    // GPS starts the moment the pit is added: the user is standing at it.
+    const wallA = next.testPits[r.testPits.length].id;
+    startFix(r.id, wallA);
+    go(`#/se/${r.id}/pit/${wallA}`);
   };
 
   const addPerc = (e: Event) => {
@@ -91,15 +97,22 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
         <UnconfirmedNotice record={r} save={props.save} context="header" />
         <TextField label="Project #" value={r.header.projectNumber} onInput={h('projectNumber')} inputMode="decimal" />
         <TextField label="Project name" value={r.header.projectName} onInput={h('projectName')} autoCapitalize="words" />
-        <TextField label="Location" value={r.header.location} onInput={h('location')} autoCapitalize="words" />
-        <TextField label="Eval. by" value={r.header.evalBy} onInput={h('evalBy')} autoCapitalize="words" />
+        <TextField label="Location" value={r.header.location} onInput={county.onLocation} autoCapitalize="words" hint={county.hint} />
+        <TextField label="Evaluated by" value={r.header.evalBy} onInput={h('evalBy')} autoCapitalize="words" />
         <TextField label="Date" type="date" value={r.header.date} onInput={h('date')} />
+        <YesNoChips
+          label="Gallatin County site evaluation"
+          value={r.header.gallatin}
+          onChange={(v) => props.save(updateHeader(r, { gallatin: v }))}
+          hint={r.header.gallatin === 'N' ? 'The confirmation number is left off the soil log.' : undefined}
+        />
         <TextField
           label="Confirmation number"
-          value={r.header.confirmationNumber}
+          value={r.header.gallatin === 'N' ? '' : r.header.confirmationNumber}
           onInput={h('confirmationNumber')}
           autoCapitalize="characters"
-          hint="From GCCHD for Gallatin County site evaluations; leave blank elsewhere."
+          disabled={r.header.gallatin === 'N'}
+          hint={r.header.gallatin === 'N' ? 'Only Gallatin County site evaluations have one.' : 'From the GCCHD.'}
         />
         <TextField label="Owner name" value={r.header.ownerName} onInput={h('ownerName')} autoCapitalize="words" hint={percTests ? 'Printed on the perc test forms.' : undefined} />
       </section>
@@ -120,8 +133,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
                   <li key={p.id}>
                     <a class="row-link" href={`#/se/${r.id}/pit/${p.id}`}>
                       <span class="row-title">
-                        Wall {p.label}
-                        {wallSide(p.label) && `, ${wallSide(p.label)}`} <span class={`badge st-${pitStatus(p)}`}>{STATUS_TEXT[pitStatus(p)]}</span>
+                        Wall {p.label} <span class={`badge st-${pitStatus(p)}`}>{STATUS_TEXT[pitStatus(p)]}</span>
                       </span>
                       <span class="row-sub">
                         {p.horizons.length} horizon{p.horizons.length === 1 ? '' : 's'}
@@ -143,7 +155,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
             value={pitLabel}
             onInput={setPitLabel}
             autoCapitalize="characters"
-            hint={`Blank uses ${nextPitNumber(r.testPits)}. Adds walls A (north) and B (south).`}
+            hint={`Blank uses ${nextPitNumber(r.testPits)}. Adds walls A and B. GPS starts as soon as you add it.`}
           />
           <button class="btn primary" type="submit">
             Add test pit
@@ -228,6 +240,43 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
       </section>
     </main>
   );
+}
+
+/**
+ * The county for the typed address, looked up a moment after the user stops typing. It sets the
+ * Gallatin County Yes/No, which the user can still change. Opening a record never looks it up again.
+ */
+function useCountyLookup(r: FieldRecord, save: (r: FieldRecord) => void) {
+  const [state, setState] = useState<'' | 'busy' | 'offline' | 'not-found'>('');
+  const latest = useRef(r);
+  latest.current = r;
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const onLocation = (v: string) => {
+    save(updateHeader(latest.current, { location: v, county: '' }));
+    clearTimeout(timer.current);
+    setState('');
+    if (v.trim().length < 8) return;
+    timer.current = setTimeout(async () => {
+      setState('busy');
+      const found = await findCounty(v.trim());
+      // Typed on since: that lookup is stale.
+      if (latest.current.header.location !== v) return;
+      if ('county' in found) {
+        save(updateHeader(latest.current, { county: found.county, gallatin: found.gallatin ? 'Y' : 'N' }));
+        setState('');
+      } else setState('offline' in found ? 'offline' : 'not-found');
+    }, 1200);
+  };
+  const hint =
+    state === 'busy'
+      ? 'Finding the county…'
+      : state === 'offline'
+        ? 'The county could not be checked without a connection. Answer the Gallatin County question below yourself.'
+        : state === 'not-found'
+          ? 'The county could not be found for this address. Answer the Gallatin County question below yourself.'
+          : r.header.county || undefined;
+  return { onLocation, hint };
 }
 
 /** "edited by" note once a second person has edited the site evaluation. */

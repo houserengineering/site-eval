@@ -83,7 +83,7 @@ export function DropboxSection(props: { record: FieldRecord; save: (r: FieldReco
     return (
       <section aria-labelledby="dbx">
         <h2 id="dbx">Dropbox and office printing</h2>
-        <p class="hint">Off in the demo. On a real job, connect Dropbox here: the soil logs, photos and field record file into the project folder.</p>
+        <p class="hint">On a real job, connect Dropbox here once. The soil logs, photos and field record are then saved to the project folder. It is turned off for this practice job.</p>
       </section>
     );
   return (

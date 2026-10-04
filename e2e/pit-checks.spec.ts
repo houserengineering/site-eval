@@ -35,12 +35,12 @@ test('pit checks: flags on the wall and in the pit list, retake prompt, accept w
 
   // A flat, small photo: flagged at once with a retake prompt.
   await page.getByLabel('Take photo').setInputFiles({ name: 'pit.jpg', mimeType: 'image/jpeg', buffer: readFileSync('test/fixtures/pit-photo.jpg') });
-  await expect(page.getByText('Saved, but it does not meet the photo standard: retake.')).toBeVisible();
+  await expect(page.getByText('Saved, but it does not meet the photo standard. Retake it.')).toBeVisible();
   const photos = page.getByRole('region', { name: 'Photos' });
-  await expect(photos.getByText('Blurry, too small (300 × 400): retake it.')).toBeVisible();
+  await expect(photos.getByText('This photo is blurry and too small (300 × 400). Retake it.')).toBeVisible();
 
   const checks = page.getByRole('region', { name: 'Pit checks' });
-  await expect(checks.getByRole('listitem')).toHaveText([/^Log ends at 84"; log the wall to 96"\./, /^Photo 1 is blurry and too small \(300 × 400\): retake it\./]);
+  await expect(checks.getByRole('listitem')).toHaveText([/^Log ends at 84"; log the wall to 96"\./, /^Photo 1 is blurry and too small \(300 × 400\)\. Retake it\./]);
   await expect(checks.getByText('2 open')).toBeVisible();
   await expect(page.getByRole('button', { name: '2 pit checks open' })).toBeVisible();
   await shot(page, '90-pit-checks', checks);
@@ -49,12 +49,12 @@ test('pit checks: flags on the wall and in the pit list, retake prompt, accept w
   await photos.getByLabel('Retake photo 1').setInputFiles({ name: 'wall.jpg', mimeType: 'image/jpeg', buffer: readFileSync('test/fixtures/pit-wall-synthetic.jpg') });
   await expect(page.getByText('1 photo saved on this device.')).toBeVisible();
   await expect(photos.getByRole('img')).toHaveCount(1);
-  await expect(photos.getByText(/retake it/)).toHaveCount(0);
+  await expect(photos.getByText(/Retake it/)).toHaveCount(0);
   await expect(checks.getByRole('listitem')).toHaveCount(1);
 
   // The pit list and the deliverables show it; the soil log is held.
   await page.getByRole('link', { name: 'Back to site evaluation' }).click();
-  await expect(page.getByRole('link', { name: /^Wall 1A, north/ })).toContainText('1 check open');
+  await expect(page.getByRole('link', { name: /^Wall 1A / })).toContainText('1 check open');
   const hold = page.getByRole('region', { name: 'Soil log held' });
   await expect(hold).toContainText('Soil log held: 1 pit check open.');
   await expect(page.getByRole('button', { name: 'Export soil logs (Excel)' })).toBeDisabled();
@@ -76,8 +76,8 @@ test('pit checks: flags on the wall and in the pit list, retake prompt, accept w
   await expect(page.getByRole('button', { name: 'Export soil logs (Excel)' })).toBeEnabled();
 
   // Wall 1B starts from 1A: the acceptance stays on 1A, so 1B flags its own short log until it is fixed.
-  await page.getByRole('link', { name: /^Wall 1B, south/ }).click();
-  await page.getByRole('button', { name: /^Start from wall 1A/ }).click();
+  await page.getByRole('link', { name: /^Wall 1B / }).click();
+  await page.getByRole('button', { name: /^Copy horizons from wall 1A/ }).click();
   await expect(page.getByRole('region', { name: 'Pit checks' }).getByRole('listitem')).toHaveText([/^Log ends at 84"/]);
   await page.getByRole('region', { name: 'Horizon 2' }).getByRole('textbox', { name: 'Bottom' }).fill('96');
   await expect(page.getByRole('region', { name: 'Pit checks' })).toHaveCount(0);

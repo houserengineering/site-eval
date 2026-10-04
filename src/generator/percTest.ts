@@ -114,7 +114,7 @@ function fill(ws: ExcelJS.Worksheet, spec: PercTestSnapshot, record: FieldRecord
   put(inp.testDate, excelDate(testDay));
   put(inp.holeDiameter, `${spec.labels.holeDiameter}${inch(test.holeDiameterIn)}`);
   put(inp.referenceHeight, `${spec.labels.referenceHeight}${inch(test.referenceHeightIn)}`);
-  put(inp.confirmationNumber, h.confirmationNumber);
+  put(inp.confirmationNumber, h.gallatin === 'N' ? '' : h.confirmationNumber);
   const lot = test.lot.trim();
   put(inp.title, `${lot ? (/^lot\b/i.test(lot) ? `${lot} ` : `Lot ${lot} `) : ''}${spec.labels.title}${test.label}`);
   // Hole depth is on the DEQ form (App. A p126) but not the office template; it goes beside the diameter.

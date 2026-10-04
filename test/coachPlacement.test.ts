@@ -6,6 +6,15 @@ const tip = { width: 380, height: 180 };
 const overlaps = (a: Box, b: Box) => a.left < b.left + b.width && b.left < a.left + a.width && a.top < b.top + b.height && b.top < a.top + a.height;
 
 describe('coach tip placement (demo spec decision 9)', () => {
+  it('goes over the lower part of a printed page when neither side has room, only when allowed', () => {
+    const target = { top: 150, left: 8, width: 396, height: 640 };
+    expect(placeTip(target, tip, view).side).not.toBe('over');
+    const p = placeTip(target, tip, view, 'below', true);
+    expect(p.side).toBe('over');
+    expect(p.top + p.height).toBe(view.top + view.height - 8);
+    expect(p.height).toBe(tip.height);
+  });
+
   it('sits below a field near the top, with the arrow at the field', () => {
     const target = { top: 120, left: 16, width: 380, height: 70 };
     const p = placeTip(target, tip, view);

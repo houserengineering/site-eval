@@ -22,7 +22,7 @@ import { PitMedia } from './PitMedia';
 import { TextureGuide } from './TextureGuide';
 import { pitWarnings } from '../domain/rules';
 import { hueWarning } from '../domain/hueCheck';
-import { wallOf, wallSide } from '../domain/pitWalls';
+import { wallOf } from '../domain/pitWalls';
 import { RuleWarnings } from './RuleWarnings';
 import { AiReviewLine, OpenChecksLink, WallChecks } from './PitChecks';
 import { acceptFill, suggestions, type Fill, type FillField } from '../domain/fillGaps';
@@ -46,7 +46,6 @@ export function TestPitView(props: { record: FieldRecord; pitId: string; save: (
   // Wall B starts from wall A of the same hole (only depths change); otherwise the previous pit.
   const otherWall = r.testPits.find((p) => p !== pit && p.horizons.length > 0 && wallOf(p.label).pit === wallOf(pit.label).pit);
   const previous = otherWall ?? r.testPits.slice(0, pitIndex).reverse().find((p) => p.horizons.length > 0);
-  const side = wallSide(pit.label);
 
   const remove = () => {
     if (!confirm(`Delete test pit ${pit.label}? This cannot be undone.`)) return;
@@ -60,7 +59,6 @@ export function TestPitView(props: { record: FieldRecord; pitId: string; save: (
         <a class="back" href={back} aria-label="Back to site evaluation">‹</a>
         <h1>Test pit {pit.label}</h1>
       </header>
-      {side && <p class="hint">{side === 'north' ? 'North' : 'South'} wall of test pit {wallOf(pit.label).pit}</p>}
       <EditedBy record={props.record} pitId={pit.id} />
       <OpenChecksLink record={r} wall={pit} />
 
@@ -68,7 +66,7 @@ export function TestPitView(props: { record: FieldRecord; pitId: string; save: (
 
       {pit.horizons.length === 0 && previous && (
         <button class={`btn block${otherWall ? ' primary' : ''}`} onClick={() => props.save(copyHorizons(r, previous.id, pit.id))}>
-          {otherWall ? `Start from wall ${otherWall.label} (same hole: change the depths)` : `Copy horizons from test pit ${previous.label}`}
+          {otherWall ? `Copy horizons from wall ${otherWall.label}` : `Copy horizons from test pit ${previous.label}`}
         </button>
       )}
 

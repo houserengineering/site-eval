@@ -20,6 +20,7 @@ import { SettingsView } from './SettingsView';
 import { Coach } from './demo/Coach';
 import { demoDone, demoState, publishLive, setDemoState, startDemo } from './demo/state';
 import { STEPS } from './demo/steps';
+import { setFixFallback } from './gps';
 
 type Route =
   | { name: 'home' }
@@ -77,6 +78,7 @@ export function App() {
           save: (recordId, wallId, review) => sync.saveReview(recordId, wallId, review),
         });
         setReviewQueue(reviews);
+        setFixFallback((recordId, wallId, fix) => void sync.patchWall(recordId, wallId, { location: fix }));
         void reviews.start();
         if (returnTo) location.hash = returnTo;
         // The demo: resumed where it was left; required on a device's first launch (spec decision 6).

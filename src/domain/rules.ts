@@ -3,6 +3,7 @@
 // blocks anything, because the reviewing authority and the PE keep the judgment.
 import { pitDepth, type Design, type FieldRecord, type Horizon, type PercTest, type TestPit } from './fieldRecord';
 import { readingCalc, soakStatus, stopRule } from './perc';
+import { wallOf } from './pitWalls';
 
 /** Which review a rule belongs to: DEQ subdivision, county permit, or both (DEQ-4 is adopted by both). */
 export type Juris = 'ALL' | 'SUB' | 'CTY';
@@ -375,7 +376,9 @@ export function pitWarnings(r: FieldRecord, pit: TestPit): Warning[] {
   else if (sandy && below != null && below < 72)
     warn(RULES.coarseSoil, `${sandy.texture.cls} at the infiltrative depth with only ${below}" ${lim ? `to ${lim.what}` : 'logged below it'}: pressure distribution is required under 6 ft.`);
 
-  if (logged && !pit.location) warn(RULES.location, 'No GPS location recorded for this pit.');
+  // Either wall's fix locates the pit: both walls are the same hole.
+  const located = r.testPits.some((p) => p.location && (p === pit || wallOf(p.label).pit === wallOf(pit.label).pit));
+  if (logged && !located) warn(RULES.location, 'No GPS location recorded for this pit.');
   return out;
 }
 

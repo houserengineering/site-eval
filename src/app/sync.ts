@@ -1,7 +1,7 @@
 // App-side sync service: stamps edits, keeps the outbox, and syncs it to Dropbox whenever there
 // is a connection (after edits, when the phone comes back online, and every 30 s while open).
 import { useEffect, useState } from 'preact/hooks';
-import type { FieldRecord } from '../domain/fieldRecord';
+import type { FieldRecord, TestPit } from '../domain/fieldRecord';
 import { mergeRecords, sameRecord, stampEdits } from '../domain/merge';
 import type { OutboxEntry, RecordStore } from '../storage/db';
 import { AuthError, FakeSync, OfflineError, type SyncAdapter } from '../sync/adapter';
@@ -172,12 +172,17 @@ export class SyncService {
   }
 
   /** Stores an AI review on its wall like an edit (stamped, synced) and shows it in open views. */
-  async saveReview(recordId: string, wallId: string, review: AiReview): Promise<FieldRecord | undefined> {
+  saveReview(recordId: string, wallId: string, review: AiReview): Promise<FieldRecord | undefined> {
+    return this.patchWall(recordId, wallId, { aiReview: review });
+  }
+
+  /** Saves a change to one wall from outside its screen (stamped, synced) and shows it in open views. */
+  async patchWall(recordId: string, wallId: string, patch: Partial<Omit<TestPit, 'id'>>): Promise<FieldRecord | undefined> {
     let edited = false;
     const saved = await this.store.update(recordId, (cur) => {
       if (!cur?.testPits.some((p) => p.id === wallId)) return undefined;
       edited = true;
-      return this.recordEdited(cur, updateTestPit(cur, wallId, { aiReview: review }));
+      return this.recordEdited(cur, updateTestPit(cur, wallId, patch));
     });
     if (edited && saved) for (const fn of this.recordListeners) fn(saved);
     return saved;

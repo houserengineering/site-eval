@@ -16,13 +16,13 @@ test('a new wall starts its GPS fix without a tap and says where its location co
   await context.setGeolocation({ latitude: 45.6793, longitude: -111.2355, accuracy: 2 });
   await page.getByRole('link', { name: 'Back to site evaluation' }).click();
   await context.clearPermissions();
-  await page.getByRole('link', { name: /^Wall 1B,/ }).click();
+  await page.getByRole('link', { name: /^Wall 1B / }).click();
   await expect(gps.getByText(/^Location on the log: 45\.679200° N, 111\.235500° W ±7 ft \(GPS at other wall of this pit, /)).toBeVisible();
 
   // Back on wall A, which has a fix: no second fix.
   await context.grantPermissions(['geolocation']);
   await page.getByRole('link', { name: 'Back to site evaluation' }).click();
-  await page.getByRole('link', { name: /^Wall 1A,/ }).click();
+  await page.getByRole('link', { name: /^Wall 1A / }).click();
   await expect(gps.getByRole('button', { name: 'Retake GPS' })).toBeVisible();
   await page.waitForTimeout(1000);
   await expect(gps.getByText(/^Location on the log: 45\.679200° N, 111\.235500° W ±7 ft \(GPS, /)).toBeVisible();

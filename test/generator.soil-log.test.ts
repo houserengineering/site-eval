@@ -46,6 +46,25 @@ async function soilLogWorkbook(record: FieldRecord) {
 }
 
 describe('soil log xlsx', () => {
+  it('leaves the confirmation field off a site outside Gallatin County', async () => {
+    const r = sampleRecord();
+    const { wb } = await soilLogWorkbook({ ...r, header: { ...r.header, gallatin: 'N' } });
+    const ws = wb.worksheets[0];
+    const conf = spec.inputs.confirmationNumber;
+    const rowNo = Number(conf.replace(/[A-Z]+/, ''));
+    const row = ws.getRow(rowNo);
+    for (let c = 1; c <= 8; c++) expect(String(row.getCell(c).value ?? ''), `column ${c}`).not.toMatch(/CONFIRMATION|SE 00001/);
+    for (const col of ['F', 'G', 'H']) {
+      expect(ws.getCell(`${col}${rowNo}`).border?.bottom, `${col} underline`).toBeUndefined();
+    }
+  });
+
+  it('prints the confirmation number on a Gallatin County site', async () => {
+    const r = sampleRecord();
+    const { wb } = await soilLogWorkbook({ ...r, header: { ...r.header, gallatin: 'Y' } });
+    expect(wb.worksheets[0].getCell(spec.inputs.confirmationNumber).value).toBe('SE 00001');
+  });
+
   it('fills header and horizon cells as text in the template positions', async () => {
     const { wb } = await soilLogWorkbook(sampleRecord());
     expect(wb.worksheets).toHaveLength(1);

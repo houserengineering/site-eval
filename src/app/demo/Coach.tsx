@@ -7,7 +7,7 @@ import { useAnimate } from '../settings';
 import { setPace } from './dom';
 import { GAP, placeTip, scrollToFit, unionRect, type Box, type Side } from './placement';
 import { demoState, markDemoDone, removeDemoRecords, setDemoState, useDemo } from './state';
-import { SCREEN_NAMES, STEPS, hashFor, screenOf, walls, type Ctx } from './steps';
+import { SCREEN_NAMES, STEPS, hashFor, onStepScreen, screenOf, walls, type Ctx } from './steps';
 
 /** The highlight's margin around its field; the tip lines up with the highlight's edges. */
 const PAD = 8;
@@ -56,18 +56,30 @@ const typingInTarget = () => {
 const same = (a: Box | null, b: Box | null) =>
   a === b || (!!a && !!b && Math.abs(a.top - b.top) < 0.5 && Math.abs(a.left - b.left) < 0.5 && Math.abs(a.width - b.width) < 0.5 && Math.abs(a.height - b.height) < 0.5);
 const focusInTarget = () => !!document.activeElement?.closest(`[${ATTR}]`);
+/**
+ * ready: the user's turn. busy: Show me or a button is working. shown: Show me finished and the step is
+ * about to complete (its buttons stay hidden, so they do not flash). done: completed, moving on.
+ */
+type Phase = 'ready' | 'busy' | 'shown' | 'done';
+/** Off the step's screen just after a step change: the navigation is still landing, so no tip yet. */
+const SETTLE_MS = 1200;
 
 function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: RecordStore }) {
   const { ctx, index } = props;
   const step = STEPS[index];
   const animate = useAnimate();
-  const onScreen = ctx.screen === step.screen;
+  const onScreen = onStepScreen(step, ctx.screen);
   const key = stepKey(step, ctx);
   const [box, setBox] = useState<(Box & { step: string }) | null>(null);
   const [view, setView] = useState<Box>(() => viewBox());
   const [tipH, setTipH] = useState(200);
   const [prefer, setPrefer] = useState<Side>('below');
-  const [phase, setPhase] = useState<'ready' | 'busy' | 'done'>('ready');
+  // The phase belongs to its step: a new step starts ready, with no frame of the last step's phase.
+  const [ph, setPh] = useState<{ i: number; p: Phase }>({ i: index, p: 'ready' });
+  const phase: Phase = ph.i === index ? ph.p : 'ready';
+  const setPhase = (p: Phase) => setPh({ i: index, p });
+  const changedAt = useRef({ index, at: Date.now() });
+  if (changedAt.current.index !== index) changedAt.current = { index, at: Date.now() };
   const [, setTick] = useState(0);
   const [glide, setGlide] = useState(false);
   const lastInput = useRef(0);
@@ -79,7 +91,6 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
 
   // A new step: ready again, glide to its field, scroll to it once.
   useEffect(() => {
-    setPhase('ready');
     scrolledFor.current = '';
     if (!animate) return;
     setGlide(true);
@@ -148,7 +159,7 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
   const userScroll = useRef(0);
   // Show me scrolls to each control it taps: no re-anchoring meanwhile.
   const busy = useRef(false);
-  busy.current = phase === 'busy';
+  busy.current = phase === 'busy' || phase === 'shown';
   useEffect(() => {
     const on = () => (userScroll.current = Date.now());
     const opts = { passive: true, capture: true };
@@ -160,7 +171,7 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
   const needsScroll = () => {
     const { box, tipH, view, prefer, scrollKey, key } = latestFit.current;
     if (!box || box.step !== key) return false;
-    const short = placeTip(box, { width: 420, height: tipH }, view, prefer).height < tipH;
+    const short = placeTip(box, { width: 420, height: tipH }, view, prefer, live.current.step.tipOver).height < tipH;
     // Off the screen without the user scrolling it there (the page grew or shrank around it): back to it.
     const gone = box.top + box.height < view.top || box.top > view.top + view.height;
     const moved = gone && !busy.current && Date.now() - userScroll.current > 1500 && Date.now() - lastScroll.current > 600;
@@ -228,7 +239,7 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
   // The user's own action completes the step.
   const valid = !!step.done && (onScreen || !!step.leaves) && step.done(ctx);
   useEffect(() => {
-    if (phase === 'ready' && valid && (!step.typed || !focusInTarget())) void complete();
+    if ((phase === 'ready' || phase === 'shown') && valid && (!step.typed || !focusInTarget())) void complete();
   });
 
   const showMe = async () => {
@@ -237,9 +248,12 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
     try {
       await step.showMe!(live.current.ctx);
     } finally {
-      setPhase('ready');
+      // Not straight back to ready: the step completes on the next render, and ready would show its
+      // buttons for a moment first. Back to ready only if it did not complete (a typed field left open).
+      setPhase('shown');
       (document.activeElement as HTMLElement | null)?.blur?.();
       bump();
+      setTimeout(() => setPh((cur) => (cur.i === index && cur.p === 'shown' ? { i: index, p: 'ready' } : cur)), 1500);
     }
   };
   const skip = async () => {
@@ -271,7 +285,7 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
   };
 
   // Off the step's screen because the step is done or Show me is moving on: no "Take me back" flash.
-  if (ctx.screen === 'loading' || (!onScreen && (phase !== 'ready' || valid))) return null;
+  if (ctx.screen === 'loading' || (!onScreen && (phase !== 'ready' || valid || Date.now() - changedAt.current.at < SETTLE_MS))) return null;
   const offscreen = !!box && (box.top + box.height < view.top || box.top > view.top + view.height);
   const hole = onScreen && box && !offscreen ? onScreenBox(box) : null;
   const typedNext = step.typed && valid && phase === 'ready';
@@ -279,13 +293,13 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
   const sample = typeof step.sample === 'function' ? step.sample(ctx) : step.sample;
   // Keyboard up on this step's field: the tip shrinks to one line.
   const compact = prefer === 'above' && !!hole;
-  const showProblem = problem && phase !== 'busy' && (!focusInTarget() || Date.now() - lastInput.current > 1200);
+  const showProblem = problem && phase === 'ready' && (!focusInTarget() || Date.now() - lastInput.current > 1200);
   const place = hole
-    ? placeTip(hole, { width: 420, height: tipH }, view, prefer)
+    ? placeTip(hole, { width: 420, height: tipH }, view, prefer, step.tipOver)
     : { side: 'none' as const, top: view.top + Math.max(8, (view.height - tipH) / 2), left: view.left + 16, width: Math.min(420, view.width - 32), height: Math.min(tipH, view.height - 16), arrowLeft: 0, maxHeight: view.height - 16 };
   if (!hole) place.left = view.left + (view.width - place.width) / 2;
   // Scrolled away from the field: a one-line chip at the edge toward it, not a card in the way.
-  const away = onScreen && offscreen && phase !== 'busy' ? (box!.top < view.top ? 'above' : 'below') : null;
+  const away = onScreen && offscreen && phase === 'ready' ? (box!.top < view.top ? 'above' : 'below') : null;
   if (away) place.top = away === 'above' ? view.top + EDGE : view.top + view.height - EDGE - Math.min(tipH, 72);
 
   return (
@@ -301,7 +315,7 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
       ) : (
         <div class="coach-block dim" />
       )}
-      {hole && (
+      {hole && place.side !== 'over' && (
         <span
           class="coach-arrow"
           aria-hidden="true"
@@ -342,8 +356,7 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
               {onScreen ? step.text(ctx) : `This step is on ${SCREEN_NAMES[step.screen]}.`}
               {onScreen && sample && (
                 <span class="coach-sample">
-                  {' '}
-                  e.g. <strong>{sample}</strong>
+                  , e.g. <strong>{sample}</strong>.
                 </span>
               )}
               {phase === 'done' && <span class="coach-check"> ✓</span>}
@@ -353,7 +366,7 @@ function CoachView(props: { ctx: Ctx; index: number; replay: boolean; store: Rec
                 {problem}
               </p>
             )}
-            <div class="coach-actions">
+            <div class={`coach-actions${phase === 'ready' ? '' : ' is-waiting'}`}>
               {(!onScreen || offscreen) && (
                 <button type="button" class="btn small primary" onClick={takeBack}>
                   Take me back

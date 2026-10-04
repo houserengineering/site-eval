@@ -195,6 +195,6 @@ describe('photo minimum standard (ticket 09)', () => {
       { id: 'ph2', takenAt: '2026-10-02T15:00:00Z', width: 300, height: 400 },
     ];
     const r = site(wall('1A', good(), { photos }));
-    expect(wallFlags(r, r.testPits[0]).map((f) => [f.id, f.message])).toEqual([['photo:ph1', 'Photo 1 is blurry and too small (300 × 400): retake it.']]);
+    expect(wallFlags(r, r.testPits[0]).map((f) => [f.id, f.message])).toEqual([['photo:ph1', 'Photo 1 is blurry and too small (300 × 400). Retake it.']]);
   });
 });

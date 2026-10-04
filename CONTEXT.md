@@ -15,7 +15,7 @@ One excavated hole, numbered on the site plan. Dug to 96 inches unless groundwat
 _Avoid_: hole, pit location
 
 **Pit wall**:
-One side of a test pit, logged on its own soil log. The two walls are labeled A and B (A north, B south where the pit allows); both share the pit's location because they are the same hole.
+One side of a test pit, logged on its own soil log. The two walls are labeled A and B: two opposite walls of the same hole, in no fixed direction. Both share the pit's location because they are the same hole.
 _Avoid_: treating A and B as separate pits or separate locations
 
 **Horizon**:

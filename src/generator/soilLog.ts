@@ -158,13 +158,25 @@ function fillHeader(ws: ExcelJS.Worksheet, spec: SoilLogSnapshot, record: FieldR
   put(spec.inputs.location, h.location);
   put(spec.inputs.evalBy, h.evalBy);
   put(spec.inputs.date, dateText(h.date));
-  put(spec.inputs.confirmationNumber, h.confirmationNumber);
+  // Outside Gallatin County the confirmation field comes off the log entirely, label and line (the
+  // template's own note: "For test pits in other counties, delete this field"; Nathan 2026-10-04).
+  const omit = h.gallatin === 'N';
+  put(spec.inputs.confirmationNumber, omit ? '' : h.confirmationNumber);
   // The confirmation number is underlined like the other header fields; the template's extra rule
   // above it comes off on every sheet (Justin's 2026-10-03 markup).
   const conf = splitAddr(spec.inputs.confirmationNumber);
+  const row = ws.getRow(conf.row);
+  if (omit) {
+    const label = row.getCell(ws.getColumn(conf.col).number - 1);
+    if (typeof label.value === 'string' && /CONFIRMATION/i.test(label.value)) label.value = null;
+  }
   for (let c = ws.getColumn(conf.col).number; c <= ws.getColumn('H').number; c++) {
-    const cell = ws.getRow(conf.row).getCell(c);
-    if (cell.border?.top) cell.border = { ...cell.border, top: undefined };
+    const cell = row.getCell(c);
+    if (omit) {
+      cell.border = {};
+      cell.fill = { type: 'pattern', pattern: 'none' };
+      cell.note = undefined as any;
+    } else if (cell.border?.top) cell.border = { ...cell.border, top: undefined };
   }
 }
 

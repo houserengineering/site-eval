@@ -1,5 +1,5 @@
-// Test pits and their walls: a soil log is one wall (`7A` north, `7B` south) of a numbered test
-// pit, and both walls of a pit print on one page. See CONTEXT.md.
+// Test pits and their walls: a soil log is one wall (`7A`, `7B`: opposite walls of the same hole) of
+// a numbered test pit, and both walls of a pit print on one page. See CONTEXT.md.
 import type { LatLon, TestPit } from './fieldRecord';
 import { pitStatus, type PitStatus } from './soilLogText';
 
@@ -7,12 +7,6 @@ import { pitStatus, type PitStatus } from './soilLogText';
 export function wallOf(label: string): { pit: string; wall: string } {
   const m = /^\s*(.*?\d)\s*([A-Z])\s*$/i.exec(label);
   return m ? { pit: m[1].toUpperCase(), wall: m[2].toUpperCase() } : { pit: label.trim().toUpperCase(), wall: '' };
-}
-
-/** Which side a wall is logged on (CONTEXT.md: A north, B south where the pit allows). */
-export function wallSide(label: string): 'north' | 'south' | '' {
-  const { wall } = wallOf(label);
-  return wall === 'A' ? 'north' : wall === 'B' ? 'south' : '';
 }
 
 /** The number for the next test pit: one past the highest pit number so far. */

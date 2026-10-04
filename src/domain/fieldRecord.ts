@@ -8,7 +8,7 @@ import type { Acceptance, PhotoQuality } from './pitChecks';
 import type { PhotoColor } from './photoColor';
 import type { AiReview } from './aiReview';
 
-export const SCHEMA_VERSION = 12;
+export const SCHEMA_VERSION = 13;
 
 /** Header values are always text: `0999.001`, `SE 00001`, `3B` print exactly as entered. */
 export interface Header {
@@ -19,6 +19,13 @@ export interface Header {
   /** ISO date `YYYY-MM-DD` as entered on the date picker (kept as text). */
   date: string;
   confirmationNumber: string;
+  /** The site's county as found from the location, e.g. `Gallatin County, MT`; blank when not found. */
+  county: string;
+  /**
+   * A Gallatin County site evaluation: Y prints the confirmation number, N leaves the field off the soil
+   * log. Set from the county found, changeable by the user; blank (older records) prints as before.
+   */
+  gallatin: YesNo;
   /** Owner name on the perc test form (DEQ-4 App. A form p126). */
   ownerName: string;
 }
@@ -174,7 +181,7 @@ export interface PercTest {
   /** Fixed drop timed in fixed-drop mode. */
   fixedDropIn: number | null;
   readings: PercReading[];
-  /** Tester's printed name; blank = header Eval. by. */
+  /** Tester's printed name; blank = header Evaluated by. */
   tester: string;
   notes: string;
 }
@@ -265,8 +272,13 @@ export const emptyHeader = (): Header => ({
   evalBy: '',
   date: '',
   confirmationNumber: '',
+  county: '',
+  gallatin: '',
   ownerName: '',
 });
+
+/** Today on this device as `YYYY-MM-DD`. */
+export const today = () => new Date().toLocaleDateString('en-CA');
 
 const newId = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
@@ -278,7 +290,8 @@ export function newSiteEvaluation(header: Partial<Header> = {}): FieldRecord {
     id: newId(),
     createdAt: t,
     updatedAt: t,
-    header: { ...emptyHeader(), ...header },
+    // The dig date is today unless the job file says otherwise; the user can change it.
+    header: { ...emptyHeader(), ...header, date: header.date || today() },
     design: emptyDesign(),
     testPits: [],
     percTests: [],
@@ -340,7 +353,7 @@ export function addTestPit(r: FieldRecord, label: string, p: Partial<Omit<TestPi
 }
 
 /**
- * Adds test pit `label` as its two walls, `7A` (north) and `7B` (south); a label that already
+ * Adds test pit `label` as its two walls, `7A` and `7B` (opposite walls of the same hole); a label that already
  * names a wall (`3B`) adds just that wall. Both walls share the planned location (same hole); a
  * GPS fix taken while adding belongs to wall A.
  */
@@ -562,6 +575,8 @@ const migrations: Record<number, (r: any) => any> = {
   10: (r) => ({ ...r, schemaVersion: 11 }),
   // v11 → v12: the AI photo review on each wall (optional).
   11: (r) => ({ ...r, schemaVersion: 12 }),
+  // v12 → v13: the site's county and the Gallatin County Yes/No on the header.
+  12: (r) => ({ ...r, schemaVersion: 13, header: { ...emptyHeader(), ...r.header } }),
 };
 
 export function migrate(raw: unknown): FieldRecord {

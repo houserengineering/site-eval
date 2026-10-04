@@ -21,6 +21,7 @@ export function TextField(props: {
   hint?: string;
   inputMode?: 'text' | 'numeric' | 'decimal';
   autoCapitalize?: 'characters' | 'words' | 'off';
+  disabled?: boolean;
 }) {
   const id = useId();
   return (
@@ -30,10 +31,11 @@ export function TextField(props: {
         id={id}
         {...({ type: props.type ?? 'text' } as {})}
         value={props.value}
-        placeholder={placeholderFor(props.label)}
+        placeholder={props.disabled ? '' : placeholderFor(props.label)}
         inputMode={props.inputMode}
         autoCapitalize={props.autoCapitalize}
         autoComplete="off"
+        disabled={props.disabled}
         // ALL CAPS fields store what prints (2026-10-02 field feedback).
         onInput={(e) => props.onInput(props.autoCapitalize === 'characters' ? upperInPlace(e.currentTarget) : e.currentTarget.value)}
       />
@@ -165,9 +167,10 @@ export function Chips(props: {
 }
 
 /** Yes/No pick printed as Y/N. */
-export const YesNoChips = (props: { label: string; value: string; onChange: (v: '' | 'Y' | 'N') => void }) => (
+export const YesNoChips = (props: { label: string; value: string; onChange: (v: '' | 'Y' | 'N') => void; hint?: string }) => (
   <Chips
     label={props.label}
+    hint={props.hint}
     options={[{ value: 'Y', label: 'Yes' }, { value: 'N', label: 'No' }]}
     value={props.value}
     onChange={(v) => props.onChange(v as '' | 'Y' | 'N')}

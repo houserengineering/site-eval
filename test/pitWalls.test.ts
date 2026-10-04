@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { addHorizon, addPitWalls, addTestPit, copyHorizons, emptyHorizon, newSiteEvaluation, type TestPit } from '../src/domain/fieldRecord';
 import { fillGaps } from '../src/domain/fillGaps';
-import { groupStatus, needsAutoFix, nextPitNumber, pitGroups, pitPages, wallLocation, wallOf, wallSide } from '../src/domain/pitWalls';
+import { groupStatus, needsAutoFix, nextPitNumber, pitGroups, pitPages, wallLocation, wallOf } from '../src/domain/pitWalls';
 
 function walls(labels: string[]): TestPit[] {
   let r = newSiteEvaluation();
@@ -38,10 +38,10 @@ describe('pit walls', () => {
 });
 
 describe('adding a test pit (ticket 04)', () => {
-  it('creates wall A (north) and wall B (south); a label with a wall letter adds just that wall', () => {
+  it('creates walls A and B; a label with a wall letter adds just that wall', () => {
     let r = addPitWalls(newSiteEvaluation(), '7');
     expect(r.testPits.map((p) => p.label)).toEqual(['7A', '7B']);
-    expect(r.testPits.map((p) => wallSide(p.label))).toEqual(['north', 'south']);
+    expect(r.testPits.map((p) => wallOf(p.label).wall)).toEqual(['A', 'B']);
     r = addPitWalls(r, '3b');
     expect(r.testPits.map((p) => p.label)).toEqual(['7A', '7B', '3B']);
   });

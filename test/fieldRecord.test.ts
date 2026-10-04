@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addHorizon, addTestPit, copyHorizons, newSiteEvaluation, pitDepth, removeHorizon, updateHorizon, updateTestPit } from '../src/domain/fieldRecord';
+import { addHorizon, addTestPit, copyHorizons, migrate, newSiteEvaluation, today, pitDepth, removeHorizon, updateHorizon, updateTestPit } from '../src/domain/fieldRecord';
 
 function pitWith(bottoms: number[]) {
   let r = addTestPit(newSiteEvaluation(), '1');
@@ -40,5 +40,21 @@ describe('test pits', () => {
     const { r, pitId } = pitWith([12, 96]);
     expect(pitDepth(r.testPits[0])).toBe(96);
     expect(pitDepth(updateTestPit(r, pitId, { totalDepthIn: 100 }).testPits[0])).toBe(100);
+  });
+});
+
+describe('header', () => {
+  it('starts a new site evaluation dated today, unless the job file gives a date', () => {
+    expect(newSiteEvaluation().header.date).toBe(today());
+    expect(newSiteEvaluation({ date: '' }).header.date).toBe(today());
+    expect(newSiteEvaluation({ date: '2026-05-01' }).header.date).toBe('2026-05-01');
+  });
+
+  it('adds a blank county and Gallatin answer to older records', () => {
+    const old: any = { ...newSiteEvaluation({ confirmationNumber: 'SE 1' }), schemaVersion: 12 };
+    delete old.header.county;
+    delete old.header.gallatin;
+    const r = migrate(old);
+    expect(r.header).toMatchObject({ county: '', gallatin: '', confirmationNumber: 'SE 1' });
   });
 });

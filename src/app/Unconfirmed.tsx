@@ -6,9 +6,11 @@ export const HEADER_LABELS: Record<keyof Header, string> = {
   projectNumber: 'Project #',
   projectName: 'Project name',
   location: 'Location',
-  evalBy: 'Eval. by',
+  evalBy: 'Evaluated by',
   date: 'Date',
   confirmationNumber: 'Confirmation number',
+  county: 'County',
+  gallatin: 'Gallatin County site evaluation',
   ownerName: 'Owner name',
 };
 

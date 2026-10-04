@@ -1,16 +1,14 @@
 // Test pit photos (camera, stored on device) and GPS fix with accuracy and retake.
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { updateTestPit, type FieldRecord, type GpsFix, type PhotoRef, type TestPit } from '../domain/fieldRecord';
+import { updateTestPit, type FieldRecord, type PhotoRef, type TestPit } from '../domain/fieldRecord';
 import { accuracyFt, fixText, stampText } from '../generator/sitePlan';
 import type { RecordStore } from '../storage/db';
-import { needsAutoFix, wallLocation } from '../domain/pitWalls';
+import { needsAutoFix, wallLocation, wallOf } from '../domain/pitWalls';
 import { locationCaption } from '../generator/locationPanel';
-import { lumaOf, measurePhoto, photoProblems, type PhotoQuality } from '../domain/pitChecks';
+import { lumaOf, measurePhoto, photoProblemText, photoProblems, type PhotoQuality } from '../domain/pitChecks';
 import { measureColor, type PhotoColor } from '../domain/photoColor';
+import { COUNTY_FT, keepBestFix, registerSaver, startFix, stopFix, useCapture } from './gps';
 
-/** County site evaluations locate each test pit within 10 ft. */
-const COUNTY_FT = 10;
-const FT_PER_M = 3.28084;
 
 export function PitMedia(props: { record: FieldRecord; pit: TestPit; save: (r: FieldRecord) => void; store: RecordStore }) {
   // Photo encoding and GPS fixes finish after later edits; they must apply to the latest record.
@@ -110,7 +108,7 @@ function PitPhotos({ record, pit, store, patchPit }: Props) {
       });
       if (retake) await store.removePhoto(retake);
       const bad = refs.filter((x) => photoProblems(x.quality!).length).length;
-      setStatus(bad ? `Saved, but ${bad === refs.length ? (refs.length === 1 ? 'it does' : 'they do') : `${bad} of ${refs.length} do`} not meet the photo standard: retake.` : `${refs.length} photo${refs.length === 1 ? '' : 's'} saved on this device.`);
+      setStatus(bad ? `Saved, but ${bad === refs.length ? (refs.length === 1 ? 'it does' : 'they do') : `${bad} of ${refs.length} do`} not meet the photo standard. Retake ${bad === 1 ? 'it' : 'them'}.` : `${refs.length} photo${refs.length === 1 ? '' : 's'} saved on this device.`);
     } catch (e: any) {
       setStatus(`Photo not saved: ${e.message}`);
     }
@@ -148,7 +146,7 @@ function PitPhotos({ record, pit, store, patchPit }: Props) {
               {i === 0 ? 'On the soil log · ' : ''}
               {stampText(p.takenAt)}
             </span>
-            {p.quality && photoProblems(p.quality).length > 0 && <p class="alert">{cap(photoProblems(p.quality).join(', '))}: retake it.</p>}
+            {p.quality && photoProblems(p.quality).length > 0 && <p class="alert">This photo is {photoProblemText(p.quality)}. Retake it.</p>}
             {p.color && (
               <label class="toggle">
                 <input type="checkbox" checked={!!p.face} onChange={(e) => markFace(p.id, e.currentTarget.checked)} />
@@ -199,65 +197,26 @@ function PitPhotos({ record, pit, store, patchPit }: Props) {
   );
 }
 
-/** A fix still short of the county's accuracy is kept after this long rather than waiting on. */
-const FIX_TIMEOUT_MS = 90_000;
-
 function PitLocation({ record, pit, patchPit }: Props) {
-  const [best, setBest] = useState<GpsFix | null>(null);
-  const [error, setError] = useState<string>();
-  const [watching, setWatching] = useState(false);
-  const watch = useRef<number | undefined>(undefined);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  const stop = () => {
-    if (watch.current !== undefined) navigator.geolocation.clearWatch(watch.current);
-    clearTimeout(timer.current);
-    watch.current = undefined;
-    setWatching(false);
-  };
+  const capture = useCapture(pit.id);
+  const watching = !!capture?.watching;
+  const best = capture?.best;
+  const error = capture?.error;
+  // The open screen saves the fix itself, so it lands on the record being edited here.
+  useEffect(() => registerSaver(pit.id, (fix) => patchPit(() => ({ location: fix }))), [pit.id]);
+  // A wall opened before its pit got a fix (an older job, or the capture stopped): start now.
   useEffect(() => {
-    if (needsAutoFix(pit)) start();
-    return stop;
+    if (needsAutoFix(pit) && !capture) startFix(record.id, pit.id);
   }, [pit.id]);
-
-  const accept = (fix: GpsFix) => {
-    stop();
-    setBest(null);
-    patchPit(() => ({ location: fix }));
-  };
-
-  const start = () => {
-    if (!('geolocation' in navigator)) return setError('This browser has no GPS access.');
-    setError(undefined);
-    setBest(null);
-    setWatching(true);
-    let top: GpsFix | null = null;
-    timer.current = setTimeout(() => {
-      if (top) accept(top);
-      else {
-        stop();
-        setError('No GPS fix yet. Try again in open sky.');
-      }
-    }, FIX_TIMEOUT_MS);
-    watch.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        const fix = { lat: pos.coords.latitude, lon: pos.coords.longitude, accuracyM: pos.coords.accuracy, at: new Date(pos.timestamp).toISOString() };
-        if (!top || fix.accuracyM <= top.accuracyM) top = fix;
-        setBest(top);
-        // Good enough for the county: keep it without another tap.
-        if (top.accuracyM * FT_PER_M <= COUNTY_FT) accept(top);
-      },
-      (e) => {
-        stop();
-        setError(e.code === e.PERMISSION_DENIED ? 'Location permission is off for this site. Allow it in the browser settings, then try again.' : `No GPS fix: ${e.message}`);
-      },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 120_000 },
-    );
-  };
+  const start = () => startFix(record.id, pit.id);
+  const stop = () => stopFix(pit.id);
+  const accept = () => keepBestFix(pit.id);
 
   const fix = pit.location;
   const over = fix && accuracyFt(fix) > COUNTY_FT;
   const onLog = wallLocation(pit, record.testPits);
+  // The other wall of this hole has the fix: this wall uses it.
+  const shared = !fix && onLog?.source === 'other-wall' ? record.testPits.find((p) => p !== pit && p.location && wallOf(p.label).pit === wallOf(pit.label).pit)?.label : undefined;
   return (
     <section class="card" aria-labelledby={`gps-${pit.id}`}>
       <h2 id={`gps-${pit.id}`}>GPS location</h2>
@@ -267,7 +226,12 @@ function PitLocation({ record, pit, patchPit }: Props) {
           <span class="row-sub">Captured {stampText(fix.at)}</span>
         </p>
       ) : (
-        !watching && <p class="muted">Not recorded. Stand at the pit and capture.</p>
+        !watching &&
+        (shared ? (
+          <p class="muted">This wall uses the GPS location of wall {shared}, the other wall of the same hole.</p>
+        ) : (
+          <p class="muted">No fix yet. Stand at the pit and tap Capture GPS.</p>
+        ))
       )}
       {onLog && <p class="hint">Location on the log: {locationCaption(onLog)}</p>}
       {over && !watching && <p class="hint-warn">Accuracy is over the county's {COUNTY_FT} ft. Retake in open sky if you can.</p>}
@@ -278,7 +242,7 @@ function PitLocation({ record, pit, patchPit }: Props) {
               <p>
                 Best so far <strong>±{accuracyFt(best)} ft</strong>. Waiting for ±{COUNTY_FT} ft or better…
               </p>
-              <button class="btn primary block" onClick={() => accept(best)}>
+              <button class="btn primary block" onClick={accept}>
                 Use this fix (±{accuracyFt(best)} ft)
               </button>
             </>
@@ -291,8 +255,8 @@ function PitLocation({ record, pit, patchPit }: Props) {
         </div>
       )}
       {!watching && (
-        <button class={`btn block${fix ? '' : ' primary'}`} onClick={start}>
-          {fix ? 'Retake GPS' : 'Capture GPS'}
+        <button class={`btn block${fix || shared ? '' : ' primary'}`} onClick={start}>
+          {fix ? 'Retake GPS' : shared ? 'Capture GPS for this wall' : 'Capture GPS'}
         </button>
       )}
       {error && (
@@ -304,4 +268,3 @@ function PitLocation({ record, pit, patchPit }: Props) {
   );
 }
 
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

@@ -76,7 +76,8 @@ export async function type(el: HTMLInputElement | null, text: string) {
     for (let i = 1; i <= text.length; i++) {
       setter.call(el, text.slice(0, i));
       el.dispatchEvent(new Event('input', { bubbles: true }));
-      await wait(110);
+      // About 65 ms a character: quick enough to watch without waiting on it (taps keep their pace).
+      await new Promise((ok) => setTimeout(ok, 65 * pace));
     }
   el.dispatchEvent(new Event('change', { bubbles: true }));
   await wait(700);
@@ -85,7 +86,8 @@ export async function type(el: HTMLInputElement | null, text: string) {
 /** Taps a chip in a chip group unless it is already picked. */
 export async function pick(scope: ParentNode | null, group: string, option: string) {
   const f = scope && field(group, scope);
-  const chip = f && byText<HTMLButtonElement>('[role="radio"]', option, f);
+  // A chip's own label, without the help text some chips carry (GRAVEL 2–75 mm).
+  const chip = f && [...f.querySelectorAll<HTMLButtonElement>('[role="radio"]')].find((c) => (c.querySelector('span') ?? c).textContent?.trim() === option || c.textContent?.trim() === option);
   if (chip && chip.getAttribute('aria-checked') !== 'true') await tap(chip);
 }
 
