@@ -8,9 +8,11 @@ export interface DeviceSettings {
   percTests: boolean;
   /** AI photo review device token (`node service.mjs enroll` on the office PC); '' = review off. */
   reviewToken: string;
+  /** Animations (the demo's gliding highlight and Show me): follow the device's reduced-motion setting, or on/off. */
+  motion: 'device' | 'on' | 'off';
 }
 
-const DEFAULTS: DeviceSettings = { percTests: false, reviewToken: '' };
+const DEFAULTS: DeviceSettings = { percTests: false, reviewToken: '', motion: 'device' };
 const KEY = 'settings';
 
 let current: DeviceSettings = DEFAULTS;
@@ -42,4 +44,10 @@ export function useSettings(): DeviceSettings {
     return () => void listeners.delete(setS);
   }, []);
   return s;
+}
+
+/** Whether to animate: this device's Motion setting, or the system's reduced-motion preference. */
+export function useAnimate(): boolean {
+  const { motion } = useSettings();
+  return motion === 'on' || (motion === 'device' && !matchMedia('(prefers-reduced-motion: reduce)').matches);
 }

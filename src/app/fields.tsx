@@ -1,5 +1,6 @@
 import { useId, useState } from 'preact/hooks';
 import { draftShown, tapeShown, wholeInches, type Draft } from './draft';
+import { placeholderFor } from './fieldGuide';
 
 /** Upper-cases typed text in place (as the soil log prints it), keeping the caret where it was. */
 function upperInPlace(el: HTMLInputElement): string {
@@ -29,6 +30,7 @@ export function TextField(props: {
         id={id}
         {...({ type: props.type ?? 'text' } as {})}
         value={props.value}
+        placeholder={placeholderFor(props.label)}
         inputMode={props.inputMode}
         autoCapitalize={props.autoCapitalize}
         autoComplete="off"
@@ -68,7 +70,7 @@ export function NumberField(props: {
           inputMode="decimal"
           value={shown}
           readOnly={props.readOnly}
-          placeholder={props.placeholder}
+          placeholder={props.placeholder || placeholderFor(props.label)}
           onInput={(e) => {
             setDraft({ text: e.currentTarget.value, base: props.value });
             props.onInput(parse(e.currentTarget.value));
@@ -198,6 +200,7 @@ export function TapeField(props: { label: string; value: number | null; onInput:
           inputMode="numeric"
           aria-label={`${props.label}, inches`}
           value={shown}
+          placeholder={placeholderFor(props.label)}
           autoComplete="off"
           onInput={(e) => {
             setDraft({ text: e.currentTarget.value, base: props.value });

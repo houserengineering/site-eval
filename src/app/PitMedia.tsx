@@ -1,5 +1,4 @@
 // Test pit photos (camera, stored on device) and GPS fix with accuracy and retake.
-import { samplePhoto } from './Demo';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { updateTestPit, type FieldRecord, type GpsFix, type PhotoRef, type TestPit } from '../domain/fieldRecord';
 import { accuracyFt, fixText, stampText } from '../generator/sitePlan';
@@ -50,6 +49,14 @@ async function shrink(file: Blob, max = 1600): Promise<{ blob: Blob; width: numb
   return { blob, width, height, quality, color };
 }
 
+/** Shrinks, measures and stores one photo on this device; the wall's photo list is the caller's. */
+export async function storePhoto(store: RecordStore, recordId: string, file: File): Promise<PhotoRef> {
+  const { blob, width, height, quality, color } = await shrink(file);
+  const id = crypto.randomUUID();
+  await store.putPhoto(id, recordId, blob);
+  return { id, takenAt: new Date(file.lastModified || Date.now()).toISOString(), width, height, quality, color };
+}
+
 function measure(bmp: ImageBitmap): { quality: PhotoQuality; color: PhotoColor } {
   const k = Math.min(1, 512 / Math.max(bmp.width, bmp.height));
   const w = Math.max(3, Math.round(bmp.width * k));
@@ -96,12 +103,7 @@ function PitPhotos({ record, pit, store, patchPit }: Props) {
     setStatus('Saving photo…');
     try {
       const refs: PhotoRef[] = [];
-      for (const file of Array.from(files)) {
-        const { blob, width, height, quality, color } = await shrink(file);
-        const id = crypto.randomUUID();
-        await store.putPhoto(id, record.id, blob);
-        refs.push({ id, takenAt: new Date(file.lastModified || Date.now()).toISOString(), width, height, quality, color });
-      }
+      for (const file of Array.from(files)) refs.push(await storePhoto(store, record.id, file));
       patchPit((p) => {
         const at = retake ? p.photos.findIndex((x) => x.id === retake) : -1;
         return { photos: at < 0 ? [...p.photos, ...refs] : [...p.photos.slice(0, at), ...refs, ...p.photos.slice(at + 1)] };
@@ -183,11 +185,6 @@ function PitPhotos({ record, pit, store, patchPit }: Props) {
           Take photo
           <input class="visually-hidden" type="file" accept="image/*" capture="environment" onChange={(e) => picked(e.currentTarget)} />
         </label>
-        {record.demo && (
-          <button type="button" class="btn" onClick={async () => add([await samplePhoto()])}>
-            Use a sample photo
-          </button>
-        )}
         <label class="btn">
           From gallery
           <input class="visually-hidden" type="file" accept="image/*" multiple onChange={(e) => picked(e.currentTarget)} />

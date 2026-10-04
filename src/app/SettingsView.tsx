@@ -1,6 +1,7 @@
 // Device settings: optional modules shown on this device, and the AI photo review token.
 import type { RecordStore } from '../storage/db';
-import { dismissDemoTip, startDemo } from './Demo';
+import { startDemo } from './demo/state';
+import { Chips } from './fields';
 import { changeSettings, useSettings } from './settings';
 
 export function SettingsView(props: { store: RecordStore }) {
@@ -19,10 +20,7 @@ export function SettingsView(props: { store: RecordStore }) {
           type="button"
           class="btn block"
           aria-describedby="demo-hint"
-          onClick={() => {
-            dismissDemoTip();
-            startDemo(props.store);
-          }}
+          onClick={() => startDemo(props.store, true)}
         >
           Replay the demo
         </button>
@@ -30,6 +28,17 @@ export function SettingsView(props: { store: RecordStore }) {
           A guided practice run on a made-up job. It never goes to Dropbox and deletes itself when you finish.
         </p>
       </div>
+      <Chips
+        label="Motion"
+        options={[
+          { value: 'device', label: 'Like this device' },
+          { value: 'on', label: 'On' },
+          { value: 'off', label: 'Off' },
+        ]}
+        value={s.motion}
+        onChange={(v) => changeSettings(props.store, { motion: (v || 'device') as typeof s.motion })}
+        hint={`Gliding highlights and "Show me" in the demo. This device ${matchMedia('(prefers-reduced-motion: reduce)').matches ? 'asks for reduced motion' : 'allows motion'}.`}
+      />
       <div class="field">
         <label class="toggle">
           <input type="checkbox" checked={s.percTests} aria-describedby="perc-hint" onChange={(e) => changeSettings(props.store, { percTests: e.currentTarget.checked })} />

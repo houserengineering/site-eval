@@ -30,7 +30,7 @@ The one photo of a pit wall taken square to it, the surface at the top edge and 
 _Avoid_: pit photo (most pit photos look down into the pit and show backdirt and shadow)
 
 **Demo**:
-A guided walkthrough of one made-up site evaluation, done in the real screens. A panel at the bottom says what to do next and ticks each step off when the user has done it. Started from Home (Try the demo) or Settings (Replay the demo); Finish deletes the demo evaluation and Home points to Settings to replay it. The demo evaluation never syncs or files to Dropbox.
+A coached walkthrough of one made-up site evaluation, done in the real screens: the screen dims except the highlighted field, a tip with an example sits above or below it, and each step completes when the user does it (or taps Show me). Required on a device's first launch and must be finished once there; replayed (and exitable) from Settings › Replay the demo. Wall B carries a planted dark, blurred photo to retake. Finish deletes the demo evaluation; it never syncs or files to Dropbox. Tips and the grey field examples come from one field guide (`src/app/fieldGuide.ts`).
 _Avoid_: tutorial, help page
 
 **Project folder (missing)**:

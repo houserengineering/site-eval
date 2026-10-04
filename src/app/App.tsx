@@ -1,4 +1,3 @@
-import { demoTip, DemoGuide, dismissDemoTip, startDemo } from './Demo';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { newSiteEvaluation, type FieldRecord } from '../domain/fieldRecord';
 import { openStore, type RecordStore } from '../storage/db';
@@ -18,6 +17,9 @@ import { readBackup, isBackup } from '../domain/backup';
 import { loadSettings, settings, useSettings } from './settings';
 import { ReviewQueue, setReviewQueue } from './reviewQueue';
 import { SettingsView } from './SettingsView';
+import { Coach } from './demo/Coach';
+import { demoDone, demoState, publishLive, setDemoState, startDemo } from './demo/state';
+import { STEPS } from './demo/steps';
 
 type Route =
   | { name: 'home' }
@@ -47,6 +49,9 @@ function parseRoute(hash: string): Route {
   return { name: 'home' };
 }
 
+/** Steps from here on run on Home and Settings, after the demo evaluation is deleted. */
+const FINALE = STEPS.findIndex((x) => x.id === 'home-settings');
+
 export const go = (hash: string) => {
   location.hash = hash;
 };
@@ -74,6 +79,10 @@ export function App() {
         setReviewQueue(reviews);
         void reviews.start();
         if (returnTo) location.hash = returnTo;
+        // The demo: resumed where it was left; required on a device's first launch (spec decision 6).
+        const demo = demoState();
+        if (demo && demo.step < FINALE && !(await s.get(demo.recordId))) setDemoState(null);
+        if (!returnTo && !demoDone() && !demoState()) await startDemo(s, false);
         setStore(s);
       },
       (e) => setError(`Storage unavailable on this device: ${e.message}`),
@@ -85,6 +94,15 @@ export function App() {
 
   if (error) return <main class="page"><p class="alert" role="alert">{error}</p></main>;
   if (!store) return <main class="page" aria-busy="true" />;
+  return (
+    <>
+      {page(route, store, percTests)}
+      <Coach store={store} />
+    </>
+  );
+}
+
+function page(route: Route, store: RecordStore, percTests: boolean) {
   if (route.name === 'pit') return <RecordLoader store={store} id={route.id} render={(r, save) => <TestPitView record={r} pitId={route.pitId} save={save} store={store} />} />;
   if (route.name === 'perc' && percTests) return <RecordLoader store={store} id={route.id} render={(r, save) => <PercTestView record={r} testId={route.testId} save={save} />} />;
   if (route.name === 'print') return <RecordLoader store={store} id={route.id} render={(r, save) => <PrintView record={r} kind={route.kind} store={store} save={save} />} />;
@@ -135,11 +153,11 @@ function RecordLoader(props: {
         <a class="btn" href="#/">All site evaluations</a>
       </main>
     );
+  if (record.demo) publishLive(record, save);
   return (
     <>
       {props.render(record, save)}
       {percTests && <PercTimers record={record} />}
-      {record.demo && <DemoGuide record={record} store={props.store} />}
     </>
   );
 }
@@ -147,7 +165,6 @@ function RecordLoader(props: {
 function Home({ store }: { store: RecordStore }) {
   const [records, setRecords] = useState<FieldRecord[]>();
   const [problem, setProblem] = useState<string>();
-  const [tip, setTip] = useState(demoTip);
   const { percTests } = useSettings();
   useEffect(() => {
     store.list().then(
@@ -198,30 +215,12 @@ function Home({ store }: { store: RecordStore }) {
     <main class="page">
       <header class="bar">
         <h1>Site evaluations</h1>
-        <a class={`bar-link${tip ? ' demo-target' : ''}`} href="#/settings">
+        <a class="bar-link" href="#/settings">
           Settings
         </a>
       </header>
-      {tip && (
-        <div class="demo-tip" role="status">
-          <p>Demo finished and deleted. Replay it any time from Settings › Replay the demo.</p>
-          <button
-            type="button"
-            class="btn small"
-            onClick={() => {
-              dismissDemoTip();
-              setTip(false);
-            }}
-          >
-            OK
-          </button>
-        </div>
-      )}
       <button class="btn primary block" onClick={create}>
         New site evaluation
-      </button>
-      <button class="btn block" onClick={() => startDemo(store)}>
-        Try the demo
       </button>
       <a class="btn block" href="#/dropbox">
         Open from Dropbox

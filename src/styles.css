@@ -429,18 +429,35 @@ button.row-link:focus-visible { outline: 3px solid var(--focus); outline-offset:
 .hold-walls { margin: 0; padding-left: 1.2rem; }
 .hold-walls a { display: inline-block; min-height: 44px; line-height: 44px; color: var(--text); }
 
-/* Demo guide (app/Demo.tsx): pinned to the bottom so the screen above stays usable. */
-.demo-guide { position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 50; max-width: 640px; margin: 0 auto; max-height: 45vh; overflow: auto;
-  background: var(--surface); color: var(--text); border: 2px solid #1d4f91; border-radius: 12px; padding: 12px 16px; box-shadow: 0 6px 24px rgba(0,0,0,.25); }
-.demo-guide h2 { margin: 4px 0; font-size: 1.15rem; }
-.demo-guide p { margin: 4px 0 8px; }
-.demo-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.demo-step { font-weight: 650; color: var(--muted); margin: 0; }
-.demo-pill { position: fixed; right: 12px; bottom: 12px; z-index: 50; min-height: 44px; padding: 8px 16px; border-radius: 22px; border: 2px solid #1d4f91;
-  background: var(--surface); color: var(--text); font: inherit; font-weight: 650; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
-body:has(.demo-guide) .page { padding-bottom: 50vh; }
-.demo-tip { display: flex; align-items: center; gap: 12px; border: 2px solid #1d4f91; border-radius: 8px; padding: 8px 12px; margin: 0 0 12px; }
-.demo-tip p { margin: 0; flex: 1; }
-.demo-target { outline: 3px solid #1d4f91; outline-offset: 3px; border-radius: 6px; }
-.bar .demo-target { outline-color: #ffd34d; }
+/* Demo coach marks (app/demo/Coach.tsx): dimmed screen, highlighted field, tip above or below it. */
+input::placeholder { color: #6b7380; opacity: 1; }
+@media (prefers-color-scheme: dark) { input::placeholder { color: #8d97a5; } }
+.coach-hole { position: fixed; z-index: 1000; border-radius: 10px; pointer-events: none;
+  box-shadow: 0 0 0 3px #ffd34d, 0 0 0 200vmax rgba(8, 12, 18, 0.62); }
+.coach-block { position: fixed; z-index: 1001; }
+/* Room to scroll the last thing on a screen clear of its tip. */
+body:has(.coach) { padding-bottom: 70vh; }
+.coach-block.dim { inset: 0; background: rgba(8, 12, 18, 0.62); }
+.coach.is-done .coach-hole { box-shadow: 0 0 0 4px #4caf50, 0 0 0 200vmax rgba(8, 12, 18, 0.62); }
+.coach-tip { position: fixed; z-index: 1002; background: #ffffff; color: #111418; border-radius: 12px; padding: 12px 16px 6px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35); font-size: 17px; line-height: 1.4; }
+.coach-tip h2 { margin: 2px 0 6px; font-size: 1.15rem; }
+.coach-tip p { margin: 0 0 8px; }
+.coach-count { font-size: 0.9rem; font-weight: 650; color: #4a5360; }
+.coach-sample { color: #4a5360; }
+.coach-sample strong { color: #111418; }
+.coach-problem { color: #a4161a; font-weight: 650; }
+.coach-check { color: #1b5e20; }
+.coach-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.coach-actions .btn.small { margin: 4px 0 8px; }
+.coach-tip .btn.small:not(.primary) { background: #ffffff; color: #0b3d6e; border-color: #0b3d6e; }
+.coach-tip .btn.primary { background: #0b3d6e; color: #ffffff; }
+.coach-tip .link-btn { min-height: 48px; color: #0b3d6e; }
+.coach-arrow { position: absolute; width: 16px; height: 16px; background: #ffffff; transform: translateX(-50%) rotate(45deg); }
+.coach-tip.below .coach-arrow { top: -7px; }
+.coach-tip.above .coach-arrow { bottom: -7px; }
+.coach.glide .coach-hole, .coach.glide .coach-tip { transition: top 0.4s ease, left 0.4s ease, width 0.4s ease, height 0.4s ease; }
+.coach-touch { position: fixed; z-index: 1003; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; pointer-events: none;
+  background: rgba(255, 211, 77, 0.55); border: 3px solid #ffd34d; animation: coach-touch 0.6s ease-out forwards; }
+@keyframes coach-touch { from { transform: scale(0.4); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
 .create-folder { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 8px 0; }
