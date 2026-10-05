@@ -213,7 +213,7 @@ export class SyncService {
   /** Stamps the change, queues it, and schedules a sync. Returns the record to save. */
   recordEdited(prev: FieldRecord, next: FieldRecord): FieldRecord {
     const stamped = stampEdits(prev, next, this.state.who);
-    if (next.demo) return stamped;
+    if (next.demo || next.example) return stamped;
     if (stamped !== next || stamped.deliverableFolder !== prev.deliverableFolder) this.queue(stamped.id, {});
     return stamped;
   }
@@ -319,7 +319,7 @@ export class SyncService {
       if (entry) await this.dequeue(id, entry);
       return;
     }
-    if (local.demo) {
+    if (local.demo || local.example) {
       if (entry) await this.dequeue(id, entry);
       return;
     }

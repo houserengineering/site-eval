@@ -46,7 +46,11 @@ export function syncLine(s: SyncState, r: FieldRecord): { text: string; tone: 'o
 
 export function SyncStatus({ record }: { record: FieldRecord }) {
   const s = useSyncState();
-  const line = record.demo ? { text: 'Demo: saved on this device only. Nothing goes to Dropbox.', tone: 'ok' } : syncLine(s, record);
+  const line = record.demo
+    ? { text: 'Demo: saved on this device only. Nothing goes to Dropbox.', tone: 'ok' }
+    : record.example
+      ? { text: 'Example: saved on this device only. Nothing goes to Dropbox.', tone: 'ok' }
+      : syncLine(s, record);
   return (
     <p class={`sync-line ${line.tone}`} role="status">
       {line.text}
@@ -76,6 +80,14 @@ export function DropboxSection(props: { record: FieldRecord; save: (r: FieldReco
     setNote(`Saved ${name}. Keep it off this phone (email it or save it to Drive).`);
   };
 
+  if (r.example)
+    return (
+      <section aria-labelledby="dbx">
+        <h2 id="dbx">Dropbox</h2>
+        <SyncStatus record={r} />
+        <p class="hint">This example never goes to Dropbox, so the real job's folder is never touched. Changes you make stay on this phone.</p>
+      </section>
+    );
   if (r.demo)
     return (
       <section aria-labelledby="dbx">

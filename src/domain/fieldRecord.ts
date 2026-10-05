@@ -247,6 +247,8 @@ export interface FieldRecord {
   areaSoils: Record<string, AreaHorizon[]>;
   /** The in-app demo's sample job (app/Demo.tsx): never synced or filed. */
   demo?: boolean;
+  /** The shared example of a completed job (app/example.ts): a local copy, never synced or filed. */
+  example?: boolean;
 }
 
 /** A reference horizon at a pit: the soil survey or past logs in its map unit, with where it came from. */

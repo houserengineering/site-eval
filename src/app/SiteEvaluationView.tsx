@@ -86,6 +86,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
       </header>
 
       <SyncStatus record={r} />
+      {r.example && <p class="hint">A completed job to learn from. Look through the test pits, then open the soil log PDF under Deliverables.</p>}
 
       {(r.siteMap || r.testPits.some((p) => p.planned || p.location)) && (
         <a class="btn primary block" href={`#/se/${r.id}/map`}>

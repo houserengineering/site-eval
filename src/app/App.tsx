@@ -19,6 +19,7 @@ import { changeSettings, loadSettings, settings, useSettings } from './settings'
 import { markEnrolled, takeEnrollment, type Enrollment } from './enroll';
 import { freshIdToken, onUserChange, signedInUser } from './google';
 import { SignInScreen } from './SignIn';
+import { ExampleButton } from './example';
 import { ReviewQueue, setReviewQueue } from './reviewQueue';
 import { SettingsView } from './SettingsView';
 import { Coach } from './demo/Coach';
@@ -258,6 +259,7 @@ function Home({ store }: { store: RecordStore }) {
       <a class="btn block" href="#/dropbox">
         Open from Dropbox
       </a>
+      <ExampleButton store={store} />
       <label class="btn block">
         Load job file or backup
         <input class="visually-hidden" type="file" accept=".json,application/json" onChange={(e) => loadJob(e.currentTarget)} />
@@ -272,7 +274,7 @@ function Home({ store }: { store: RecordStore }) {
         {records?.map((r) => (
           <li key={r.id}>
             <a class="row-link" href={`#/se/${r.id}`}>
-              <span class="row-title">{r.demo ? 'Demo:' : r.header.projectNumber || 'No project #'} {r.header.projectName}</span>
+              <span class="row-title">{r.demo ? 'Demo:' : r.example ? 'Example:' : r.header.projectNumber || 'No project #'} {r.header.projectName}</span>
               <span class="row-sub">
                 {r.testPits.length} test pit{r.testPits.length === 1 ? '' : 's'}
                 {percTests && r.percTests.length > 0 && ` · ${r.percTests.length} perc test${r.percTests.length === 1 ? '' : 's'}`}
