@@ -27,7 +27,7 @@ export function pitGroups(pits: TestPit[]): { pit: string; walls: TestPit[] }[] 
 
 /** One status for a pit: complete when every wall is, not started when no wall is. */
 export function groupStatus(walls: TestPit[]): PitStatus {
-  const s = walls.map(pitStatus);
+  const s = walls.map((w) => pitStatus(w, walls));
   return s.every((x) => x === 'complete') ? 'complete' : s.every((x) => x === 'not-started') ? 'not-started' : 'in-progress';
 }
 

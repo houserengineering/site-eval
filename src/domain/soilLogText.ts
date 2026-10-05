@@ -2,6 +2,7 @@
 // writes ALL CAPS (2026 template), depths as `72"`, and puts DEQ-4 extras the form has
 // no column for into NOTES (research/01 §1.9, §6).
 import { pitDepth, type Horizon, type TestPit } from './fieldRecord';
+import { wallLocation } from './pitWalls';
 import { munsellName, munsellNotation, rockModifier, STRUCTURELESS, textureWithSandSize } from './vocabulary';
 
 const up = (s: string) => s.trim().toUpperCase();
@@ -119,7 +120,11 @@ export function pitSummary(pit: TestPit): string {
     .replace(/^\.$/, '');
 }
 
-/** DEQ-4-required items still blank. Hints only; nothing blocks the evaluator. */
+/**
+ * Items the soil log prints that are still blank. Hints only; nothing blocks the evaluator. Consistence and
+ * plasticity are optional: Justin's template has no column for them, and they print in NOTES only when given
+ * (spec: "Keep only what prints"; 0271 has none, 2026-10-04).
+ */
 export function missingItems(pit: TestPit): { horizons: string[][]; pit: string[] } {
   const horizons = pit.horizons.map((h) => {
     const m: string[] = [];
@@ -128,14 +133,12 @@ export function missingItems(pit: TestPit): { horizons: string[][]; pit: string[
     if (!colorText(h)) m.push('color');
     if (!h.texture.cls.trim()) m.push('texture');
     if (!structureText(h)) m.push('structure');
-    if (!h.consistence) m.push('consistence');
-    if (!h.plasticity) m.push('plasticity');
     if (!h.roots) m.push('roots');
     if (!h.mottling.present) m.push('mottling');
     else if (h.mottling.present === 'Y' && !mottleNote(h)) m.push('mottle description');
     if (h.rock.pct == null) m.push('rock %');
-    else if (h.rock.pct >= 15 && !rockModifier(h.rock.pct, h.rock.kind).prefix && !rockModifier(h.rock.pct, h.rock.kind).noun)
-      m.push('rock size (for the texture modifier)');
+    // From 15% the size prints with the percent ("40% ROCKS (GRAVEL TO COBBLES)"); ROCKS is the unpicked default.
+    else if (h.rock.pct >= 15 && (!h.rock.kind.trim() || up(h.rock.kind) === 'ROCKS')) m.push('rock size');
     return m;
   });
   const p: string[] = [];
@@ -152,9 +155,13 @@ export function missingItems(pit: TestPit): { horizons: string[][]; pit: string[
 
 export type PitStatus = 'not-started' | 'in-progress' | 'complete';
 
-/** Complete = GPS fix taken and nothing DEQ-4 asks for is blank (the same items the pit hints list). */
-export function pitStatus(pit: TestPit): PitStatus {
+/**
+ * Complete = the wall has a location to print and nothing the soil log prints is blank (the same items the pit
+ * hints list). With the other walls, the location can be the other wall's fix or the planned pin, as it prints.
+ */
+export function pitStatus(pit: TestPit, all?: TestPit[]): PitStatus {
   if (!pit.horizons.length && !pit.photos.length && !pit.location && !pit.notes) return 'not-started';
   const m = missingItems(pit);
-  return pit.location && pit.horizons.length && !m.pit.length && m.horizons.every((h) => !h.length) ? 'complete' : 'in-progress';
+  const located = pit.location || (all && wallLocation(pit, all));
+  return located && pit.horizons.length && !m.pit.length && m.horizons.every((h) => !h.length) ? 'complete' : 'in-progress';
 }

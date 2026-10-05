@@ -373,7 +373,7 @@ function PanZoom(props: {
             const [x, y] = screen(at);
             const s = groupStatus(g.walls);
             // Opens the first wall still to log (wall A on a new pit).
-            const wall = g.walls.find((w) => pitStatus(w) !== 'complete') ?? g.walls[0];
+            const wall = g.walls.find((w) => pitStatus(w, g.walls) !== 'complete') ?? g.walls[0];
             return (
               <a
                 key={g.pit}

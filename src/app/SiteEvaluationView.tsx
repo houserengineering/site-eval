@@ -135,7 +135,7 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
                   <li key={p.id}>
                     <a class="row-link" href={`#/se/${r.id}/pit/${p.id}`}>
                       <span class="row-title">
-                        Wall {p.label} <span class={`badge st-${pitStatus(p)}`}>{STATUS_TEXT[pitStatus(p)]}</span>
+                        Wall {p.label} <span class={`badge st-${pitStatus(p, r.testPits)}`}>{STATUS_TEXT[pitStatus(p, r.testPits)]}</span>
                       </span>
                       <span class="row-sub">
                         {p.horizons.length} horizon{p.horizons.length === 1 ? '' : 's'}

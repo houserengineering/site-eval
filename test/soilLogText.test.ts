@@ -188,8 +188,16 @@ describe('required-item hints (DEQ-4 §2.1.4.1, §2.1.8.1)', () => {
         slope: { pct: null, shape: '', direction: '', method: '' },
       }),
     );
-    expect(m.horizons[0]).toEqual(['color', 'texture', 'structure', 'consistence', 'plasticity', 'roots', 'mottling', 'rock size (for the texture modifier)']);
+    expect(m.horizons[0]).toEqual(['color', 'texture', 'structure', 'roots', 'mottling', 'rock size']);
     expect(m.pit).toEqual(['observed water', 'limiting layer', 'slope %', 'pit is shallower than 8 ft: record the limiting layer or reason']);
+  });
+
+  it('only what the soil log prints: no consistence or plasticity; a picked or legacy size range is a size', () => {
+    const need = (rock: { pct: number | null; kind: string }) => missingItems(pit({ horizons: [hz({ topIn: 0, bottomIn: 96, rock })] })).horizons[0];
+    for (const kind of ['GRAVEL TO COBBLES', 'GRAVEL', 'COBBLES']) expect(need({ pct: 40, kind })).not.toContain('rock size');
+    expect(need({ pct: 10, kind: 'ROCKS' })).not.toContain('rock size');
+    expect(need({ pct: 15, kind: 'ROCKS' })).toContain('rock size');
+    expect(need({ pct: 15, kind: 'ROCKS' })).not.toContain('consistence');
   });
 
   it('a new wall needs nothing in its summary; no SHGW estimate, slope shape, direction or method', () => {
