@@ -59,7 +59,7 @@ test('pit checks: flags on the wall and in the pit list, retake prompt, accept w
   await expect(hold).toContainText('Soil log held: 1 pit check open.');
   await expect(page.getByRole('button', { name: 'Export soil logs (Excel)' })).toBeDisabled();
   await shot(page, '91-soil-log-held', hold);
-  await page.getByRole('link', { name: /^Soil logs/ }).click();
+  await page.getByRole('link', { name: 'Open soil log PDF' }).click();
   await expect(page.getByRole('img', { name: /^Soil logs page 1 of/ })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save PDF' })).toBeDisabled();
   await page.getByRole('region', { name: 'Soil log held' }).getByRole('link', { name: 'Wall 1A: 1 open' }).click();

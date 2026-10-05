@@ -75,7 +75,7 @@ test('photo, GPS, certify on the certifier device, print preview and PDFs', asyn
   }
 
   // Print preview of the soil logs: letter sheets drawn from the PDF's pages.
-  await page.getByRole('link', { name: /^Soil logs/ }).click();
+  await page.getByRole('link', { name: 'Open soil log PDF' }).click();
   const sheet = page.getByRole('img', { name: 'Soil logs page 1 of 1' });
   await expect(sheet).toBeVisible();
   await expect(sheet.locator('text', { hasText: 'SOIL PROFILE LOG' })).toHaveCount(1);
@@ -107,7 +107,7 @@ test('photo, GPS, certify on the certifier device, print preview and PDFs', asyn
   }
 
   await page.getByRole('link', { name: 'Back to site evaluation' }).click();
-  await page.getByRole('link', { name: /^Soil logs/ }).click();
+  await page.getByRole('link', { name: 'Open soil log PDF' }).click();
   await expect(page.getByRole('img', { name: /^Soil logs page 1 of / }).locator('text', { hasText: 'LOCATION OF TEST PIT WITHIN PROPERTY' })).not.toHaveCount(0);
   await shot(page, '47-print-soil-logs');
 

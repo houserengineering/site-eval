@@ -26,7 +26,7 @@ test('job file: pre-filled header, confirm-on-site flag, offline map with live d
   await shot(page, '50-job-loaded');
 
   // The flag blocks nothing and shows on the deliverable preview.
-  await page.getByRole('link', { name: /^Soil logs/ }).click();
+  await page.getByRole('link', { name: 'Open soil log PDF' }).click();
   const sheet = page.getByRole('img', { name: /Soil logs page 1 of/ });
   if (FEATURES.UNCONFIRMED_MARKS) {
     await expect(page.getByRole('region', { name: 'Confirm on site' })).toContainText('print marked (UNCONFIRMED)');

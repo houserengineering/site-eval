@@ -254,7 +254,7 @@ test(`rehearsal: ${project}, ${PITS} test pits, perc tests, offline, filing, pri
   await shot(page, 'r07-filed');
 
   // The soil log PDF preview; Chromium's print-to-PDF of it keeps the page count.
-  await page.getByRole('link', { name: /^Soil logs/ }).click();
+  await page.getByRole('link', { name: 'Open soil log PDF' }).click();
   await expect(page.getByRole('img', { name: `Soil logs page 1 of ${soilPdf.getPageCount()}` })).toBeVisible();
   await shot(page, 'r08-print-preview', false);
   await page.emulateMedia({ media: 'print' });

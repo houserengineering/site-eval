@@ -207,24 +207,24 @@ export function SiteEvaluationView(props: { record: FieldRecord; save: (r: Field
         <h2 id="out">Deliverables</h2>
         <SoilLogHold record={r} />
         {FEATURES.RULE_WARNINGS && <RuleWarnings warnings={allWarnings(r, now, { percTests })} title="Rule checks before export" showSubject />}
-        <p class="hint">{percTests && r.percTests.length > 0 ? 'PDFs:' : 'Soil log PDFs:'}</p>
-        <ul class="list">
-          {(Object.keys(PRINT_KINDS) as PrintKind[])
-            .filter((k) => k !== 'groundwater' && printKindOn(k, percTests) && (k !== 'perc-tests' || r.percTests.length > 0))
-            .map((k) => (
-              <li key={k}>
-                <a class="row-link" href={`#/se/${r.id}/print/${k}`}>
-                  <span class="row-title">{PRINT_KINDS[k].title}</span>
-                  <span class="row-sub">{PRINT_SUB[k]}</span>
-                </a>
-              </li>
-            ))}
-        </ul>
-        <button class="btn primary block" onClick={exportXlsx('soil-log-xlsx', 'soil logs')} disabled={held}>
+        {/* The PDF is the deliverable, so it is the main button (Nathan, 2026-10-04: a card did not read as tappable). */}
+        {(Object.keys(PRINT_KINDS) as PrintKind[])
+          .filter((k) => k !== 'groundwater' && printKindOn(k, percTests) && (k !== 'perc-tests' || r.percTests.length > 0))
+          .map((k) => (
+            <div key={k} class="field">
+              <a class="btn primary block" href={`#/se/${r.id}/print/${k}`} aria-describedby={`pdf-${k}`}>
+                {PRINT_OPEN[k]}
+              </a>
+              <p class="hint" id={`pdf-${k}`}>
+                {PRINT_SUB[k]}
+              </p>
+            </div>
+          ))}
+        <button class="btn block" onClick={exportXlsx('soil-log-xlsx', 'soil logs')} disabled={held}>
           Export soil logs (Excel)
         </button>
         {percTests && r.percTests.length > 0 && (
-          <button class="btn primary block" onClick={exportXlsx('perc-test-xlsx', 'perc tests')}>
+          <button class="btn block" onClick={exportXlsx('perc-test-xlsx', 'perc tests')}>
             Export perc tests (Excel)
           </button>
         )}
@@ -302,8 +302,14 @@ function pitCounts(r: FieldRecord): string {
   return `${n.complete} complete · ${n['in-progress']} in progress · ${n['not-started']} not started`;
 }
 
+const PRINT_OPEN: Record<PrintKind, string> = {
+  'soil-logs': 'Open soil log PDF',
+  'perc-tests': 'Open perc test PDF',
+  groundwater: 'Open groundwater results PDF',
+};
+
 const PRINT_SUB: Record<PrintKind, string> = {
-  'soil-logs': 'One page per test pit (both walls), with photos and locations',
+  'soil-logs': 'One page per test pit (both walls), with photos and locations. Save PDF is at the top.',
   'perc-tests': 'One page per perc test',
   groundwater: 'One page per observation well',
 };

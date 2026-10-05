@@ -30,7 +30,7 @@ test('live scope: no perc, certification, groundwater, texture guide, rule warni
   await expect(page.getByRole('region', { name: 'Rule checks before export' })).toHaveCount(0);
   await expect(page.getByLabel('Owner name')).toHaveCount(0);
   await expect(page.getByRole('link', { name: /^(Perc tests|Groundwater|Observation wells)/ })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: /^Soil logs/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open soil log PDF' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Export soil logs (Excel)' })).toBeVisible();
 
   // A wall: a 24" log would raise DEQ-4 warnings; neither they nor the texture guide show.

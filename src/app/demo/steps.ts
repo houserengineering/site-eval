@@ -582,7 +582,7 @@ export const STEPS: Step[] = [
     title: 'Open the soil log',
     text: (c) => {
       const n = c.r ? openFlags(c.r).length : 0;
-      return n ? checksText(n) : 'Tap Soil logs to see the finished log.';
+      return n ? checksText(n) : 'Tap Open soil log PDF to see the finished log.';
     },
     target: () => one(soilLogsLink()),
     done: (c) => c.screen === 'print',
